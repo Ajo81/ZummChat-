@@ -7,6 +7,16 @@ const messagesEl = document.getElementById("messages");
 const inputEl    = document.getElementById("messageInput");
 const sendBtn    = document.getElementById("sendBtn");
 
+// ---- Nombre de usuario ----
+let username = localStorage.getItem("zummchat_user");
+if (!username) {
+  username = prompt("¿Cómo te llamas?");
+  if (!username || !username.trim()) username = "Anónimo";
+  username = username.trim().substring(0, 20);
+  localStorage.setItem("zummchat_user", username);
+}
+
+// ---- Splash ----
 const splash = document.getElementById("splash");
 setTimeout(() => {
   if (!splash) return;
@@ -15,24 +25,55 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
+// ---- Render ----
 const rendered = new Set();
 function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+function formatTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return h + ":" + m;
+}
 
 function renderMessage(m) {
   if (!m || !m.id || rendered.has(m.id)) return;
   rendered.add(m.id);
+
   const div = document.createElement("div");
   div.className = "msg";
-  div.textContent = m.text;
+
+  const header = document.createElement("div");
+  header.className = "msg-header";
+
+  const nameEl = document.createElement("span");
+  nameEl.className = "msg-name";
+  nameEl.textContent = m.username || "Anónimo";
+
+  const timeEl = document.createElement("span");
+  timeEl.className = "msg-time";
+  timeEl.textContent = formatTime(m.created_at);
+
+  header.appendChild(nameEl);
+  header.appendChild(timeEl);
+
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  body.textContent = m.text;
+
+  div.appendChild(header);
+  div.appendChild(body);
   messagesEl.appendChild(div);
   scrollToBottom();
 }
 
+// ---- Historial ----
 async function loadHistory() {
   console.log("Cargando historial...");
   const { data, error } = await supabaseClient
     .from("messages")
-    .select("id, text, created_at")
+    .select("id, text, username, created_at")
     .order("created_at", { ascending: true })
     .limit(200);
   if (error) { console.error("ERROR historial:", error); return; }
@@ -40,15 +81,15 @@ async function loadHistory() {
   data.forEach(renderMessage);
 }
 
+// ---- Enviar ----
 async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
   inputEl.value = "";
 
-  console.log("Enviando:", text);
   const { data, error } = await supabaseClient
     .from("messages")
-    .insert([{ text }])
+    .insert([{ text: text, username: username }])
     .select()
     .single();
 
@@ -58,21 +99,18 @@ async function sendMessage() {
     alert("No se pudo enviar: " + error.message);
     return;
   }
-  console.log("Insert OK:", data);
   renderMessage(data);
 }
 
 sendBtn.addEventListener("click", sendMessage);
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
+// ---- Realtime ----
 supabaseClient
   .channel("messages-realtime")
   .on("postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
-      payload => {
-        console.log("Realtime llega:", payload.new);
-        renderMessage(payload.new);
-      })
-  .subscribe(status => console.log("Realtime estado:", status));
+      payload => renderMessage(payload.new))
+  .subscribe(status => console.log("Realtime:", status));
 
 loadHistory();

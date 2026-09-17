@@ -6,7 +6,9 @@ const supabaseClient = supabase.createClient(
 const messagesEl = document.getElementById("messages");
 const inputEl    = document.getElementById("messageInput");
 const sendBtn    = document.getElementById("sendBtn");
+const shareBtn   = document.getElementById("shareBtn");
 
+// ---- Nombre de usuario ----
 let username = localStorage.getItem("zummchat_user");
 if (!username) {
   username = prompt("¿Cómo te llamas?");
@@ -15,6 +17,7 @@ if (!username) {
   localStorage.setItem("zummchat_user", username);
 }
 
+// ---- Color por usuario ----
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
@@ -25,6 +28,29 @@ function colorForUser(name) {
   return "hsl(" + hue + ", 75%, 65%)";
 }
 
+// ---- Botón compartir ----
+shareBtn.addEventListener("click", async () => {
+  const url = location.href;
+  const datos = {
+    title: "ZummChat",
+    text: "Únete a mi chat ZummChat 🐦💬",
+    url: url
+  };
+
+  if (navigator.share) {
+    try { await navigator.share(datos); } catch (e) { /* cancelado */ }
+  } else {
+    // Si el navegador no soporta compartir (Chrome Android sí soporta)
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("Enlace copiado: " + url);
+    } catch (e) {
+      prompt("Copia este enlace:", url);
+    }
+  }
+});
+
+// ---- Splash ----
 const splash = document.getElementById("splash");
 setTimeout(() => {
   if (!splash) return;
@@ -33,6 +59,7 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
+// ---- Render ----
 const rendered = new Set();
 function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
@@ -76,6 +103,7 @@ function renderMessage(m) {
   scrollToBottom();
 }
 
+// ---- Historial ----
 async function loadHistory() {
   const { data, error } = await supabaseClient
     .from("messages")
@@ -86,6 +114,7 @@ async function loadHistory() {
   data.forEach(renderMessage);
 }
 
+// ---- Enviar ----
 async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
@@ -109,6 +138,7 @@ async function sendMessage() {
 sendBtn.addEventListener("click", sendMessage);
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
+// ---- Realtime ----
 supabaseClient
   .channel("messages-realtime")
   .on("postgres_changes",

@@ -59,6 +59,7 @@ function switchRoom(room) {
 
   if (chatTitle) chatTitle.textContent = "ZummChat · " + roomLabel(room);
   rendered.clear();
+  lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
   updateActiveTab();
   loadHistory();
@@ -147,7 +148,7 @@ if (shareBtn) {
   });
 }
 
-// ---- EMOJIS ----
+// ---- Emojis ----
 const EMOJIS = [
   "😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢",
   "😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜",
@@ -179,6 +180,40 @@ if (emojiBtn) {
   });
 }
 
+// ---- Separador de fecha ----
+let lastDateKey = "";
+
+function dateKey(d) {
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+
+function dateLabel(d) {
+  const hoy = new Date();
+  const ayer = new Date();
+  ayer.setDate(hoy.getDate() - 1);
+
+  if (dateKey(d) === dateKey(hoy)) return "HOY";
+  if (dateKey(d) === dateKey(ayer)) return "AYER";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return dd + "/" + mm + "/" + yyyy;
+}
+
+function maybeAddDateSeparator(iso) {
+  if (!iso || !messagesEl) return;
+  const d = new Date(iso);
+  const key = dateKey(d);
+  if (key === lastDateKey) return;
+  lastDateKey = key;
+
+  const sep = document.createElement("div");
+  sep.className = "date-sep";
+  sep.textContent = dateLabel(d);
+  messagesEl.appendChild(sep);
+}
+
 // ---- Render ----
 const rendered = new Set();
 function scrollToBottom() {
@@ -198,6 +233,8 @@ function renderMessage(m) {
   if (m.room !== currentRoom) return;
   if (!messagesEl) return;
   rendered.add(m.id);
+
+  maybeAddDateSeparator(m.created_at);
 
   const div = document.createElement("div");
   div.className = "msg";

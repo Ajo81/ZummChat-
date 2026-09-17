@@ -18,6 +18,8 @@ const shareBtn     = document.getElementById("shareBtn");
 const chatTitle    = document.getElementById("chat-title");
 const privateBtn   = document.getElementById("privateBtn");
 const privRoomBar  = document.getElementById("priv-room-bar");
+const emojiBtn     = document.getElementById("emojiBtn");
+const emojiBar     = document.getElementById("emoji-bar");
 
 let username = localStorage.getItem("zummchat_user");
 if (!username) {
@@ -145,6 +147,39 @@ if (shareBtn) {
   });
 }
 
+// ---- EMOJIS ----
+const EMOJIS = [
+  "😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢",
+  "😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜",
+  "👍","👎","👏","🙏","💪","✌️","🤝","👋","🖐️","✋",
+  "❤️","💔","💚","💙","💜","🧡","💛","🖤","🤍","💯",
+  "🔥","⭐","✨","🎉","🎊","🎁","🌈","☀️","🌙","⚡",
+  "🐦","🐶","🐱","🌸","🌺","🍀","🍕","🍔","☕","🍺",
+  "⚽","🏀","🎮","🎵","🎶","📱","💻","📷","🚀","🏆"
+];
+
+if (emojiBar) {
+  EMOJIS.forEach(e => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = e;
+    b.addEventListener("click", () => {
+      if (inputEl) {
+        inputEl.value += e;
+        inputEl.focus();
+      }
+    });
+    emojiBar.appendChild(b);
+  });
+}
+
+if (emojiBtn) {
+  emojiBtn.addEventListener("click", () => {
+    if (emojiBar) emojiBar.classList.toggle("show");
+  });
+}
+
+// ---- Render ----
 const rendered = new Set();
 function scrollToBottom() {
   if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;

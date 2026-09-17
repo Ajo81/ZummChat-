@@ -1,0 +1,40 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #000; font-family: system-ui, Arial, sans-serif; color: #fff; }
+
+#splash {
+  position: fixed; inset: 0;
+  background: linear-gradient(#003300, #000);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  z-index: 999; transition: opacity .4s ease;
+}
+#splash.hidden { opacity: 0; pointer-events: none; }
+#matrixRain { position: absolute; inset: 0; }
+#logo { width: 120px; margin-bottom: 20px; position: relative; animation: fadeIn 1.2s ease-in-out; }
+.matrix-text {
+  position: relative; font-size: 32px; color: #00ff66;
+  text-shadow: 0 0 10px #00ff66; letter-spacing: 2px;
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+#chat-container { padding: 16px; max-width: 720px; margin: 0 auto; }
+#messages {
+  height: calc(100vh - 120px); overflow-y: auto;
+  background: #111; padding: 12px; border-radius: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.msg {
+  background: #1c1c1c; padding: 8px 12px; border-radius: 12px;
+  border-left: 3px solid #00ff66; word-wrap: break-word;
+}
+#input-area { margin-top: 10px; display: flex; gap: 10px; }
+#messageInput {
+  flex: 1; padding: 12px; border-radius: 8px;
+  border: 1px solid #333; background: #111; color: #fff; font-size: 16px;
+}
+#messageInput:focus { outline: 2px solid #00ff66; }
+#sendBtn {
+  padding: 12px 18px; background: #00ff66; color: #000;
+  font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
+}
+#sendBtn:active { transform: scale(.97); }

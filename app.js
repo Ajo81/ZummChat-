@@ -16,25 +16,15 @@ if (!username) {
   localStorage.setItem("zummchat_user", username);
 }
 
-// ---- Color por usuario ----
+// ---- Color por usuario (hash mejorado) ----
 function colorForUser(name) {
   if (!name) name = "Anónimo";
-  // Genera un color fijo a partir del nombre
-  const colores = [
-    "#00ff66", // verde
-    "#4fc3f7", // azul claro
-    "#ffb74d", // naranja
-    "#ba68c8", // morado
-    "#f06292", // rosa
-    "#fff176", // amarillo
-    "#4db6ac", // turquesa
-    "#e57373", // rojo suave
-    "#9575cd", // violeta
-    "#aed581"  // verde lima
-  ];
-  let suma = 0;
-  for (let i = 0; i < name.length; i++) suma += name.charCodeAt(i);
-  return colores[suma % colores.length];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  const hue = hash % 360;
+  return "hsl(" + hue + ", 75%, 65%)";
 }
 
 // ---- Splash ----

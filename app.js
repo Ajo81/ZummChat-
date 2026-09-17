@@ -3,13 +3,14 @@ const supabaseClient = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdibm1naWFhemZmaHVuendndWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MjMyMTAsImV4cCI6MjEwNTA5OTIxMH0.h7biHjEprLOsxbm4Hgt28psiIHeAEdlTv9LClGPFGRg"
 );
 
-const messagesEl = document.getElementById("messages");
-const inputEl    = document.getElementById("messageInput");
-const sendBtn    = document.getElementById("sendBtn");
-const shareBtn   = document.getElementById("shareBtn");
-const chatTitle  = document.getElementById("chat-title");
-const roomBar    = document.getElementById("room-bar");
-const privateBtn = document.getElementById("privateBtn");
+const messagesEl   = document.getElementById("messages");
+const inputEl      = document.getElementById("messageInput");
+const sendBtn      = document.getElementById("sendBtn");
+const shareBtn     = document.getElementById("shareBtn");
+const chatTitle    = document.getElementById("chat-title");
+const privateBtn   = document.getElementById("privateBtn");
+const privRoomBar  = document.getElementById("priv-room-bar");
+const privSection  = document.getElementById("priv-section");
 
 // ---- Nombre de usuario ----
 let username = localStorage.getItem("zummchat_user");
@@ -20,9 +21,10 @@ if (!username) {
   localStorage.setItem("zummchat_user", username);
 }
 
-// ---- Sala actual ----
-let currentRoom = localStorage.getItem("zummchat_room") || "general";
-let currentPartner = localStorage.getItem("zummchat_partner") || null;
+// ---- Sala actual: SIEMPRE arranca en "general" ----
+let currentRoom = "general";
+localStorage.removeItem("zummchat_room"); // ya no recordamos sala
+localStorage.removeItem("zummchat_partner");
 
 // ---- Colores ----
 function colorForUser(name) {
@@ -34,7 +36,7 @@ function colorForUser(name) {
   return "hsl(" + (hash % 360) + ", 75%, 65%)";
 }
 
-// ---- Nombre visible de la sala ----
+// ---- Nombre visible ----
 function roomLabel(room) {
   if (room.startsWith("priv:")) {
     const partes = room.replace("priv:", "").split("|");
@@ -44,13 +46,25 @@ function roomLabel(room) {
   return room.charAt(0).toUpperCase() + room.slice(1);
 }
 
+// ---- Ocultar privados al volver a sala pública ----
+function hidePrivados() {
+  privRoomBar.style.display = "none";
+}
+
+function showPrivados() {
+  privRoomBar.style.display = "flex";
+}
+
 // ---- Cambiar sala ----
 function switchRoom(room) {
   currentRoom = room;
-  currentPartner = room.startsWith("priv:") ? room : null;
-  localStorage.setItem("zummchat_room", currentRoom);
-  if (currentPartner) localStorage.setItem("zummchat_partner", currentPartner);
-  else localStorage.removeItem("zummchat_partner");
+
+  // Si entro a sala pública -> oculto los privados
+  if (!room.startsWith("priv:")) {
+    hidePrivados();
+  } else {
+    showPrivados();
+  }
 
   chatTitle.textContent = "ZummChat · " + roomLabel(room);
   rendered.clear();
@@ -59,33 +73,60 @@ function switchRoom(room) {
   loadHistory();
 }
 
-// ---- Marcar pestaña activa ----
+// ---- Marcar activo ----
 function updateActiveTab() {
   document.querySelectorAll(".room-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.room === currentRoom);
   });
 }
 
-// ---- Pestañas ----
-function createRoomButton(room) {
-  const btn = document.createElement("button");
-  btn.className = "room-btn";
-  if (room.startsWith("priv:")) btn.classList.add("priv");
-  btn.dataset.room = room;
-  btn.textContent = roomLabel(room);
-  btn.addEventListener("click", () => switchRoom(room));
-  roomBar.appendChild(btn);
-  return btn;
-}
-
-// Salas privadas guardadas
-const privateRooms = JSON.parse(localStorage.getItem("zummchat_privrooms") || "[]");
-privateRooms.forEach(r => createRoomButton(r));
-
-// Click en pestañas públicas
-document.querySelectorAll(".room-btn[data-room]").forEach(btn => {
+// ---- Salas públicas ----
+document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
   btn.addEventListener("click", () => switchRoom(btn.dataset.room));
 });
+
+// ---- Chats privados ----
+let privateRooms = JSON.parse(localStorage.getItem("zummchat_privrooms") || "[]");
+
+function savePrivateRooms() {
+  localStorage.setItem("zummchat_privrooms", JSON.stringify(privateRooms));
+}
+
+function createPrivateButton(room) {
+  const btn = document.createElement("button");
+  btn.className = "room-btn priv";
+  btn.dataset.room = room;
+
+  const label = document.createElement("span");
+  label.textContent = roomLabel(room);
+  btn.appendChild(label);
+
+  const close = document.createElement("button");
+  close.className = "close";
+  close.textContent = "✕";
+  close.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!confirm("¿Eliminar este chat privado de tu lista?")) return;
+
+    privateRooms = privateRooms.filter(r => r !== room);
+    savePrivateRooms();
+    btn.remove();
+
+    if (currentRoom === room) {
+      switchRoom("general");
+    }
+  });
+  btn.appendChild(close);
+
+  btn.addEventListener("click", () => switchRoom(room));
+  privRoomBar.appendChild(btn);
+}
+
+// Pintar los privados guardados
+privateRooms.forEach(r => createPrivateButton(r));
+
+// Ocultar la barra de privados al arrancar
+hidePrivados();
 
 // ---- Crear chat privado ----
 privateBtn.addEventListener("click", () => {
@@ -98,14 +139,13 @@ privateBtn.addEventListener("click", () => {
     return;
   }
 
-  // Sala ordenada alfabéticamente para que ambos vean la misma
   const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   const room = "priv:" + nombres[0] + "|" + nombres[1];
 
   if (!privateRooms.includes(room)) {
     privateRooms.push(room);
-    localStorage.setItem("zummchat_privrooms", JSON.stringify(privateRooms));
-    createRoomButton(room);
+    savePrivateRooms();
+    createPrivateButton(room);
   }
 
   switchRoom(room);
@@ -114,11 +154,7 @@ privateBtn.addEventListener("click", () => {
 // ---- Compartir ----
 shareBtn.addEventListener("click", async () => {
   const url = location.href;
-  const datos = {
-    title: "ZummChat",
-    text: "Únete a mi chat ZummChat 🐦💬",
-    url: url
-  };
+  const datos = { title: "ZummChat", text: "Únete a mi chat ZummChat 🐦💬", url };
   if (navigator.share) {
     try { await navigator.share(datos); } catch (e) {}
   } else {
@@ -152,7 +188,7 @@ function formatTime(iso) {
 
 function renderMessage(m) {
   if (!m || !m.id || rendered.has(m.id)) return;
-  if (m.room !== currentRoom) return; // solo la sala actual
+  if (m.room !== currentRoom) return;
   rendered.add(m.id);
 
   const div = document.createElement("div");
@@ -183,7 +219,7 @@ function renderMessage(m) {
   scrollToBottom();
 }
 
-// ---- Historial de la sala ----
+// ---- Historial ----
 async function loadHistory() {
   const { data, error } = await supabaseClient
     .from("messages")
@@ -228,6 +264,6 @@ supabaseClient
   .subscribe(status => console.log("Realtime:", status));
 
 // ---- Arrancar ----
-chatTitle.textContent = "ZummChat · " + roomLabel(currentRoom);
+chatTitle.textContent = "ZummChat · General";
 updateActiveTab();
 loadHistory();

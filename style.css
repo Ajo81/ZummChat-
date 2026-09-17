@@ -238,3 +238,17 @@ body { margin: 0; background: #000; font-family: system-ui, Arial, sans-serif; c
   font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
 }
 #sendBtn:active { transform: scale(.97); }
+.date-sep {
+  text-align: center;
+  color: #00ff66;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 12px 0 6px 0;
+  opacity: 0.8;
+}
+.date-sep::before,
+.date-sep::after {
+  content: " ─── ";
+  color: #333;
+}

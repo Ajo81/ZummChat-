@@ -3,7 +3,6 @@ const supabaseClient = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdibm1naWFhemZmaHVuendndWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MjMyMTAsImV4cCI6MjEwNTA5OTIxMH0.h7biHjEprLOsxbm4Hgt28psiIHeAEdlTv9LClGPFGRg"
 );
 
-// --- Quitar el splash PRIMERO, pase lo que pase ---
 const splash = document.getElementById("splash");
 setTimeout(() => {
   if (!splash) return;
@@ -12,7 +11,6 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
-// --- Referencias seguras ---
 const messagesEl   = document.getElementById("messages");
 const inputEl      = document.getElementById("messageInput");
 const sendBtn      = document.getElementById("sendBtn");
@@ -21,7 +19,6 @@ const chatTitle    = document.getElementById("chat-title");
 const privateBtn   = document.getElementById("privateBtn");
 const privRoomBar  = document.getElementById("priv-room-bar");
 
-// ---- Nombre de usuario ----
 let username = localStorage.getItem("zummchat_user");
 if (!username) {
   username = prompt("¿Cómo te llamas?");
@@ -30,10 +27,8 @@ if (!username) {
   localStorage.setItem("zummchat_user", username);
 }
 
-// ---- Sala actual: SIEMPRE arranca en "general" ----
 let currentRoom = "general";
 
-// ---- Colores ----
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
@@ -43,7 +38,6 @@ function colorForUser(name) {
   return "hsl(" + (hash % 360) + ", 75%, 65%)";
 }
 
-// ---- Nombre visible ----
 function roomLabel(room) {
   if (room.startsWith("priv:")) {
     const partes = room.replace("priv:", "").split("|");
@@ -53,15 +47,9 @@ function roomLabel(room) {
   return room.charAt(0).toUpperCase() + room.slice(1);
 }
 
-// ---- Ocultar/mostrar privados (seguro si el elemento no existe) ----
-function hidePrivados() {
-  if (privRoomBar) privRoomBar.style.display = "none";
-}
-function showPrivados() {
-  if (privRoomBar) privRoomBar.style.display = "flex";
-}
+function hidePrivados() { if (privRoomBar) privRoomBar.style.display = "none"; }
+function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
 
-// ---- Cambiar sala ----
 function switchRoom(room) {
   currentRoom = room;
   if (!room.startsWith("priv:")) hidePrivados();
@@ -74,21 +62,17 @@ function switchRoom(room) {
   loadHistory();
 }
 
-// ---- Marcar activo ----
 function updateActiveTab() {
   document.querySelectorAll(".room-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.room === currentRoom);
   });
 }
 
-// ---- Salas públicas ----
 document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
   btn.addEventListener("click", () => switchRoom(btn.dataset.room));
 });
 
-// ---- Chats privados ----
 let privateRooms = JSON.parse(localStorage.getItem("zummchat_privrooms") || "[]");
-
 function savePrivateRooms() {
   localStorage.setItem("zummchat_privrooms", JSON.stringify(privateRooms));
 }
@@ -123,7 +107,6 @@ function createPrivateButton(room) {
 privateRooms.forEach(r => createPrivateButton(r));
 hidePrivados();
 
-// ---- Crear chat privado ----
 if (privateBtn) {
   privateBtn.addEventListener("click", () => {
     const otro = prompt("¿Con quién quieres hablar en privado? (escribe su nombre exacto)");
@@ -147,7 +130,6 @@ if (privateBtn) {
   });
 }
 
-// ---- Compartir ----
 if (shareBtn) {
   shareBtn.addEventListener("click", async () => {
     const url = location.href;
@@ -163,7 +145,6 @@ if (shareBtn) {
   });
 }
 
-// ---- Render ----
 const rendered = new Set();
 function scrollToBottom() {
   if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -185,6 +166,7 @@ function renderMessage(m) {
 
   const div = document.createElement("div");
   div.className = "msg";
+  div.dataset.msgId = m.id;
 
   const header = document.createElement("div");
   header.className = "msg-header";
@@ -194,12 +176,37 @@ function renderMessage(m) {
   nameEl.textContent = m.username || "Anónimo";
   nameEl.style.color = colorForUser(m.username);
 
+  const rightSide = document.createElement("span");
+  rightSide.className = "msg-right";
+
   const timeEl = document.createElement("span");
   timeEl.className = "msg-time";
   timeEl.textContent = formatTime(m.created_at);
+  rightSide.appendChild(timeEl);
+
+  // Botón borrar solo si es mi mensaje
+  if ((m.username || "").toLowerCase() === username.toLowerCase()) {
+    const delBtn = document.createElement("button");
+    delBtn.className = "del-btn";
+    delBtn.textContent = "🗑️";
+    delBtn.title = "Borrar mensaje";
+    delBtn.addEventListener("click", async () => {
+      if (!confirm("¿Borrar este mensaje?")) return;
+      const { error } = await supabaseClient
+        .from("messages")
+        .delete()
+        .eq("id", m.id);
+      if (error) {
+        alert("No se pudo borrar: " + error.message);
+        return;
+      }
+      removeMessageFromDOM(m.id);
+    });
+    rightSide.appendChild(delBtn);
+  }
 
   header.appendChild(nameEl);
-  header.appendChild(timeEl);
+  header.appendChild(rightSide);
 
   const body = document.createElement("div");
   body.className = "msg-body";
@@ -211,7 +218,12 @@ function renderMessage(m) {
   scrollToBottom();
 }
 
-// ---- Historial ----
+function removeMessageFromDOM(id) {
+  rendered.delete(id);
+  const el = messagesEl.querySelector('[data-msg-id="' + id + '"]');
+  if (el) el.remove();
+}
+
 async function loadHistory() {
   const { data, error } = await supabaseClient
     .from("messages")
@@ -223,7 +235,6 @@ async function loadHistory() {
   data.forEach(renderMessage);
 }
 
-// ---- Enviar ----
 async function sendMessage() {
   if (!inputEl) return;
   const text = inputEl.value.trim();
@@ -248,15 +259,16 @@ async function sendMessage() {
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
-// ---- Realtime ----
 supabaseClient
   .channel("messages-realtime")
   .on("postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
       payload => renderMessage(payload.new))
+  .on("postgres_changes",
+      { event: "DELETE", schema: "public", table: "messages" },
+      payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })
   .subscribe(status => console.log("Realtime:", status));
 
-// ---- Arrancar ----
 if (chatTitle) chatTitle.textContent = "ZummChat · General";
 updateActiveTab();
 loadHistory();

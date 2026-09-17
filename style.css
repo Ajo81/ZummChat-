@@ -10,11 +10,36 @@ body { margin: 0; background: #000; font-family: system-ui, Arial, sans-serif; c
 }
 #splash.hidden { opacity: 0; pointer-events: none; }
 #matrixRain { position: absolute; inset: 0; }
-#logo { width: 120px; margin-bottom: 20px; position: relative; animation: fadeIn 1.2s ease-in-out; }
+
+#logo {
+  width: 120px;
+  margin-bottom: 20px;
+  position: relative;
+  animation: flotar 2.5s ease-in-out infinite, brillar 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px #00ff66);
+}
+
+@keyframes flotar {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+
+@keyframes brillar {
+  0%, 100% { filter: drop-shadow(0 0 6px #00ff66) drop-shadow(0 0 12px #00ff66); }
+  50%      { filter: drop-shadow(0 0 14px #00ff66) drop-shadow(0 0 28px #00ff66); }
+}
+
 .matrix-text {
   position: relative; font-size: 32px; color: #00ff66;
   text-shadow: 0 0 10px #00ff66; letter-spacing: 2px;
+  animation: textoPulso 2s ease-in-out infinite;
 }
+
+@keyframes textoPulso {
+  0%, 100% { text-shadow: 0 0 8px #00ff66, 0 0 16px #00ff66; }
+  50%      { text-shadow: 0 0 16px #00ff66, 0 0 32px #00ff66; }
+}
+
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
 #chat-container { padding: 16px; max-width: 720px; margin: 0 auto; }

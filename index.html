@@ -1,1 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#00ff66">
+  <title>ZummChat</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+  <div id="splash">
+    <canvas id="matrixRain"></canvas>
+    <img src="logo.png" id="logo" alt="Zunzún">
+    <h2 class="matrix-text">ZummChat</h2>
+  </div>
+
+  <div id="chat-container">
+    <div id="messages"></div>
+    <div id="input-area">
+      <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
+      <button id="sendBtn" type="button">Enviar</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+  <script src="matrix.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+  </script>
+</body>
+</html>

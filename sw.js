@@ -1,6 +1,6 @@
-const CACHE = "zummchat-v1";
+const CACHE = "zummchat-v2";
 const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./matrix.js",
-                "./manifest.json", "./logo.png", "./icon.png"];
+                "./manifest.json", "./logo.svg", "./icon.svg"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

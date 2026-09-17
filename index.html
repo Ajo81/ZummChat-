@@ -20,9 +20,22 @@
   <div id="chat-container">
     <div id="chat-header">
       <span id="chat-title">ZummChat</span>
-      <button id="shareBtn" type="button" title="Compartir">📤 Compartir</button>
+      <button id="shareBtn" type="button">📤 Compartir</button>
     </div>
+
+    <div id="room-bar">
+      <button class="room-btn active" data-room="general">General</button>
+      <button class="room-btn" data-room="amigos">Amigos</button>
+      <button class="room-btn" data-room="familia">Familia</button>
+      <button class="room-btn" data-room="trabajo">Trabajo</button>
+    </div>
+
+    <div id="priv-bar">
+      <button id="privateBtn" type="button">🔒 Chat privado</button>
+    </div>
+
     <div id="messages"></div>
+
     <div id="input-area">
       <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
       <button id="sendBtn" type="button">Enviar</button>

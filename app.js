@@ -3,6 +3,16 @@ const supabaseClient = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdibm1naWFhemZmaHVuendndWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MjMyMTAsImV4cCI6MjEwNTA5OTIxMH0.h7biHjEprLOsxbm4Hgt28psiIHeAEdlTv9LClGPFGRg"
 );
 
+// --- Quitar el splash PRIMERO, pase lo que pase ---
+const splash = document.getElementById("splash");
+setTimeout(() => {
+  if (!splash) return;
+  splash.classList.add("hidden");
+  if (window.stopMatrixRain) window.stopMatrixRain();
+  setTimeout(() => splash.remove(), 500);
+}, 2000);
+
+// --- Referencias seguras ---
 const messagesEl   = document.getElementById("messages");
 const inputEl      = document.getElementById("messageInput");
 const sendBtn      = document.getElementById("sendBtn");
@@ -10,7 +20,6 @@ const shareBtn     = document.getElementById("shareBtn");
 const chatTitle    = document.getElementById("chat-title");
 const privateBtn   = document.getElementById("privateBtn");
 const privRoomBar  = document.getElementById("priv-room-bar");
-const privSection  = document.getElementById("priv-section");
 
 // ---- Nombre de usuario ----
 let username = localStorage.getItem("zummchat_user");
@@ -23,8 +32,6 @@ if (!username) {
 
 // ---- Sala actual: SIEMPRE arranca en "general" ----
 let currentRoom = "general";
-localStorage.removeItem("zummchat_room"); // ya no recordamos sala
-localStorage.removeItem("zummchat_partner");
 
 // ---- Colores ----
 function colorForUser(name) {
@@ -46,29 +53,23 @@ function roomLabel(room) {
   return room.charAt(0).toUpperCase() + room.slice(1);
 }
 
-// ---- Ocultar privados al volver a sala pública ----
+// ---- Ocultar/mostrar privados (seguro si el elemento no existe) ----
 function hidePrivados() {
-  privRoomBar.style.display = "none";
+  if (privRoomBar) privRoomBar.style.display = "none";
 }
-
 function showPrivados() {
-  privRoomBar.style.display = "flex";
+  if (privRoomBar) privRoomBar.style.display = "flex";
 }
 
 // ---- Cambiar sala ----
 function switchRoom(room) {
   currentRoom = room;
+  if (!room.startsWith("priv:")) hidePrivados();
+  else showPrivados();
 
-  // Si entro a sala pública -> oculto los privados
-  if (!room.startsWith("priv:")) {
-    hidePrivados();
-  } else {
-    showPrivados();
-  }
-
-  chatTitle.textContent = "ZummChat · " + roomLabel(room);
+  if (chatTitle) chatTitle.textContent = "ZummChat · " + roomLabel(room);
   rendered.clear();
-  messagesEl.innerHTML = "";
+  if (messagesEl) messagesEl.innerHTML = "";
   updateActiveTab();
   loadHistory();
 }
@@ -93,6 +94,7 @@ function savePrivateRooms() {
 }
 
 function createPrivateButton(room) {
+  if (!privRoomBar) return;
   const btn = document.createElement("button");
   btn.className = "room-btn priv";
   btn.dataset.room = room;
@@ -107,14 +109,10 @@ function createPrivateButton(room) {
   close.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!confirm("¿Eliminar este chat privado de tu lista?")) return;
-
     privateRooms = privateRooms.filter(r => r !== room);
     savePrivateRooms();
     btn.remove();
-
-    if (currentRoom === room) {
-      switchRoom("general");
-    }
+    if (currentRoom === room) switchRoom("general");
   });
   btn.appendChild(close);
 
@@ -122,61 +120,54 @@ function createPrivateButton(room) {
   privRoomBar.appendChild(btn);
 }
 
-// Pintar los privados guardados
 privateRooms.forEach(r => createPrivateButton(r));
-
-// Ocultar la barra de privados al arrancar
 hidePrivados();
 
 // ---- Crear chat privado ----
-privateBtn.addEventListener("click", () => {
-  const otro = prompt("¿Con quién quieres hablar en privado? (escribe su nombre exacto)");
-  if (!otro || !otro.trim()) return;
-  const otroLimpio = otro.trim().substring(0, 20);
+if (privateBtn) {
+  privateBtn.addEventListener("click", () => {
+    const otro = prompt("¿Con quién quieres hablar en privado? (escribe su nombre exacto)");
+    if (!otro || !otro.trim()) return;
+    const otroLimpio = otro.trim().substring(0, 20);
 
-  if (otroLimpio.toLowerCase() === username.toLowerCase()) {
-    alert("No puedes chatear contigo mismo 😅");
-    return;
-  }
+    if (otroLimpio.toLowerCase() === username.toLowerCase()) {
+      alert("No puedes chatear contigo mismo 😅");
+      return;
+    }
 
-  const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-  const room = "priv:" + nombres[0] + "|" + nombres[1];
+    const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    const room = "priv:" + nombres[0] + "|" + nombres[1];
 
-  if (!privateRooms.includes(room)) {
-    privateRooms.push(room);
-    savePrivateRooms();
-    createPrivateButton(room);
-  }
-
-  switchRoom(room);
-});
+    if (!privateRooms.includes(room)) {
+      privateRooms.push(room);
+      savePrivateRooms();
+      createPrivateButton(room);
+    }
+    switchRoom(room);
+  });
+}
 
 // ---- Compartir ----
-shareBtn.addEventListener("click", async () => {
-  const url = location.href;
-  const datos = { title: "ZummChat", text: "Únete a mi chat ZummChat 🐦💬", url };
-  if (navigator.share) {
-    try { await navigator.share(datos); } catch (e) {}
-  } else {
-    try {
-      await navigator.clipboard.writeText(url);
-      alert("Enlace copiado: " + url);
-    } catch (e) { prompt("Copia este enlace:", url); }
-  }
-});
-
-// ---- Splash ----
-const splash = document.getElementById("splash");
-setTimeout(() => {
-  if (!splash) return;
-  splash.classList.add("hidden");
-  if (window.stopMatrixRain) window.stopMatrixRain();
-  setTimeout(() => splash.remove(), 500);
-}, 2000);
+if (shareBtn) {
+  shareBtn.addEventListener("click", async () => {
+    const url = location.href;
+    const datos = { title: "ZummChat", text: "Únete a mi chat ZummChat 🐦💬", url };
+    if (navigator.share) {
+      try { await navigator.share(datos); } catch (e) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        alert("Enlace copiado: " + url);
+      } catch (e) { prompt("Copia este enlace:", url); }
+    }
+  });
+}
 
 // ---- Render ----
 const rendered = new Set();
-function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+function scrollToBottom() {
+  if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+}
 
 function formatTime(iso) {
   if (!iso) return "";
@@ -189,6 +180,7 @@ function formatTime(iso) {
 function renderMessage(m) {
   if (!m || !m.id || rendered.has(m.id)) return;
   if (m.room !== currentRoom) return;
+  if (!messagesEl) return;
   rendered.add(m.id);
 
   const div = document.createElement("div");
@@ -233,6 +225,7 @@ async function loadHistory() {
 
 // ---- Enviar ----
 async function sendMessage() {
+  if (!inputEl) return;
   const text = inputEl.value.trim();
   if (!text) return;
   inputEl.value = "";
@@ -252,8 +245,8 @@ async function sendMessage() {
   renderMessage(data);
 }
 
-sendBtn.addEventListener("click", sendMessage);
-inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+if (sendBtn) sendBtn.addEventListener("click", sendMessage);
+if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
 // ---- Realtime ----
 supabaseClient
@@ -264,6 +257,6 @@ supabaseClient
   .subscribe(status => console.log("Realtime:", status));
 
 // ---- Arrancar ----
-chatTitle.textContent = "ZummChat · General";
+if (chatTitle) chatTitle.textContent = "ZummChat · General";
 updateActiveTab();
 loadHistory();

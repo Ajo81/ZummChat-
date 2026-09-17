@@ -7,7 +7,6 @@ const messagesEl = document.getElementById("messages");
 const inputEl    = document.getElementById("messageInput");
 const sendBtn    = document.getElementById("sendBtn");
 
-// ---- Nombre de usuario ----
 let username = localStorage.getItem("zummchat_user");
 if (!username) {
   username = prompt("¿Cómo te llamas?");
@@ -16,7 +15,6 @@ if (!username) {
   localStorage.setItem("zummchat_user", username);
 }
 
-// ---- Color por usuario (hash mejorado) ----
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
@@ -27,7 +25,6 @@ function colorForUser(name) {
   return "hsl(" + hue + ", 75%, 65%)";
 }
 
-// ---- Splash ----
 const splash = document.getElementById("splash");
 setTimeout(() => {
   if (!splash) return;
@@ -36,7 +33,6 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
-// ---- Render ----
 const rendered = new Set();
 function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
@@ -80,20 +76,16 @@ function renderMessage(m) {
   scrollToBottom();
 }
 
-// ---- Historial ----
 async function loadHistory() {
-  console.log("Cargando historial...");
   const { data, error } = await supabaseClient
     .from("messages")
     .select("id, text, username, created_at")
     .order("created_at", { ascending: true })
     .limit(200);
   if (error) { console.error("ERROR historial:", error); return; }
-  console.log("Historial OK:", data.length, "mensajes");
   data.forEach(renderMessage);
 }
 
-// ---- Enviar ----
 async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
@@ -117,7 +109,6 @@ async function sendMessage() {
 sendBtn.addEventListener("click", sendMessage);
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
-// ---- Realtime ----
 supabaseClient
   .channel("messages-realtime")
   .on("postgres_changes",

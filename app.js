@@ -16,6 +16,27 @@ if (!username) {
   localStorage.setItem("zummchat_user", username);
 }
 
+// ---- Color por usuario ----
+function colorForUser(name) {
+  if (!name) name = "Anónimo";
+  // Genera un color fijo a partir del nombre
+  const colores = [
+    "#00ff66", // verde
+    "#4fc3f7", // azul claro
+    "#ffb74d", // naranja
+    "#ba68c8", // morado
+    "#f06292", // rosa
+    "#fff176", // amarillo
+    "#4db6ac", // turquesa
+    "#e57373", // rojo suave
+    "#9575cd", // violeta
+    "#aed581"  // verde lima
+  ];
+  let suma = 0;
+  for (let i = 0; i < name.length; i++) suma += name.charCodeAt(i);
+  return colores[suma % colores.length];
+}
+
 // ---- Splash ----
 const splash = document.getElementById("splash");
 setTimeout(() => {
@@ -50,6 +71,7 @@ function renderMessage(m) {
   const nameEl = document.createElement("span");
   nameEl.className = "msg-name";
   nameEl.textContent = m.username || "Anónimo";
+  nameEl.style.color = colorForUser(m.username);
 
   const timeEl = document.createElement("span");
   timeEl.className = "msg-time";

@@ -1,6 +1,6 @@
-// ============ CONEXIÓN SUPABASE ============
-const SUPABASE_URL = "https://gbnmgiaazffhunzwguhu.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdibm1naWFhemZmaHVuendndWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MjMyMTAsImV4cCI6MjEwNTA5OTIxMH0.h7biHjEprLOsxbm4Hgt28psiIHeAEdlTv9LClGPFGRg";
+// ============ CONEXIÓN SUPABASE (Mi Círculo) ============
+const SUPABASE_URL = "https://biqjwbopvjyovxmmutly.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpcWp3Ym9wdmp5b3Z4bW11dGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg0ODQsImV4cCI6MjEwMzYyNDQ4NH0.q7IdjNy_OPDpPOJNUJ3FkxDm91LjJPmEP0pFu9CD4dA";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -14,37 +14,37 @@ setTimeout(() => {
 }, 2000);
 
 // ============ REFERENCIAS DOM ============
-const messagesEl    = document.getElementById("messages");
-const inputEl       = document.getElementById("messageInput");
-const sendBtn       = document.getElementById("sendBtn");
-const shareBtn      = document.getElementById("shareBtn");
-const chatTitle     = document.getElementById("chat-title");
-const privateBtn    = document.getElementById("privateBtn");
-const privRoomBar   = document.getElementById("priv-room-bar");
-const emojiBtn      = document.getElementById("emojiBtn");
-const emojiBar      = document.getElementById("emoji-bar");
-const fileBtn       = document.getElementById("fileBtn");
-const fileInput     = document.getElementById("fileInput");
-const soundBtn      = document.getElementById("soundBtn");
-const callBtn       = document.getElementById("callBtn");
-const videoBtn      = document.getElementById("videoBtn");
-const usersBtn      = document.getElementById("usersBtn");
-const usersPanel    = document.getElementById("usersPanel");
+const messagesEl      = document.getElementById("messages");
+const inputEl         = document.getElementById("messageInput");
+const sendBtn         = document.getElementById("sendBtn");
+const shareBtn        = document.getElementById("shareBtn");
+const chatTitle       = document.getElementById("chat-title");
+const privateBtn      = document.getElementById("privateBtn");
+const privRoomBar     = document.getElementById("priv-room-bar");
+const emojiBtn        = document.getElementById("emojiBtn");
+const emojiBar        = document.getElementById("emoji-bar");
+const fileBtn         = document.getElementById("fileBtn");
+const fileInput       = document.getElementById("fileInput");
+const soundBtn        = document.getElementById("soundBtn");
+const callBtn         = document.getElementById("callBtn");
+const videoBtn        = document.getElementById("videoBtn");
+const usersBtn        = document.getElementById("usersBtn");
+const usersPanel      = document.getElementById("usersPanel");
 const usersPanelClose = document.getElementById("usersPanelClose");
-const userList      = document.getElementById("userList");
-const noUsers       = document.getElementById("noUsers");
-const callOverlay   = document.getElementById("callOverlay");
-const callStatus    = document.getElementById("callStatus");
-const localVideo    = document.getElementById("localVideo");
-const remoteVideo   = document.getElementById("remoteVideo");
-const muteBtn       = document.getElementById("muteBtn");
-const acceptCallBtn = document.getElementById("acceptCallBtn");
-const hangupBtn     = document.getElementById("hangupBtn");
-const incomingModal = document.getElementById("incomingModal");
-const incomingAvatar = document.getElementById("incomingAvatar");
-const incomingName  = document.getElementById("incomingName");
-const incomingText  = document.getElementById("incomingText");
-const rejectBtn     = document.getElementById("rejectBtn");
+const userList        = document.getElementById("userList");
+const noUsers         = document.getElementById("noUsers");
+const callOverlay     = document.getElementById("callOverlay");
+const callStatus      = document.getElementById("callStatus");
+const localVideo      = document.getElementById("localVideo");
+const remoteVideo     = document.getElementById("remoteVideo");
+const muteBtn         = document.getElementById("muteBtn");
+const acceptCallBtn   = document.getElementById("acceptCallBtn");
+const hangupBtn       = document.getElementById("hangupBtn");
+const incomingModal   = document.getElementById("incomingModal");
+const incomingAvatar  = document.getElementById("incomingAvatar");
+const incomingName    = document.getElementById("incomingName");
+const incomingText    = document.getElementById("incomingText");
+const rejectBtn       = document.getElementById("rejectBtn");
 const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
 
 const MAX_SIZE_MB = 5;
@@ -53,18 +53,46 @@ const ICE_SERVERS = [
   { urls: "stun:stun1.l.google.com:19302" }
 ];
 
+// ============ ALMACENAMIENTO SEGURO ============
+function makeStorage(tipo) {
+  try {
+    const backend = tipo === "local" ? window.localStorage : window.sessionStorage;
+    backend.setItem("__zumm_t", "1");
+    backend.removeItem("__zumm_t");
+    return backend;
+  } catch (e) {
+    const mem = {};
+    return {
+      getItem: k => Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null,
+      setItem: (k, v) => { mem[k] = String(v); },
+      removeItem: k => { delete mem[k]; }
+    };
+  }
+}
+const LS = makeStorage("local");
+const SS = makeStorage("session");
+
 // ============ USUARIO ============
-let username = localStorage.getItem("zummchat_user");
+let username = LS.getItem("zummchat_user");
 if (!username) {
   username = prompt("¿Cómo te llamas?");
   if (!username || !username.trim()) username = "Anónimo";
   username = username.trim().substring(0, 20);
-  localStorage.setItem("zummchat_user", username);
+  LS.setItem("zummchat_user", username);
 }
+
+if (!SS.getItem("zummchat_cid")) {
+  SS.setItem("zummchat_cid",
+    (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : "c" + Date.now() + Math.random().toString(36).slice(2));
+}
+const myClientId = SS.getItem("zummchat_cid");
+
 let currentRoom = "general";
 
 // ============ SONIDO ============
-let sonidoActivo = localStorage.getItem("zummchat_sonido") !== "off";
+let sonidoActivo = LS.getItem("zummchat_sonido") !== "off";
 let audioCtx = null;
 
 function initAudio() {
@@ -98,15 +126,14 @@ document.body.addEventListener("touchstart", initAudio, { once: true });
 document.body.addEventListener("click", initAudio, { once: true });
 
 function updateSoundBtn() {
-  if (!soundBtn) return;
-  soundBtn.textContent = sonidoActivo ? "🔔" : "🔕";
+  if (soundBtn) soundBtn.textContent = sonidoActivo ? "🔔" : "🔕";
 }
 updateSoundBtn();
 
 if (soundBtn) {
   soundBtn.addEventListener("click", () => {
     sonidoActivo = !sonidoActivo;
-    localStorage.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
+    LS.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
     updateSoundBtn();
     if (sonidoActivo) playBeep();
   });
@@ -186,7 +213,7 @@ function switchRoom(room) {
   if (messagesEl) messagesEl.innerHTML = "";
   updateActiveTab();
   loadHistory();
-  actualizarPresencia();
+  resuscribirPresence();
 }
 
 function updateActiveTab() {
@@ -199,9 +226,9 @@ document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
   btn.addEventListener("click", () => switchRoom(btn.dataset.room));
 });
 
-let privateRooms = JSON.parse(localStorage.getItem("zummchat_privrooms") || "[]");
+let privateRooms = JSON.parse(LS.getItem("zummchat_privrooms") || "[]");
 function savePrivateRooms() {
-  localStorage.setItem("zummchat_privrooms", JSON.stringify(privateRooms));
+  LS.setItem("zummchat_privrooms", JSON.stringify(privateRooms));
 }
 
 function createPrivateButton(room) {
@@ -231,23 +258,26 @@ function createPrivateButton(room) {
 privateRooms.forEach(r => createPrivateButton(r));
 hidePrivados();
 
+function openPrivateWith(otroNombre) {
+  const otroLimpio = String(otroNombre || "").trim().substring(0, 20);
+  if (!otroLimpio) return;
+  if (otroLimpio.toLowerCase() === username.toLowerCase()) return;
+  const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  const room = "priv:" + nombres[0] + "|" + nombres[1];
+  if (!privateRooms.includes(room)) {
+    privateRooms.push(room);
+    savePrivateRooms();
+    createPrivateButton(room);
+  }
+  switchRoom(room);
+  if (usersPanel) usersPanel.classList.remove("show");
+}
+
 if (privateBtn) {
   privateBtn.addEventListener("click", () => {
     const otro = prompt("¿Con quién quieres hablar en privado? (escribe su nombre exacto)");
     if (!otro || !otro.trim()) return;
-    const otroLimpio = otro.trim().substring(0, 20);
-    if (otroLimpio.toLowerCase() === username.toLowerCase()) {
-      alert("No puedes chatear contigo mismo 😅");
-      return;
-    }
-    const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    const room = "priv:" + nombres[0] + "|" + nombres[1];
-    if (!privateRooms.includes(room)) {
-      privateRooms.push(room);
-      savePrivateRooms();
-      createPrivateButton(room);
-    }
-    switchRoom(room);
+    openPrivateWith(otro);
   });
 }
 
@@ -328,7 +358,7 @@ if (fileInput) {
     const texto = inputEl ? inputEl.value.trim() : "";
     if (inputEl) inputEl.value = "";
 
-    const { data, error } = await supabaseClient.from("messages")
+    const { data, error } = await supabaseClient.from("zumm_messages")
       .insert([{
         text: texto || "",
         username: username,
@@ -434,7 +464,7 @@ function renderMessage(m, esNuevo) {
     delBtn.textContent = "🗑️";
     delBtn.addEventListener("click", async () => {
       if (!confirm("¿Borrar este mensaje?")) return;
-      const { error } = await supabaseClient.from("messages").delete().eq("id", m.id);
+      const { error } = await supabaseClient.from("zumm_messages").delete().eq("id", m.id);
       if (error) { alert("No se pudo borrar: " + error.message); return; }
       removeMessageFromDOM(m.id);
     });
@@ -494,7 +524,7 @@ function removeMessageFromDOM(id) {
 }
 
 async function loadHistory() {
-  const { data, error } = await supabaseClient.from("messages")
+  const { data, error } = await supabaseClient.from("zumm_messages")
     .select("id, text, username, created_at, room, file_url, file_name, file_type")
     .eq("room", currentRoom)
     .order("created_at", { ascending: true })
@@ -509,7 +539,7 @@ async function sendMessage() {
   if (!text) return;
   inputEl.value = "";
 
-  const { data, error } = await supabaseClient.from("messages")
+  const { data, error } = await supabaseClient.from("zumm_messages")
     .insert([{ text: text, username: username, room: currentRoom }])
     .select()
     .single();
@@ -527,14 +557,14 @@ if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
 supabaseClient
-  .channel("messages-realtime")
+  .channel("zumm-messages-realtime")
   .on("postgres_changes",
-      { event: "INSERT", schema: "public", table: "messages" },
+      { event: "INSERT", schema: "public", table: "zumm_messages" },
       payload => renderMessage(payload.new, true))
   .on("postgres_changes",
-      { event: "DELETE", schema: "public", table: "messages" },
+      { event: "DELETE", schema: "public", table: "zumm_messages" },
       payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })
-  .subscribe();
+  .subscribe(status => console.log("Realtime mensajes:", status));
 
 function openImageModal(url) {
   let modal = document.getElementById("imgModal");
@@ -558,274 +588,143 @@ function openImageModal(url) {
 }
 
 // ================================================================
-// ============ LLAMADAS USANDO LA TABLA `llamadas` ==============
+// ============ PRESENCE NATIVO (como Mi Círculo) ================
 // ================================================================
 
-let pc = null;
-let localStream = null;
-let callPeer = null;
-let pendingOffer = null;
-let pendingKind = "audio";
+let presenceChannel = null;
+let presenceReady = false;
 let usersOnline = [];
-let miLlamadaId = null;
-let pollingPresencia = null;
-let pollingSenales = null;
-let ultimoIdSenal = 0;
 
-// ---- PRESENCIA via tabla `presencia` ----
-async function actualizarPresencia() {
-  try {
-    const { error } = await supabaseClient.from("presencia").upsert({
-      username: username,
-      room: currentRoom,
-      last_seen: new Date().toISOString()
-    }, { onConflict: "username,room" });
-
-    if (error) console.error("Error presencia:", error.message);
-  } catch (e) { console.error("Error presencia:", e); }
+function presenceChannelName() {
+  return "zumm-presence-" + currentRoom.replace(/[^a-zA-Z0-9]/g, "_");
 }
 
-async function leerPresencia() {
-  try {
-    const hace30s = new Date(Date.now() - 30000).toISOString();
-    const { data, error } = await supabaseClient
-      .from("presencia")
-      .select("username, last_seen")
-      .eq("room", currentRoom)
-      .gte("last_seen", hace30s);
+function resuscribirPresence() {
+  if (presenceChannel) {
+    try { presenceChannel.unsubscribe(); } catch (e) {}
+    try { supabaseClient.removeChannel(presenceChannel); } catch (e) {}
+    presenceChannel = null;
+  }
+  presenceReady = false;
+  usersOnline = [];
+  renderUserList();
 
-    if (error) { console.error("Error leyendo presencia:", error.message); return; }
-
-    usersOnline = (data || [])
-      .map(u => u.username)
-      .filter(u => u.toLowerCase() !== username.toLowerCase());
-
-    renderUserList();
-  } catch (e) { console.error(e); }
-}
-
-// ---- SEÑALIZACIÓN via tabla `llamadas` ----
-async function enviarSenal(evento, datos) {
-  try {
-    await supabaseClient.from("llamadas").insert([{
-      emisor: username,
-      receptor: datos.to || "",
-      tipo: evento,
-      room_id: datos.from || "",
-      estado: datos.kind || JSON.stringify(datos.payload || "")
-    }]);
-  } catch (e) { console.error("Error al enviar señal:", e); }
-}
-
-async function leerSenalesNuevas() {
-  try {
-    const { data, error } = await supabaseClient
-      .from("llamadas")
-      .select("*")
-      .eq("receptor", username)
-      .order("id", { ascending: true })
-      .limit(20);
-
-    if (error) { console.error("Error señales:", error.message); return; }
-
-    for (const senal of (data || [])) {
-      if (senal.id <= ultimoIdSenal) continue;
-      ultimoIdSenal = senal.id;
-
-      const edad = Date.now() - new Date(senal.created_at).getTime();
-      if (edad > 60000) continue;
-
-      procesarSenal(senal);
+  presenceChannel = supabaseClient.channel(presenceChannelName(), {
+    config: {
+      presence: { key: username },
+      broadcast: { self: false }
     }
-  } catch (e) { console.error(e); }
+  });
+
+  presenceChannel
+    .on("presence", { event: "sync" }, () => {
+      try {
+        const state = presenceChannel.presenceState();
+        const nuevos = Object.keys(state).filter(u => u.toLowerCase() !== username.toLowerCase());
+        console.log("👥 Presencia sync:", nuevos);
+        usersOnline = nuevos;
+        renderUserList();
+      } catch (e) { console.error("Error presence sync:", e); }
+    })
+    .on("presence", { event: "join" }, ({ key }) => {
+      console.log("➕ Se unió:", key);
+    })
+    .on("presence", { event: "leave" }, ({ key }) => {
+      console.log("➖ Se fue:", key);
+    })
+    .on("broadcast", { event: "signal" }, msg => {
+      handleSignal(msg.payload);
+    })
+    .subscribe(async (status, err) => {
+      console.log("📡 Presence channel:", status, err || "");
+      if (status === "SUBSCRIBED") {
+        try {
+          await presenceChannel.track({
+            username: username,
+            online_at: new Date().toISOString()
+          });
+          presenceReady = true;
+          console.log("✅ Presencia registrada:", username);
+          renderUserList();
+        } catch (e) {
+          console.error("Error al trackear presencia:", e);
+        }
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        presenceReady = false;
+        renderUserList();
+      }
+    });
 }
 
-function procesarSenal(s) {
-  if (s.tipo === "call" && s.estado === "audio") {
-    if (callPeer) return;
-    callPeer = s.emisor;
-    pendingOffer = JSON.parse(s.room_id || "{}");
-    pendingKind = s.estado;
-    mostrarLlamadaEntrante(s.emisor, false);
+function sendSignal(payload) {
+  if (!presenceChannel || !presenceReady) {
+    console.warn("Señal no enviada, presence no listo");
+    return;
+  }
+  presenceChannel.send({
+    type: "broadcast",
+    event: "signal",
+    payload: Object.assign({ from: myClientId, fromName: username }, payload)
+  });
+}
+
+// ================================================================
+// ============ LISTA DE USUARIOS ================================
+// ================================================================
+
+function updateUsersBtn() {
+  if (usersBtn) {
+    const hay = presenceReady && usersOnline.length > 0;
+    usersBtn.classList.toggle("has-users", hay);
   }
 }
 
-// ---- INICIAR LLAMADA ----
-async function startCall(toUser, withVideo) {
-  if (toUser.toLowerCase() === username.toLowerCase()) return;
+function renderUserList() {
+  if (!userList) return;
+  userList.innerHTML = "";
 
-  callPeer = toUser;
-  callStatus.textContent = "Llamando a " + toUser + "...";
-  callOverlay.classList.add("show");
-  acceptCallBtn.style.display = "none";
-
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: withVideo ? { width: 640, height: 480, facingMode: "user" } : false
-    });
-  } catch (e) {
-    alert("No se pudo acceder al micrófono/cámara:\n" + e.message);
-    endCallUI();
+  if (!presenceReady) {
+    if (noUsers) { noUsers.style.display = "block"; noUsers.textContent = "Conectando..."; }
+    updateUsersBtn();
     return;
   }
 
-  localVideo.srcObject = localStream;
-  pc = createPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-
-  await enviarSenal("call", {
-    to: toUser,
-    from: JSON.stringify(offer),
-    kind: withVideo ? "video" : "audio"
-  });
-}
-
-// ---- RECIBIR LLAMADA ----
-function mostrarLlamadaEntrante(nombre, video) {
-  incomingAvatar.textContent = avatarLetter(nombre);
-  incomingAvatar.style.background = colorForUser(nombre);
-  incomingName.textContent = nombre;
-  incomingText.textContent = video ? "Videollamada entrante..." : "Llamada entrante...";
-  incomingModal.classList.add("show");
-  playRingtone();
-}
-
-rejectBtn.addEventListener("click", () => {
-  stopRingtone();
-  incomingModal.classList.remove("show");
-  callPeer = null;
-  pendingOffer = null;
-});
-
-incomingAcceptBtn.addEventListener("click", async () => {
-  stopRingtone();
-  incomingModal.classList.remove("show");
-  callStatus.textContent = "En llamada con " + callPeer;
-  callOverlay.classList.add("show");
-
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: pendingKind === "video" ? { width: 640, height: 480, facingMode: "user" } : false
-    });
-  } catch (e) {
-    alert("Error micrófono/cámara: " + e.message);
-    endCallUI();
+  if (usersOnline.length === 0) {
+    if (noUsers) { noUsers.style.display = "block"; noUsers.textContent = "Nadie más conectado"; }
+    updateUsersBtn();
     return;
   }
 
-  localVideo.srcObject = localStream;
-  pc = createPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  if (noUsers) noUsers.style.display = "none";
 
-  await pc.setRemoteDescription(new RTCSessionDescription(pendingOffer));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
+  usersOnline.forEach(name => {
+    const li = document.createElement("li");
 
-  await enviarSenal("answer", {
-    to: callPeer,
-    from: JSON.stringify(answer),
-    kind: "answer"
+    const span = document.createElement("span");
+    span.textContent = name;
+    li.appendChild(span);
+
+    const actions = document.createElement("div");
+    actions.className = "user-actions";
+
+    const mkBtn = (texto, titulo, fn) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.title = titulo;
+      b.textContent = texto;
+      b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+      return b;
+    };
+
+    actions.appendChild(mkBtn("💬", "Chat privado", () => openPrivateWith(name)));
+    actions.appendChild(mkBtn("📞", "Llamar", () => startCall(name, false)));
+    actions.appendChild(mkBtn("📹", "Videollamada", () => startCall(name, true)));
+
+    li.appendChild(actions);
+    li.addEventListener("click", () => openPrivateWith(name));
+    userList.appendChild(li);
   });
-  pendingOffer = null;
-});
-
-async function onRemoteIceCandidate({ candidate }) {
-  if (pc && candidate) {
-    await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-  }
-}
-
-async function handleAnswer(answerData) {
-  if (!pc) return;
-  callStatus.textContent = "En llamada con " + callPeer;
-  await pc.setRemoteDescription(new RTCSessionDescription(answerData));
-}
-
-function createPeerConnection() {
-  const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-  conn.onicecandidate = (e) => {
-    if (e.candidate && callPeer) {
-      enviarSenal("ice", { to: callPeer, from: JSON.stringify(e.candidate), kind: "ice" });
-    }
-  };
-  conn.ontrack = (e) => {
-    if (remoteVideo) remoteVideo.srcObject = e.streams[0];
-  };
-  conn.onconnectionstatechange = () => {
-    if (conn.connectionState === "connected") {
-      callStatus.textContent = "En llamada con " + callPeer;
-    } else if (conn.connectionState === "disconnected" || conn.connectionState === "failed") {
-      endCallUI();
-    }
-  };
-  return conn;
-}
-
-let muteado = false;
-if (muteBtn) {
-  muteBtn.addEventListener("click", () => {
-    if (!localStream) return;
-    muteado = !muteado;
-    localStream.getAudioTracks().forEach(t => t.enabled = !muteado);
-    muteBtn.textContent = muteado ? "🔇 Mic" : "🎤 Mic";
-  });
-}
-
-if (hangupBtn) {
-  hangupBtn.addEventListener("click", () => {
-    if (callPeer) enviarSenal("hangup", { to: callPeer, from: "", kind: "hangup" });
-    endCallUI();
-  });
-}
-
-function endCallUI() {
-  stopRingtone();
-  if (pc) { try { pc.close(); } catch (e) {} pc = null; }
-  if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-  }
-  if (localVideo) localVideo.srcObject = null;
-  if (remoteVideo) remoteVideo.srcObject = null;
-  if (callOverlay) callOverlay.classList.remove("show");
-  if (incomingModal) incomingModal.classList.remove("show");
-  callPeer = null;
-  pendingOffer = null;
-  muteado = false;
-  if (muteBtn) muteBtn.textContent = "🎤 Mic";
-}
-
-if (callBtn) {
-  callBtn.addEventListener("click", () => {
-    if (usersOnline.length === 0) {
-      alert("No hay otros usuarios en línea.");
-      return;
-    }
-    const target = usersOnline.length === 1
-      ? usersOnline[0]
-      : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
-    if (!target) return;
-    startCall(target.trim(), false);
-  });
-}
-
-if (videoBtn) {
-  videoBtn.addEventListener("click", () => {
-    if (usersOnline.length === 0) {
-      alert("No hay otros usuarios en línea.");
-      return;
-    }
-    const target = usersOnline.length === 1
-      ? usersOnline[0]
-      : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
-    if (!target) return;
-    startCall(target.trim(), true);
-  });
+  updateUsersBtn();
 }
 
 if (usersBtn) {
@@ -839,44 +738,185 @@ if (usersPanelClose) {
   });
 }
 
-function renderUserList() {
-  if (!userList) return;
-  userList.innerHTML = "";
+// ================================================================
+// ============ LLAMADAS WEBRTC ==================================
+// ================================================================
 
-  if (usersOnline.length === 0) {
-    if (noUsers) noUsers.style.display = "block";
+let pc = null;
+let localStream = null;
+let activeCall = null;
+let incomingCall = null;
+let iceQueue = [];
+let inviteTimer = null;
+let ringTimeout = null;
+let muted = false;
+
+function handleSignal(p) {
+  if (!p || p.from === myClientId) return;
+  if (p.to !== myClientId) return;
+
+  console.log("📨 Señal recibida:", p.type);
+
+  switch (p.type) {
+    case "invite":  onInvite(p);          break;
+    case "cancel":  onCallerCanceled(p); break;
+    case "accept":  onAccept(p);          break;
+    case "reject":  onRejected(p);        break;
+    case "offer":   onOffer(p);           break;
+    case "answer":  onAnswer(p);          break;
+    case "ice":     onRemoteIce(p);       break;
+    case "hangup":  onHangup(p);          break;
+  }
+}
+
+function supportsCalls() {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return true;
+  alert("Tu navegador no soporta llamadas.\nUsa Chrome actualizado y una conexión HTTPS.");
+  return false;
+}
+
+async function startCall(targetName, withVideo) {
+  if (activeCall || incomingCall) { alert("Ya tienes una llamada activa."); return; }
+  if (!presenceReady) { alert("Conectando...\nEspera unos segundos."); return; }
+  if (!supportsCalls()) return;
+
+  const match = usersOnline.find(u => u.toLowerCase() === targetName.toLowerCase());
+  if (!match) { alert(targetName + " no está en línea."); return; }
+  targetName = match;
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: withVideo ? { width: 640, height: 480, facingMode: "user" } : false
+    });
+  } catch (e) {
+    alert("No se pudo acceder a tu micrófono/cámara:\n" + e.message);
     return;
   }
 
-  if (noUsers) noUsers.style.display = "none";
+  localStream = stream;
+  activeCall = {
+    callId: myClientId + "-" + Date.now(),
+    peerName: targetName,
+    peerId: null,
+    role: "caller",
+    video: !!withVideo
+  };
 
-  usersOnline.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = u;
-    const actions = document.createElement("div");
-    actions.className = "user-actions";
+  showCallOverlay("Llamando a " + targetName + "...");
 
-    const callB = document.createElement("button");
-    callB.textContent = "📞";
-    callB.addEventListener("click", (e) => { e.stopPropagation(); startCall(u, false); });
+  sendSignal({
+    type: "invite",
+    to: null,
+    targetName: targetName,
+    callId: activeCall.callId,
+    video: !!withVideo
+  });
 
-    const vidB = document.createElement("button");
-    vidB.textContent = "📹";
-    vidB.addEventListener("click", (e) => { e.stopPropagation(); startCall(u, true); });
+  clearTimeout(inviteTimer);
+  inviteTimer = setTimeout(() => {
+    if (activeCall && activeCall.role === "caller" && !pc) {
+      sendSignal({ type: "cancel", targetName: targetName, callId: activeCall.callId });
+      endCall(false);
+      alert(targetName + " no respondió.");
+    }
+  }, 35000);
+}
 
-    actions.appendChild(callB);
-    actions.appendChild(vidB);
-    li.appendChild(actions);
-    userList.appendChild(li);
+function onInvite(p) {
+  if (p.targetName && p.targetName.toLowerCase() !== username.toLowerCase()) return;
+
+  if (activeCall || incomingCall) {
+    sendSignal({ type: "reject", to: p.from, callId: p.callId, reason: "busy" });
+    return;
+  }
+
+  incomingCall = {
+    callId: p.callId,
+    fromName: p.fromName,
+    fromId: p.from,
+    video: !!p.video
+  };
+
+  if (incomingAvatar) {
+    incomingAvatar.textContent = avatarLetter(p.fromName);
+    incomingAvatar.style.background = colorForUser(p.fromName);
+  }
+  if (incomingName) incomingName.textContent = p.fromName || "Alguien";
+  if (incomingText) incomingText.textContent = p.video ? "Videollamada entrante..." : "Llamada entrante...";
+
+  if (incomingModal) incomingModal.classList.add("show");
+  playRingtone();
+
+  clearTimeout(ringTimeout);
+  ringTimeout = setTimeout(() => {
+    if (incomingCall && incomingCall.callId === p.callId) dismissIncoming(false);
+  }, 35000);
+}
+
+function dismissIncoming(notify) {
+  if (!incomingCall) return;
+  if (notify) sendSignal({ type: "reject", to: incomingCall.fromId, callId: incomingCall.callId });
+  incomingCall = null;
+  stopRingtone();
+  clearTimeout(ringTimeout);
+  if (incomingModal) incomingModal.classList.remove("show");
+}
+
+if (rejectBtn) {
+  rejectBtn.addEventListener("click", () => dismissIncoming(true));
+}
+
+if (incomingAcceptBtn) {
+  incomingAcceptBtn.addEventListener("click", async () => {
+    if (!incomingCall) return;
+    const call = incomingCall;
+    incomingCall = null;
+    stopRingtone();
+    clearTimeout(ringTimeout);
+    if (incomingModal) incomingModal.classList.remove("show");
+
+    if (!supportsCalls()) {
+      sendSignal({ type: "reject", to: call.fromId, callId: call.callId });
+      return;
+    }
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: call.video ? { width: 640, height: 480, facingMode: "user" } : false
+      });
+    } catch (e) {
+      alert("No se pudo acceder a tu micrófono/cámara:\n" + e.message);
+      sendSignal({ type: "reject", to: call.fromId, callId: call.callId });
+      return;
+    }
+
+    activeCall = {
+      callId: call.callId,
+      peerName: call.fromName,
+      peerId: call.fromId,
+      role: "callee",
+      video: call.video
+    };
+
+    showCallOverlay("Conectando con " + call.fromName + "...");
+    sendSignal({ type: "accept", to: call.fromId, callId: call.callId });
+    attachLocalPreview();
   });
 }
 
-// ============ ARRANCAR ============
-if (chatTitle) chatTitle.textContent = "ZummChat · General";
-updateActiveTab();
-loadHistory();
-actualizarPresencia();
-leerPresencia();
-setInterval(actualizarPresencia, 10000);
-setInterval(leerPresencia, 3000);
-setInterval(leerSenalesNuevas, 2000);
+function onCallerCanceled(p) {
+  if (incomingCall && incomingCall.callId === p.callId) dismissIncoming(false);
+}
+
+function onAccept(p) {
+  if (!activeCall || activeCall.role !== "caller" || p.callId !== activeCall.callId) return;
+  activeCall.peerId = p.from;
+  clearTimeout(inviteTimer);
+  inviteTimer = null;
+  if (callStatus) callStatus.textContent = "Conectando...";
+  (async () => {
+    try {
+      create

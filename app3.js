@@ -38,6 +38,7 @@ if (!username) {
 
 let currentRoom = "general";
 
+// ============ SONIDO ============
 let sonidoActivo = localStorage.getItem("zummchat_sonido") !== "off";
 let audioCtx = null;
 
@@ -87,6 +88,7 @@ if (soundBtn) {
   });
 }
 
+// ============ COLORES ============
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
@@ -113,6 +115,7 @@ function roomLabel(room) {
 function hidePrivados() { if (privRoomBar) privRoomBar.style.display = "none"; }
 function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
 
+// ============ SALAS ============
 function switchRoom(room) {
   currentRoom = room;
   if (!room.startsWith("priv:")) hidePrivados();
@@ -209,6 +212,7 @@ if (shareBtn) {
   });
 }
 
+// ============ EMOJIS ============
 const EMOJIS = [
   "😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢",
   "😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜",
@@ -237,6 +241,7 @@ if (emojiBtn) {
   });
 }
 
+// ============ ARCHIVOS ============
 if (fileBtn) fileBtn.addEventListener("click", () => fileInput && fileInput.click());
 
 if (fileInput) {
@@ -295,6 +300,7 @@ if (fileInput) {
   });
 }
 
+// ============ FECHAS ============
 let lastDateKey = "";
 function dateKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
 
@@ -321,6 +327,7 @@ function maybeAddDateSeparator(iso) {
   messagesEl.appendChild(sep);
 }
 
+// ============ MENSAJES ============
 const rendered = new Set();
 function scrollToBottom() { if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight; }
 
@@ -503,12 +510,58 @@ function openImageModal(url) {
   modal.classList.add("show");
 }
 
+// ============ RINGTONE ============
+let ringInterval = null;
+
+function playRingtone() {
+  initAudio();
+  if (!audioCtx) return;
+
+  const tocarTono = () => {
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 660;
+      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.55);
+    } catch (e) {}
+  };
+
+  tocarTono();
+  setTimeout(tocarTono, 600);
+
+  ringInterval = setInterval(() => {
+    tocarTono();
+    setTimeout(tocarTono, 600);
+    if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
+  }, 2000);
+}
+
+function stopRingtone() {
+  if (ringInterval) {
+    clearInterval(ringInterval);
+    ringInterval = null;
+  }
+  if (navigator.vibrate) navigator.vibrate(0);
+}
+
+// ============ LLAMADAS CON PEERJS ============
 const PEER_CONFIG = {
   debug: 1,
   config: {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
+      { urls: "stun:stun.cloudflare.com:3478" },
       {
         urls: "turn:openrelay.metered.ca:80",
         username: "openrelayproject",
@@ -518,6 +571,16 @@ const PEER_CONFIG = {
         urls: "turn:openrelay.metered.ca:443",
         username: "openrelayproject",
         credential: "openrelayproject"
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      },
+      {
+        urls: "turn:relay1.expressturn.com:3478",
+        username: "efK6QH6O1VJ8Y6FTGB",
+        credential: "WmMdd6vTpRVa5jNa"
       }
     ]
   }
@@ -563,8 +626,8 @@ async function iniciarLlamada(video) {
 
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: video ? { width: 640, height: 480 } : false
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } : false
     });
 
     llamadaVideo = video;
@@ -574,7 +637,8 @@ async function iniciarLlamada(video) {
     mostrarModalLlamada(nombreDestino.trim(), video, "Llamando...");
 
     call.on("stream", (remoteStream) => {
-      conectarVideoRemoto(remoteStream);
+      console.log("📹 Stream remoto recibido");
+      conectarStreamRemoto(remoteStream);
     });
 
     call.on("close", () => {
@@ -621,17 +685,21 @@ function mostrarModalEntrante(nombre, video, call) {
 
   modal.classList.add("show");
 
+  playRingtone();
+
   document.getElementById("rejectBtn").onclick = () => {
+    stopRingtone();
     call.close();
     modal.classList.remove("show");
   };
 
   document.getElementById("acceptBtn").onclick = async () => {
+    stopRingtone();
     modal.classList.remove("show");
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: video ? { width: 640, height: 480 } : false
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } : false
       });
 
       llamadaVideo = video;
@@ -641,7 +709,8 @@ function mostrarModalEntrante(nombre, video, call) {
       mostrarModalLlamada(nombre, video, "Conectado");
 
       call.on("stream", (remoteStream) => {
-        conectarVideoRemoto(remoteStream);
+        console.log("📹 Stream remoto recibido");
+        conectarStreamRemoto(remoteStream);
       });
 
       call.on("close", () => {
@@ -673,6 +742,7 @@ function mostrarModalLlamada(nombre, video, estado) {
     <div class="call-name">${video ? "📹" : "📞"} ${nombre}</div>
     <video id="remoteVideo" autoplay playsinline></video>
     ${video ? '<video id="localVideo" autoplay playsinline muted></video>' : ''}
+    <audio id="remoteAudio" autoplay></audio>
     <div class="call-status">${estado}</div>
     <div class="call-actions">
       <button id="muteBtn" title="Silenciar">🎤</button>
@@ -684,7 +754,10 @@ function mostrarModalLlamada(nombre, video, estado) {
 
   if (video && localStream) {
     const localVideo = document.getElementById("localVideo");
-    if (localVideo) localVideo.srcObject = localStream;
+    if (localVideo) {
+      localVideo.srcObject = localStream;
+      localVideo.play().catch(e => console.log("play local:", e));
+    }
   }
 
   let muteado = false;
@@ -702,16 +775,27 @@ function mostrarModalLlamada(nombre, video, estado) {
   };
 }
 
-function conectarVideoRemoto(remoteStream) {
+function conectarStreamRemoto(remoteStream) {
   const remoteVideo = document.getElementById("remoteVideo");
+  const remoteAudio = document.getElementById("remoteAudio");
+
   if (remoteVideo) {
     remoteVideo.srcObject = remoteStream;
+    remoteVideo.play().catch(e => console.log("video play:", e));
   }
+
+  if (remoteAudio) {
+    remoteAudio.srcObject = remoteStream;
+    remoteAudio.play().catch(e => console.log("audio play:", e));
+  }
+
   const statusEl = document.querySelector("#callModal .call-status");
   if (statusEl) statusEl.textContent = "Conectado";
 }
 
 function cerrarLlamada() {
+  stopRingtone();
+
   if (currentCall) {
     try { currentCall.close(); } catch (e) {}
     currentCall = null;
@@ -725,6 +809,11 @@ function cerrarLlamada() {
   if (modal) {
     modal.classList.remove("show");
     modal.innerHTML = "";
+  }
+
+  const incoming = document.getElementById("incomingModal");
+  if (incoming) {
+    incoming.classList.remove("show");
   }
 }
 

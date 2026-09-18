@@ -919,4 +919,211 @@ function onAccept(p) {
   if (callStatus) callStatus.textContent = "Conectando...";
   (async () => {
     try {
-      create
+      createPeer();
+      attachLocalPreview();
+      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignal({ type: "offer", to: activeCall.peerId, callId: activeCall.callId, sdp: pc.localDescription });
+    } catch (e) {
+      alert("Error al iniciar la llamada: " + e.message);
+      endCall(true);
+    }
+  })();
+}
+
+function onOffer(p) {
+  if (!activeCall || activeCall.role !== "callee" || p.callId !== activeCall.callId) return;
+  if (!localStream) return;
+  (async () => {
+    try {
+      if (!pc) createPeer();
+      attachLocalPreview();
+      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+      await pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      sendSignal({ type: "answer", to: activeCall.peerId, callId: activeCall.callId, sdp: pc.localDescription });
+      flushIce();
+    } catch (e) {
+      alert("Error al conectar: " + e.message);
+      endCall(true);
+    }
+  })();
+}
+
+function onAnswer(p) {
+  if (!activeCall || activeCall.role !== "caller" || p.callId !== activeCall.callId || !pc) return;
+  (async () => {
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
+      flushIce();
+    } catch (e) {
+      console.error("Error answer:", e);
+      endCall(true);
+    }
+  })();
+}
+
+function onRejected(p) {
+  if (!activeCall || p.callId !== activeCall.callId) return;
+  const razon = (p.reason === "busy") ? activeCall.peerName + " está en otra llamada." : activeCall.peerName + " rechazó la llamada.";
+  endCall(false);
+  alert(razon);
+}
+
+function onHangup(p) {
+  const enActiva = activeCall && activeCall.callId === p.callId;
+  const enEntrante = incomingCall && incomingCall.callId === p.callId;
+  if (!enActiva && !enEntrante) return;
+  if (enEntrante) dismissIncoming(false);
+  endCall(false);
+  alert((p.fromName || "Tu contacto") + " colgó.");
+}
+
+function onRemoteIce(p) {
+  if (!p.candidate) return;
+  if (pc && pc.remoteDescription) {
+    pc.addIceCandidate(new RTCIceCandidate(p.candidate)).catch(() => {});
+  } else {
+    iceQueue.push(p.candidate);
+  }
+}
+
+function flushIce() {
+  while (iceQueue.length && pc && pc.remoteDescription) {
+    const c = iceQueue.shift();
+    pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+  }
+}
+
+function createPeer() {
+  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate && activeCall && activeCall.peerId) {
+      sendSignal({ type: "ice", to: activeCall.peerId, callId: activeCall.callId, candidate: e.candidate });
+    }
+  };
+
+  pc.ontrack = (e) => {
+    if (remoteVideo) {
+      remoteVideo.srcObject = e.streams[0];
+      remoteVideo.play().catch(() => {});
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (!pc || !activeCall) return;
+    if (pc.connectionState === "connected") {
+      if (callStatus) callStatus.textContent = "En llamada con " + activeCall.peerName;
+    } else if (pc.connectionState === "failed") {
+      alert("Se perdió la conexión.");
+      endCall(true);
+    }
+  };
+}
+
+function attachLocalPreview() {
+  if (localVideo && localStream) {
+    localVideo.srcObject = localStream;
+    localVideo.play().catch(() => {});
+  }
+}
+
+function showCallOverlay(texto) {
+  if (callOverlay) callOverlay.classList.add("show");
+  if (callStatus) callStatus.textContent = texto;
+  if (acceptCallBtn) acceptCallBtn.style.display = "none";
+
+  const videos = document.querySelector(".videos");
+  const soloAudio = !(activeCall && activeCall.video);
+  if (videos) videos.classList.toggle("audio-only", soloAudio);
+
+  const audioAvatar = document.getElementById("audioAvatar");
+  if (audioAvatar) {
+    if (soloAudio && activeCall) {
+      audioAvatar.textContent = avatarLetter(activeCall.peerName);
+      audioAvatar.style.background = colorForUser(activeCall.peerName);
+    } else {
+      audioAvatar.textContent = "";
+    }
+  }
+
+  muted = false;
+  if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
+}
+
+function endCall(notify) {
+  if (notify && activeCall && activeCall.peerId) {
+    sendSignal({ type: "hangup", to: activeCall.peerId, callId: activeCall.callId });
+  }
+  clearTimeout(inviteTimer);
+  inviteTimer = null;
+  clearTimeout(ringTimeout);
+
+  if (pc) { try { pc.close(); } catch (e) {} pc = null; }
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  iceQueue = [];
+  activeCall = null;
+  muted = false;
+
+  if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
+  if (localVideo) localVideo.srcObject = null;
+  if (remoteVideo) remoteVideo.srcObject = null;
+  if (callOverlay) callOverlay.classList.remove("show");
+}
+
+if (muteBtn) {
+  muteBtn.addEventListener("click", () => {
+    if (!localStream) return;
+    muted = !muted;
+    localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+    muteBtn.textContent = muted ? "🔇 Mic" : "🎤 Mic";
+    muteBtn.classList.toggle("muted", muted);
+  });
+}
+
+if (hangupBtn) {
+  hangupBtn.addEventListener("click", () => endCall(true));
+}
+
+if (callBtn) {
+  callBtn.addEventListener("click", () => {
+    if (usersOnline.length === 0) {
+      alert(presenceReady ? "No hay otros usuarios en línea." : "Conectando... espera unos segundos.");
+      return;
+    }
+    const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
+    if (!target || !target.trim()) return;
+    startCall(target.trim(), false);
+  });
+}
+
+if (videoBtn) {
+  videoBtn.addEventListener("click", () => {
+    if (usersOnline.length === 0) {
+      alert(presenceReady ? "No hay otros usuarios en línea." : "Conectando... espera unos segundos.");
+      return;
+    }
+    const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
+    if (!target || !target.trim()) return;
+    startCall(target.trim(), true);
+  });
+}
+
+function avisarSalida() {
+  if (activeCall && activeCall.peerId) sendSignal({ type: "hangup", to: activeCall.peerId, callId: activeCall.callId });
+}
+
+window.addEventListener("beforeunload", avisarSalida);
+window.addEventListener("pagehide", avisarSalida);
+
+// ============ ARRANCAR ============
+if (chatTitle) chatTitle.textContent = "ZummChat · General";
+updateActiveTab();
+loadHistory();
+resuscribirPresence();

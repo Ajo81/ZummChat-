@@ -22,6 +22,9 @@ const emojiBtn     = document.getElementById("emojiBtn");
 const emojiBar     = document.getElementById("emoji-bar");
 const fileBtn      = document.getElementById("fileBtn");
 const fileInput    = document.getElementById("fileInput");
+const soundBtn     = document.getElementById("soundBtn");
+const callBtn      = document.getElementById("callBtn");
+const videoBtn     = document.getElementById("videoBtn");
 
 const MAX_SIZE_MB = 5;
 
@@ -35,19 +38,15 @@ if (!username) {
 
 let currentRoom = "general";
 
-// ---- Sonido ----
 let sonidoActivo = localStorage.getItem("zummchat_sonido") !== "off";
 let audioCtx = null;
 
 function initAudio() {
   if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (e) { audioCtx = null; }
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
   }
-  if (audioCtx && audioCtx.state === "suspended") {
-    audioCtx.resume();
-  }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
 
 function playBeep() {
@@ -69,38 +68,29 @@ function playBeep() {
   } catch (e) {}
 }
 
-// El primer toque en cualquier parte activa el audio
 document.body.addEventListener("touchstart", initAudio, { once: true });
 document.body.addEventListener("click", initAudio, { once: true });
 
-// Botón de sonido
-function crearBotonSonido() {
-  const header = document.getElementById("chat-header");
-  if (!header) return;
-  const btn = document.createElement("button");
-  btn.id = "soundBtn";
-  btn.type = "button";
-  btn.textContent = sonidoActivo ? "🔔" : "🔕";
-  btn.title = sonidoActivo ? "Silenciar" : "Activar sonido";
-  btn.addEventListener("click", () => {
+function updateSoundBtn() {
+  if (!soundBtn) return;
+  soundBtn.textContent = sonidoActivo ? "🔔" : "🔕";
+  soundBtn.title = sonidoActivo ? "Silenciar" : "Activar sonido";
+}
+updateSoundBtn();
+
+if (soundBtn) {
+  soundBtn.addEventListener("click", () => {
     sonidoActivo = !sonidoActivo;
     localStorage.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
-    btn.textContent = sonidoActivo ? "🔔" : "🔕";
-    btn.title = sonidoActivo ? "Silenciar" : "Activar sonido";
+    updateSoundBtn();
     if (sonidoActivo) playBeep();
   });
-  // Insertarlo antes del botón Compartir
-  header.insertBefore(btn, shareBtn);
 }
-crearBotonSonido();
 
-// ---- Color por usuario ----
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  }
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   return "hsl(" + (hash % 360) + ", 75%, 65%)";
 }
 
@@ -247,9 +237,7 @@ if (emojiBtn) {
   });
 }
 
-if (fileBtn) {
-  fileBtn.addEventListener("click", () => fileInput && fileInput.click());
-}
+if (fileBtn) fileBtn.addEventListener("click", () => fileInput && fileInput.click());
 
 if (fileInput) {
   fileInput.addEventListener("change", async () => {
@@ -269,8 +257,7 @@ if (fileInput) {
     fileBtn.disabled = true;
 
     const { error: upErr } = await supabaseClient
-      .storage
-      .from("archivos")
+      .storage.from("archivos")
       .upload(nombreArchivo, file, { contentType: file.type || "application/octet-stream" });
 
     if (upErr) {
@@ -281,11 +268,7 @@ if (fileInput) {
       return;
     }
 
-    const { data: urlData } = supabaseClient
-      .storage
-      .from("archivos")
-      .getPublicUrl(nombreArchivo);
-
+    const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
     const publicUrl = urlData.publicUrl;
     const texto = inputEl ? inputEl.value.trim() : "";
     if (inputEl) inputEl.value = "";
@@ -307,11 +290,8 @@ if (fileInput) {
     fileBtn.disabled = false;
     fileInput.value = "";
 
-    if (error) {
-      alert("No se pudo enviar: " + error.message);
-      return;
-    }
-    renderMessage(data);
+    if (error) { alert("No se pudo enviar: " + error.message); return; }
+    renderMessage(data, false);
   });
 }
 
@@ -356,7 +336,6 @@ function renderMessage(m, esNuevo) {
   if (!messagesEl) return;
   rendered.add(m.id);
 
-  // Suena si es mensaje nuevo y no es mío
   if (esNuevo) {
     const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
     if (!esMio) playBeep();
@@ -433,15 +412,12 @@ function renderMessage(m, esNuevo) {
       a.target = "_blank";
       a.rel = "noopener";
       a.className = "msg-file-link";
-
       const icon = document.createElement("span");
       icon.className = "icon";
       icon.textContent = tipo.includes("pdf") ? "📄" : "📎";
-
       const name = document.createElement("span");
       name.className = "name";
       name.textContent = m.file_name || "archivo";
-
       a.appendChild(icon);
       a.appendChild(name);
       body.appendChild(a);
@@ -526,6 +502,234 @@ function openImageModal(url) {
   modal.querySelector("img").src = url;
   modal.classList.add("show");
 }
+
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      }
+    ]
+  }
+};
+
+const miPeerId = "zummchat-" + username.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "");
+
+let peer = null;
+let currentCall = null;
+let localStream = null;
+let llamadaVideo = false;
+
+try {
+  peer = new Peer(miPeerId, PEER_CONFIG);
+  peer.on("open", (id) => console.log("✅ PeerJS listo. ID:", id));
+  peer.on("error", (err) => {
+    console.error("❌ Error PeerJS:", err);
+    if (err.type === "unavailable-id") {
+      alert("Ese nombre ya está en uso por otro usuario conectado.\nCambia tu nombre para poder hacer llamadas.");
+    }
+  });
+} catch (e) {
+  console.error("No se pudo inicializar PeerJS:", e);
+}
+
+async function iniciarLlamada(video) {
+  if (!peer || peer.disconnected || peer.destroyed) {
+    alert("El servicio de llamadas no está listo. Recarga la página.");
+    return;
+  }
+
+  const nombreDestino = prompt(
+    "¿A quién quieres " + (video ? "videollamar" : "llamar") + "?\n(Escribe su nombre de usuario exacto)"
+  );
+  if (!nombreDestino || !nombreDestino.trim()) return;
+
+  const idDestino = "zummchat-" + nombreDestino.trim().toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "");
+
+  if (idDestino === miPeerId) {
+    alert("No puedes llamarte a ti mismo 😅");
+    return;
+  }
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: video ? { width: 640, height: 480 } : false
+    });
+
+    llamadaVideo = video;
+    const call = peer.call(idDestino, localStream, { metadata: { video: video } });
+    currentCall = call;
+
+    mostrarModalLlamada(nombreDestino.trim(), video, "Llamando...");
+
+    call.on("stream", (remoteStream) => {
+      conectarVideoRemoto(remoteStream);
+    });
+
+    call.on("close", () => {
+      cerrarLlamada();
+    });
+
+    call.on("error", (err) => {
+      console.error("Error en llamada:", err);
+      alert("Error en la llamada: " + err.message);
+      cerrarLlamada();
+    });
+
+  } catch (err) {
+    alert("No se pudo acceder al micrófono/cámara:\n" + err.message);
+    cerrarLlamada();
+  }
+}
+
+if (peer) {
+  peer.on("call", (call) => {
+    const esVideo = call.metadata && call.metadata.video;
+    const nombreRemitente = call.peer.replace("zummchat-", "");
+
+    mostrarModalEntrante(nombreRemitente, esVideo, call);
+  });
+}
+
+function mostrarModalEntrante(nombre, video, call) {
+  let modal = document.getElementById("incomingModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "incomingModal";
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="incoming-name">${video ? "📹" : "📞"} ${nombre}</div>
+    <div class="incoming-text">${video ? "Videollamada entrante..." : "Llamada entrante..."}</div>
+    <div class="incoming-actions">
+      <button id="rejectBtn" title="Rechazar">❌</button>
+      <button id="acceptBtn" title="Aceptar">✅</button>
+    </div>
+  `;
+
+  modal.classList.add("show");
+
+  document.getElementById("rejectBtn").onclick = () => {
+    call.close();
+    modal.classList.remove("show");
+  };
+
+  document.getElementById("acceptBtn").onclick = async () => {
+    modal.classList.remove("show");
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: video ? { width: 640, height: 480 } : false
+      });
+
+      llamadaVideo = video;
+      call.answer(localStream);
+      currentCall = call;
+
+      mostrarModalLlamada(nombre, video, "Conectado");
+
+      call.on("stream", (remoteStream) => {
+        conectarVideoRemoto(remoteStream);
+      });
+
+      call.on("close", () => {
+        cerrarLlamada();
+      });
+
+      call.on("error", (err) => {
+        console.error("Error en llamada:", err);
+        cerrarLlamada();
+      });
+
+    } catch (err) {
+      alert("No se pudo acceder al micrófono/cámara:\n" + err.message);
+      call.close();
+      cerrarLlamada();
+    }
+  };
+}
+
+function mostrarModalLlamada(nombre, video, estado) {
+  let modal = document.getElementById("callModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "callModal";
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="call-name">${video ? "📹" : "📞"} ${nombre}</div>
+    <video id="remoteVideo" autoplay playsinline></video>
+    ${video ? '<video id="localVideo" autoplay playsinline muted></video>' : ''}
+    <div class="call-status">${estado}</div>
+    <div class="call-actions">
+      <button id="muteBtn" title="Silenciar">🎤</button>
+      <button id="hangupBtn" title="Colgar">❌</button>
+    </div>
+  `;
+
+  modal.classList.add("show");
+
+  if (video && localStream) {
+    const localVideo = document.getElementById("localVideo");
+    if (localVideo) localVideo.srcObject = localStream;
+  }
+
+  let muteado = false;
+  const muteBtn = document.getElementById("muteBtn");
+  muteBtn.onclick = () => {
+    if (!localStream) return;
+    muteado = !muteado;
+    localStream.getAudioTracks().forEach(t => t.enabled = !muteado);
+    muteBtn.textContent = muteado ? "🔇" : "🎤";
+    muteBtn.classList.toggle("muted", muteado);
+  };
+
+  document.getElementById("hangupBtn").onclick = () => {
+    cerrarLlamada();
+  };
+}
+
+function conectarVideoRemoto(remoteStream) {
+  const remoteVideo = document.getElementById("remoteVideo");
+  if (remoteVideo) {
+    remoteVideo.srcObject = remoteStream;
+  }
+  const statusEl = document.querySelector("#callModal .call-status");
+  if (statusEl) statusEl.textContent = "Conectado";
+}
+
+function cerrarLlamada() {
+  if (currentCall) {
+    try { currentCall.close(); } catch (e) {}
+    currentCall = null;
+  }
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+
+  const modal = document.getElementById("callModal");
+  if (modal) {
+    modal.classList.remove("show");
+    modal.innerHTML = "";
+  }
+}
+
+if (callBtn) callBtn.addEventListener("click", () => iniciarLlamada(false));
+if (videoBtn) videoBtn.addEventListener("click", () => iniciarLlamada(true));
 
 if (chatTitle) chatTitle.textContent = "ZummChat · General";
 updateActiveTab();

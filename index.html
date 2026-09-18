@@ -21,7 +21,12 @@
   <div id="chat-container">
     <div id="chat-header">
       <span id="chat-title">ZummChat · General</span>
-      <button id="shareBtn" type="button">📤 Compartir</button>
+      <div id="header-buttons">
+        <button id="soundBtn" type="button" title="Sonido">🔔</button>
+        <button id="callBtn" type="button" title="Llamada de voz">📞</button>
+        <button id="videoBtn" type="button" title="Videollamada">📹</button>
+        <button id="shareBtn" type="button">📤</button>
+      </div>
     </div>
 
     <div id="room-bar">
@@ -52,6 +57,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="matrix.js"></script>
   <script src="app3.js"></script>
   <script>

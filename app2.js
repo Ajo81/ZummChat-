@@ -20,6 +20,10 @@ const privateBtn   = document.getElementById("privateBtn");
 const privRoomBar  = document.getElementById("priv-room-bar");
 const emojiBtn     = document.getElementById("emojiBtn");
 const emojiBar     = document.getElementById("emoji-bar");
+const fileBtn      = document.getElementById("fileBtn");
+const fileInput    = document.getElementById("fileInput");
+
+const MAX_SIZE_MB = 5;
 
 let username = localStorage.getItem("zummchat_user");
 if (!username) {
@@ -38,6 +42,13 @@ function colorForUser(name) {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   }
   return "hsl(" + (hash % 360) + ", 75%, 65%)";
+}
+
+function avatarLetter(name) {
+  if (!name) return "?";
+  const limpio = name.trim();
+  if (!limpio) return "?";
+  return limpio.charAt(0).toUpperCase();
 }
 
 function roomLabel(room) {
@@ -148,7 +159,6 @@ if (shareBtn) {
   });
 }
 
-// ---- Emojis ----
 const EMOJIS = [
   "😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢",
   "😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜",
@@ -165,10 +175,7 @@ if (emojiBar) {
     b.type = "button";
     b.textContent = e;
     b.addEventListener("click", () => {
-      if (inputEl) {
-        inputEl.value += e;
-        inputEl.focus();
-      }
+      if (inputEl) { inputEl.value += e; inputEl.focus(); }
     });
     emojiBar.appendChild(b);
   });
@@ -180,25 +187,86 @@ if (emojiBtn) {
   });
 }
 
-// ---- Separador de fecha ----
-let lastDateKey = "";
-
-function dateKey(d) {
-  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+if (fileBtn) {
+  fileBtn.addEventListener("click", () => fileInput && fileInput.click());
 }
+
+if (fileInput) {
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      alert("El archivo pesa más de " + MAX_SIZE_MB + " MB.\nElige uno más pequeño.");
+      fileInput.value = "";
+      return;
+    }
+
+    const ext = file.name.split(".").pop() || "bin";
+    const nombreArchivo = Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "." + ext;
+
+    fileBtn.textContent = "⏳";
+    fileBtn.disabled = true;
+
+    const { error: upErr } = await supabaseClient
+      .storage
+      .from("archivos")
+      .upload(nombreArchivo, file, { contentType: file.type || "application/octet-stream" });
+
+    if (upErr) {
+      alert("No se pudo subir: " + upErr.message);
+      fileBtn.textContent = "📎";
+      fileBtn.disabled = false;
+      fileInput.value = "";
+      return;
+    }
+
+    const { data: urlData } = supabaseClient
+      .storage
+      .from("archivos")
+      .getPublicUrl(nombreArchivo);
+
+    const publicUrl = urlData.publicUrl;
+    const texto = inputEl ? inputEl.value.trim() : "";
+    if (inputEl) inputEl.value = "";
+
+    const { data, error } = await supabaseClient
+      .from("messages")
+      .insert([{
+        text: texto || "",
+        username: username,
+        room: currentRoom,
+        file_url: publicUrl,
+        file_name: file.name,
+        file_type: file.type || "application/octet-stream"
+      }])
+      .select()
+      .single();
+
+    fileBtn.textContent = "📎";
+    fileBtn.disabled = false;
+    fileInput.value = "";
+
+    if (error) {
+      alert("No se pudo enviar: " + error.message);
+      return;
+    }
+    renderMessage(data);
+  });
+}
+
+let lastDateKey = "";
+function dateKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
 
 function dateLabel(d) {
   const hoy = new Date();
   const ayer = new Date();
   ayer.setDate(hoy.getDate() - 1);
-
   if (dateKey(d) === dateKey(hoy)) return "HOY";
   if (dateKey(d) === dateKey(ayer)) return "AYER";
-
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return dd + "/" + mm + "/" + yyyy;
+  return dd + "/" + mm + "/" + d.getFullYear();
 }
 
 function maybeAddDateSeparator(iso) {
@@ -207,25 +275,19 @@ function maybeAddDateSeparator(iso) {
   const key = dateKey(d);
   if (key === lastDateKey) return;
   lastDateKey = key;
-
   const sep = document.createElement("div");
   sep.className = "date-sep";
   sep.textContent = dateLabel(d);
   messagesEl.appendChild(sep);
 }
 
-// ---- Render ----
 const rendered = new Set();
-function scrollToBottom() {
-  if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
-}
+function scrollToBottom() { if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight; }
 
 function formatTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return h + ":" + m;
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
 function renderMessage(m) {
@@ -239,6 +301,17 @@ function renderMessage(m) {
   const div = document.createElement("div");
   div.className = "msg";
   div.dataset.msgId = m.id;
+
+  // Avatar
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.style.background = colorForUser(m.username);
+  avatar.textContent = avatarLetter(m.username);
+  div.appendChild(avatar);
+
+  // Contenido
+  const content = document.createElement("div");
+  content.className = "msg-content";
 
   const header = document.createElement("div");
   header.className = "msg-header";
@@ -260,17 +333,10 @@ function renderMessage(m) {
     const delBtn = document.createElement("button");
     delBtn.className = "del-btn";
     delBtn.textContent = "🗑️";
-    delBtn.title = "Borrar mensaje";
     delBtn.addEventListener("click", async () => {
       if (!confirm("¿Borrar este mensaje?")) return;
-      const { error } = await supabaseClient
-        .from("messages")
-        .delete()
-        .eq("id", m.id);
-      if (error) {
-        alert("No se pudo borrar: " + error.message);
-        return;
-      }
+      const { error } = await supabaseClient.from("messages").delete().eq("id", m.id);
+      if (error) { alert("No se pudo borrar: " + error.message); return; }
       removeMessageFromDOM(m.id);
     });
     rightSide.appendChild(delBtn);
@@ -281,10 +347,46 @@ function renderMessage(m) {
 
   const body = document.createElement("div");
   body.className = "msg-body";
-  body.textContent = m.text;
 
-  div.appendChild(header);
-  div.appendChild(body);
+  if (m.text) {
+    const txt = document.createElement("div");
+    txt.textContent = m.text;
+    body.appendChild(txt);
+  }
+
+  if (m.file_url) {
+    const tipo = m.file_type || "";
+    if (tipo.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.src = m.file_url;
+      img.className = "msg-file-img";
+      img.loading = "lazy";
+      img.addEventListener("click", () => openImageModal(m.file_url));
+      body.appendChild(img);
+    } else {
+      const a = document.createElement("a");
+      a.href = m.file_url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.className = "msg-file-link";
+
+      const icon = document.createElement("span");
+      icon.className = "icon";
+      icon.textContent = tipo.includes("pdf") ? "📄" : "📎";
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = m.file_name || "archivo";
+
+      a.appendChild(icon);
+      a.appendChild(name);
+      body.appendChild(a);
+    }
+  }
+
+  content.appendChild(header);
+  content.appendChild(body);
+  div.appendChild(content);
   messagesEl.appendChild(div);
   scrollToBottom();
 }
@@ -298,7 +400,7 @@ function removeMessageFromDOM(id) {
 async function loadHistory() {
   const { data, error } = await supabaseClient
     .from("messages")
-    .select("id, text, username, created_at, room")
+    .select("id, text, username, created_at, room, file_url, file_name, file_type")
     .eq("room", currentRoom)
     .order("created_at", { ascending: true })
     .limit(200);
@@ -339,6 +441,27 @@ supabaseClient
       { event: "DELETE", schema: "public", table: "messages" },
       payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })
   .subscribe(status => console.log("Realtime:", status));
+
+function openImageModal(url) {
+  let modal = document.getElementById("imgModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "imgModal";
+    const img = document.createElement("img");
+    const close = document.createElement("button");
+    close.className = "close-modal";
+    close.textContent = "✕";
+    close.addEventListener("click", () => modal.classList.remove("show"));
+    modal.appendChild(img);
+    modal.appendChild(close);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("show");
+    });
+    document.body.appendChild(modal);
+  }
+  modal.querySelector("img").src = url;
+  modal.classList.add("show");
+}
 
 if (chatTitle) chatTitle.textContent = "ZummChat · General";
 updateActiveTab();

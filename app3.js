@@ -35,6 +35,66 @@ if (!username) {
 
 let currentRoom = "general";
 
+// ---- Sonido ----
+let sonidoActivo = localStorage.getItem("zummchat_sonido") !== "off";
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}
+
+function playBeep() {
+  if (!sonidoActivo) return;
+  initAudio();
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch (e) {}
+}
+
+// El primer toque en cualquier parte activa el audio
+document.body.addEventListener("touchstart", initAudio, { once: true });
+document.body.addEventListener("click", initAudio, { once: true });
+
+// Botón de sonido
+function crearBotonSonido() {
+  const header = document.getElementById("chat-header");
+  if (!header) return;
+  const btn = document.createElement("button");
+  btn.id = "soundBtn";
+  btn.type = "button";
+  btn.textContent = sonidoActivo ? "🔔" : "🔕";
+  btn.title = sonidoActivo ? "Silenciar" : "Activar sonido";
+  btn.addEventListener("click", () => {
+    sonidoActivo = !sonidoActivo;
+    localStorage.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
+    btn.textContent = sonidoActivo ? "🔔" : "🔕";
+    btn.title = sonidoActivo ? "Silenciar" : "Activar sonido";
+    if (sonidoActivo) playBeep();
+  });
+  // Insertarlo antes del botón Compartir
+  header.insertBefore(btn, shareBtn);
+}
+crearBotonSonido();
+
+// ---- Color por usuario ----
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
@@ -290,11 +350,17 @@ function formatTime(iso) {
   return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
-function renderMessage(m) {
+function renderMessage(m, esNuevo) {
   if (!m || !m.id || rendered.has(m.id)) return;
   if (m.room !== currentRoom) return;
   if (!messagesEl) return;
   rendered.add(m.id);
+
+  // Suena si es mensaje nuevo y no es mío
+  if (esNuevo) {
+    const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
+    if (!esMio) playBeep();
+  }
 
   maybeAddDateSeparator(m.created_at);
 
@@ -302,14 +368,12 @@ function renderMessage(m) {
   div.className = "msg";
   div.dataset.msgId = m.id;
 
-  // Avatar
   const avatar = document.createElement("div");
   avatar.className = "avatar";
   avatar.style.background = colorForUser(m.username);
   avatar.textContent = avatarLetter(m.username);
   div.appendChild(avatar);
 
-  // Contenido
   const content = document.createElement("div");
   content.className = "msg-content";
 
@@ -405,7 +469,7 @@ async function loadHistory() {
     .order("created_at", { ascending: true })
     .limit(200);
   if (error) { console.error("ERROR historial:", error); return; }
-  data.forEach(renderMessage);
+  data.forEach(m => renderMessage(m, false));
 }
 
 async function sendMessage() {
@@ -426,7 +490,7 @@ async function sendMessage() {
     alert("No se pudo enviar: " + error.message);
     return;
   }
-  renderMessage(data);
+  renderMessage(data, false);
 }
 
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
@@ -436,7 +500,7 @@ supabaseClient
   .channel("messages-realtime")
   .on("postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
-      payload => renderMessage(payload.new))
+      payload => renderMessage(payload.new, true))
   .on("postgres_changes",
       { event: "DELETE", schema: "public", table: "messages" },
       payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })

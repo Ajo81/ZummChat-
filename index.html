@@ -25,6 +25,7 @@
         <button id="soundBtn" type="button" title="Sonido">🔔</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
+        <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
         <button id="shareBtn" type="button">📤</button>
       </div>
     </div>
@@ -56,16 +57,46 @@
     </div>
   </div>
 
-  <div id="jitsiModal">
-    <div id="jitsiHeader">
-      <span id="jitsiTitle">📞 Llamada</span>
-      <button id="jitsiHangup">❌ Colgar</button>
+  <!-- Panel de usuarios en línea -->
+  <div id="usersPanel">
+    <div id="usersPanelHeader">
+      <span>👥 En línea</span>
+      <button id="usersPanelClose">✕</button>
     </div>
-    <div id="jitsiContainer"></div>
+    <ul id="userList"></ul>
+    <p id="noUsers">Nadie más conectado</p>
+  </div>
+
+  <!-- Modal de llamada (WebRTC puro) -->
+  <div id="callOverlay">
+    <div class="call-box">
+      <p id="callStatus">Llamando...</p>
+      <div class="videos">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="call-actions">
+        <button id="muteBtn">🎤 Mic</button>
+        <button id="acceptCallBtn" style="display:none">✅ Contestar</button>
+        <button id="hangupBtn">❌ Colgar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de llamada entrante -->
+  <div id="incomingModal">
+    <div class="incoming-content">
+      <div class="incoming-avatar" id="incomingAvatar">?</div>
+      <div class="incoming-name" id="incomingName">Alguien</div>
+      <div class="incoming-text" id="incomingText">Llamada entrante...</div>
+      <div class="incoming-actions">
+        <button id="rejectBtn" title="Rechazar">❌</button>
+        <button id="incomingAcceptBtn" title="Aceptar">✅</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
-  <script src="https://meet.jit.si/external_api.js"></script>
   <script src="matrix.js"></script>
   <script src="app3.js"></script>
   <script>

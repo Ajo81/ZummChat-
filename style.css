@@ -274,88 +274,53 @@ body { margin: 0; background: #000; font-family: system-ui, Arial, sans-serif; c
   font-size: 20px; font-weight: bold; cursor: pointer;
 }
 
-#callModal {
+/* ============ MODAL DE LLAMADA CON JITSI EMBEBIDO ============ */
+#jitsiModal {
   display: none;
-  position: fixed; inset: 0;
+  position: fixed;
+  inset: 0;
   background: #000;
   z-index: 10000;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
 }
-#callModal.show { display: flex; }
+#jitsiModal.show { display: flex; }
 
-#callModal .call-name {
+#jitsiHeader {
+  background: #0a0a0a;
+  border-bottom: 2px solid #00ff66;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#jitsiTitle {
   color: #00ff66;
-  font-size: 20px;
   font-weight: bold;
-  margin-bottom: 12px;
-  text-shadow: 0 0 10px #00ff66;
+  font-size: 16px;
+  text-shadow: 0 0 8px #00ff66;
 }
 
-#callModal #remoteVideo {
-  width: 100%;
-  max-width: 500px;
-  max-height: 60vh;
-  border-radius: 12px;
-  background: #111;
-  object-fit: cover;
-}
-
-#callModal #localVideo {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  border: 2px solid #00ff66;
-  background: #000;
-  object-fit: cover;
-  z-index: 10001;
-}
-
-#callModal .call-status {
-  color: #888;
-  font-size: 14px;
-  margin-top: 10px;
-}
-
-#callModal .call-actions {
-  display: flex;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-#callModal .call-actions button {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+#jitsiHangup {
+  background: #ff5252;
+  color: #fff;
   border: none;
-  font-size: 24px;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: bold;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+#jitsiHangup:active { transform: scale(.96); }
+
+#jitsiContainer {
+  flex: 1;
+  width: 100%;
+  background: #000;
 }
 
-#callModal #muteBtn {
-  background: #1c1c1c;
-  color: #00ff66;
-  border: 2px solid #00ff66;
-}
-#callModal #muteBtn.muted {
-  background: #ff5252;
-  color: #fff;
-  border-color: #ff5252;
-}
-
-#callModal #hangupBtn {
-  background: #ff5252;
-  color: #fff;
-}
-
+/* ============ MODAL DE LLAMADA ENTRANTE ============ */
 #incomingModal {
   display: none;
   position: fixed; inset: 0;
@@ -367,11 +332,16 @@ body { margin: 0; background: #000; font-family: system-ui, Arial, sans-serif; c
   padding: 20px;
   text-align: center;
 }
-#incomingModal.show { display: flex; }
+#incomingModal.show { display: flex; animation: aparecerModal 0.3s ease; }
+
+@keyframes aparecerModal {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 #incomingModal .incoming-name {
   color: #00ff66;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: bold;
   margin-bottom: 8px;
   text-shadow: 0 0 10px #00ff66;

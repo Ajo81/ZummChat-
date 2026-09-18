@@ -25,6 +25,10 @@ const fileInput    = document.getElementById("fileInput");
 const soundBtn     = document.getElementById("soundBtn");
 const callBtn      = document.getElementById("callBtn");
 const videoBtn     = document.getElementById("videoBtn");
+const jitsiModal   = document.getElementById("jitsiModal");
+const jitsiTitle   = document.getElementById("jitsiTitle");
+const jitsiHangup  = document.getElementById("jitsiHangup");
+const jitsiContainer = document.getElementById("jitsiContainer");
 
 const MAX_SIZE_MB = 5;
 
@@ -551,17 +555,82 @@ function stopRingtone() {
   if (navigator.vibrate) navigator.vibrate(0);
 }
 
-// ============ LLAMADAS CON JITSI ============
+// ============ JITSI EMBEBIDO ============
+let jitsiApi = null;
+
 function crearRoomId(a, b, tipo) {
   const orden = [a.toLowerCase(), b.toLowerCase()].sort();
-  return "ZummChat-" + orden[0] + "-" + orden[1] + "-" + tipo + "-" + Date.now();
+  return "ZummChat-" + orden[0] + "-" + orden[1] + "-" + tipo;
 }
 
-function abrirJitsi(roomId, video) {
-  // Jitsi con opciones: sin login, directo a la sala
-  const url = "https://meet.jit.si/" + roomId + "#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=" + (video ? "false" : "true");
-  window.open(url, "_blank");
+function abrirJitsi(roomId, video, nombreMostrar) {
+  // Cerrar cualquier llamada anterior
+  cerrarJitsi();
+
+  if (jitsiTitle) {
+    jitsiTitle.textContent = (video ? "📹 " : "📞 ") + (nombreMostrar || "Llamada");
+  }
+
+  if (jitsiModal) jitsiModal.classList.add("show");
+
+  // Esperar un momento a que el modal se muestre antes de crear la API
+  setTimeout(() => {
+    try {
+      const opciones = {
+        roomName: roomId,
+        parentNode: jitsiContainer,
+        width: "100%",
+        height: "100%",
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: !video,
+          prejoinPageEnabled: false,
+          disableDeepLinking: true
+        },
+        interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          DEFAULT_BACKGROUND: "#000000"
+        },
+        userInfo: {
+          displayName: username
+        }
+      };
+
+      jitsiApi = new JitsiMeetExternalAPI("meet.jit.si", opciones);
+
+      jitsiApi.addEventListener("readyToClose", () => {
+        cerrarJitsi();
+        avisarColgado(roomId);
+      });
+
+    } catch (e) {
+      console.error("Error al abrir Jitsi:", e);
+      alert("No se pudo abrir la llamada: " + e.message);
+      cerrarJitsi();
+    }
+  }, 300);
 }
+
+function cerrarJitsi() {
+  if (jitsiApi) {
+    try { jitsiApi.dispose(); } catch (e) {}
+    jitsiApi = null;
+  }
+  if (jitsiModal) jitsiModal.classList.remove("show");
+  if (jitsiContainer) jitsiContainer.innerHTML = "";
+}
+
+if (jitsiHangup) {
+  jitsiHangup.addEventListener("click", () => {
+    cerrarJitsi();
+    avisarColgado(roomIdActual);
+  });
+}
+
+// ============ LLAMADAS ============
+let roomIdActual = null;
+let idLlamadaActual = null;
 
 async function iniciarLlamada(video) {
   const nombreDestino = prompt(
@@ -578,8 +647,8 @@ async function iniciarLlamada(video) {
 
   const tipo = video ? "video" : "audio";
   const roomId = crearRoomId(username, destino, tipo);
+  roomIdActual = roomId;
 
-  // Insertar señal de llamada en Supabase
   const { error } = await supabaseClient
     .from("llamadas")
     .insert([{
@@ -595,11 +664,20 @@ async function iniciarLlamada(video) {
     return;
   }
 
-  // El emisor abre Jitsi directamente
-  abrirJitsi(roomId, video);
+  // El emisor abre Jitsi
+  abrirJitsi(roomId, video, destino);
+}
 
-  // Avisar al usuario
-  alert("📞 Llamando a " + destino + "...\n\nSe abrió la sala. Espera ahí a que " + destino + " acepte.");
+async function avisarColgado(roomId) {
+  if (!roomId) return;
+  try {
+    await supabaseClient
+      .from("llamadas")
+      .update({ estado: "colgada" })
+      .eq("room_id", roomId);
+  } catch (e) {}
+  roomIdActual = null;
+  idLlamadaActual = null;
 }
 
 // Escuchar señales de llamada entrantes
@@ -613,18 +691,29 @@ supabaseClient
         if (l.receptor.toLowerCase() !== username.toLowerCase()) return;
         if (l.estado !== "llamando") return;
 
-        // Verificar que no sea vieja (> 60 segundos)
         const edad = Date.now() - new Date(l.created_at).getTime();
         if (edad > 60000) return;
 
         mostrarModalEntrante(l.emisor, l.tipo === "video", l.room_id, l.id);
       })
-  .subscribe(status => console.log("Llamadas realtime:", status));
+  .on("postgres_changes",
+      { event: "UPDATE", schema: "public", table: "llamadas" },
+      payload => {
+        const l = payload.new;
+        if (!l) return;
 
-let idLlamadaActual = null;
+        // Si soy el emisor y el receptor colgó → cierro Jitsi
+        if (l.emisor && l.emisor.toLowerCase() === username.toLowerCase()) {
+          if (l.estado === "colgada" || l.estado === "rechazada") {
+            cerrarJitsi();
+          }
+        }
+      })
+  .subscribe(status => console.log("Llamadas realtime:", status));
 
 function mostrarModalEntrante(nombre, video, roomId, llamadaId) {
   idLlamadaActual = llamadaId;
+  roomIdActual = roomId;
 
   let modal = document.getElementById("incomingModal");
   if (!modal) {
@@ -659,7 +748,7 @@ function mostrarModalEntrante(nombre, video, roomId, llamadaId) {
     if (llamadaId) {
       await supabaseClient.from("llamadas").update({ estado: "aceptada" }).eq("id", llamadaId);
     }
-    abrirJitsi(roomId, video);
+    abrirJitsi(roomId, video, nombre);
   };
 }
 

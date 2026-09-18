@@ -551,122 +551,81 @@ function stopRingtone() {
   if (navigator.vibrate) navigator.vibrate(0);
 }
 
-// ============ LLAMADAS CON PEERJS ============
-const PEER_CONFIG = {
-  debug: 1,
-  config: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:stun3.l.google.com:19302" },
-      { urls: "stun:stun4.l.google.com:19302" },
-      { urls: "stun:stun.cloudflare.com:3478" },
-      {
-        urls: "turn:openrelay.metered.ca:80",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-      },
-      {
-        urls: "turn:relay1.expressturn.com:3478",
-        username: "efK6QH6O1VJ8Y6FTGB",
-        credential: "WmMdd6vTpRVa5jNa"
-      }
-    ]
-  }
-};
+// ============ LLAMADAS CON JITSI ============
+function crearRoomId(a, b, tipo) {
+  const orden = [a.toLowerCase(), b.toLowerCase()].sort();
+  return "ZummChat-" + orden[0] + "-" + orden[1] + "-" + tipo + "-" + Date.now();
+}
 
-const miPeerId = "zummchat-" + username.toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "");
-
-let peer = null;
-let currentCall = null;
-let localStream = null;
-let llamadaVideo = false;
-
-try {
-  peer = new Peer(miPeerId, PEER_CONFIG);
-  peer.on("open", (id) => console.log("✅ PeerJS listo. ID:", id));
-  peer.on("error", (err) => {
-    console.error("❌ Error PeerJS:", err);
-    if (err.type === "unavailable-id") {
-      alert("Ese nombre ya está en uso por otro usuario conectado.\nCambia tu nombre para poder hacer llamadas.");
-    }
-  });
-} catch (e) {
-  console.error("No se pudo inicializar PeerJS:", e);
+function abrirJitsi(roomId, video) {
+  // Jitsi con opciones: sin login, directo a la sala
+  const url = "https://meet.jit.si/" + roomId + "#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=" + (video ? "false" : "true");
+  window.open(url, "_blank");
 }
 
 async function iniciarLlamada(video) {
-  if (!peer || peer.disconnected || peer.destroyed) {
-    alert("El servicio de llamadas no está listo. Recarga la página.");
-    return;
-  }
-
   const nombreDestino = prompt(
     "¿A quién quieres " + (video ? "videollamar" : "llamar") + "?\n(Escribe su nombre de usuario exacto)"
   );
   if (!nombreDestino || !nombreDestino.trim()) return;
 
-  const idDestino = "zummchat-" + nombreDestino.trim().toLowerCase().replace(/\s/g, "").replace(/[^a-z0-9]/g, "");
+  const destino = nombreDestino.trim().substring(0, 20);
 
-  if (idDestino === miPeerId) {
+  if (destino.toLowerCase() === username.toLowerCase()) {
     alert("No puedes llamarte a ti mismo 😅");
     return;
   }
 
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } : false
-    });
+  const tipo = video ? "video" : "audio";
+  const roomId = crearRoomId(username, destino, tipo);
 
-    llamadaVideo = video;
-    const call = peer.call(idDestino, localStream, { metadata: { video: video } });
-    currentCall = call;
+  // Insertar señal de llamada en Supabase
+  const { error } = await supabaseClient
+    .from("llamadas")
+    .insert([{
+      emisor: username,
+      receptor: destino,
+      tipo: tipo,
+      room_id: roomId,
+      estado: "llamando"
+    }]);
 
-    mostrarModalLlamada(nombreDestino.trim(), video, "Llamando...");
-
-    call.on("stream", (remoteStream) => {
-      console.log("📹 Stream remoto recibido");
-      conectarStreamRemoto(remoteStream);
-    });
-
-    call.on("close", () => {
-      cerrarLlamada();
-    });
-
-    call.on("error", (err) => {
-      console.error("Error en llamada:", err);
-      alert("Error en la llamada: " + err.message);
-      cerrarLlamada();
-    });
-
-  } catch (err) {
-    alert("No se pudo acceder al micrófono/cámara:\n" + err.message);
-    cerrarLlamada();
+  if (error) {
+    alert("No se pudo iniciar la llamada: " + error.message);
+    return;
   }
+
+  // El emisor abre Jitsi directamente
+  abrirJitsi(roomId, video);
+
+  // Avisar al usuario
+  alert("📞 Llamando a " + destino + "...\n\nSe abrió la sala. Espera ahí a que " + destino + " acepte.");
 }
 
-if (peer) {
-  peer.on("call", (call) => {
-    const esVideo = call.metadata && call.metadata.video;
-    const nombreRemitente = call.peer.replace("zummchat-", "");
+// Escuchar señales de llamada entrantes
+supabaseClient
+  .channel("llamadas-realtime")
+  .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "llamadas" },
+      payload => {
+        const l = payload.new;
+        if (!l) return;
+        if (l.receptor.toLowerCase() !== username.toLowerCase()) return;
+        if (l.estado !== "llamando") return;
 
-    mostrarModalEntrante(nombreRemitente, esVideo, call);
-  });
-}
+        // Verificar que no sea vieja (> 60 segundos)
+        const edad = Date.now() - new Date(l.created_at).getTime();
+        if (edad > 60000) return;
 
-function mostrarModalEntrante(nombre, video, call) {
+        mostrarModalEntrante(l.emisor, l.tipo === "video", l.room_id, l.id);
+      })
+  .subscribe(status => console.log("Llamadas realtime:", status));
+
+let idLlamadaActual = null;
+
+function mostrarModalEntrante(nombre, video, roomId, llamadaId) {
+  idLlamadaActual = llamadaId;
+
   let modal = document.getElementById("incomingModal");
   if (!modal) {
     modal = document.createElement("div");
@@ -684,137 +643,24 @@ function mostrarModalEntrante(nombre, video, call) {
   `;
 
   modal.classList.add("show");
-
   playRingtone();
 
-  document.getElementById("rejectBtn").onclick = () => {
+  document.getElementById("rejectBtn").onclick = async () => {
     stopRingtone();
-    call.close();
     modal.classList.remove("show");
+    if (llamadaId) {
+      await supabaseClient.from("llamadas").update({ estado: "rechazada" }).eq("id", llamadaId);
+    }
   };
 
   document.getElementById("acceptBtn").onclick = async () => {
     stopRingtone();
     modal.classList.remove("show");
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } : false
-      });
-
-      llamadaVideo = video;
-      call.answer(localStream);
-      currentCall = call;
-
-      mostrarModalLlamada(nombre, video, "Conectado");
-
-      call.on("stream", (remoteStream) => {
-        console.log("📹 Stream remoto recibido");
-        conectarStreamRemoto(remoteStream);
-      });
-
-      call.on("close", () => {
-        cerrarLlamada();
-      });
-
-      call.on("error", (err) => {
-        console.error("Error en llamada:", err);
-        cerrarLlamada();
-      });
-
-    } catch (err) {
-      alert("No se pudo acceder al micrófono/cámara:\n" + err.message);
-      call.close();
-      cerrarLlamada();
+    if (llamadaId) {
+      await supabaseClient.from("llamadas").update({ estado: "aceptada" }).eq("id", llamadaId);
     }
+    abrirJitsi(roomId, video);
   };
-}
-
-function mostrarModalLlamada(nombre, video, estado) {
-  let modal = document.getElementById("callModal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "callModal";
-    document.body.appendChild(modal);
-  }
-
-  modal.innerHTML = `
-    <div class="call-name">${video ? "📹" : "📞"} ${nombre}</div>
-    <video id="remoteVideo" autoplay playsinline></video>
-    ${video ? '<video id="localVideo" autoplay playsinline muted></video>' : ''}
-    <audio id="remoteAudio" autoplay></audio>
-    <div class="call-status">${estado}</div>
-    <div class="call-actions">
-      <button id="muteBtn" title="Silenciar">🎤</button>
-      <button id="hangupBtn" title="Colgar">❌</button>
-    </div>
-  `;
-
-  modal.classList.add("show");
-
-  if (video && localStream) {
-    const localVideo = document.getElementById("localVideo");
-    if (localVideo) {
-      localVideo.srcObject = localStream;
-      localVideo.play().catch(e => console.log("play local:", e));
-    }
-  }
-
-  let muteado = false;
-  const muteBtn = document.getElementById("muteBtn");
-  muteBtn.onclick = () => {
-    if (!localStream) return;
-    muteado = !muteado;
-    localStream.getAudioTracks().forEach(t => t.enabled = !muteado);
-    muteBtn.textContent = muteado ? "🔇" : "🎤";
-    muteBtn.classList.toggle("muted", muteado);
-  };
-
-  document.getElementById("hangupBtn").onclick = () => {
-    cerrarLlamada();
-  };
-}
-
-function conectarStreamRemoto(remoteStream) {
-  const remoteVideo = document.getElementById("remoteVideo");
-  const remoteAudio = document.getElementById("remoteAudio");
-
-  if (remoteVideo) {
-    remoteVideo.srcObject = remoteStream;
-    remoteVideo.play().catch(e => console.log("video play:", e));
-  }
-
-  if (remoteAudio) {
-    remoteAudio.srcObject = remoteStream;
-    remoteAudio.play().catch(e => console.log("audio play:", e));
-  }
-
-  const statusEl = document.querySelector("#callModal .call-status");
-  if (statusEl) statusEl.textContent = "Conectado";
-}
-
-function cerrarLlamada() {
-  stopRingtone();
-
-  if (currentCall) {
-    try { currentCall.close(); } catch (e) {}
-    currentCall = null;
-  }
-  if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-  }
-
-  const modal = document.getElementById("callModal");
-  if (modal) {
-    modal.classList.remove("show");
-    modal.innerHTML = "";
-  }
-
-  const incoming = document.getElementById("incomingModal");
-  if (incoming) {
-    incoming.classList.remove("show");
-  }
 }
 
 if (callBtn) callBtn.addEventListener("click", () => iniciarLlamada(false));

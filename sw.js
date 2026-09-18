@@ -1,5 +1,5 @@
-const CACHE = "zummchat-v17";
-const ASSETS = ["./", "./index.html", "./style.css", "./app2.js", "./matrix.js",
+const CACHE = "zummchat-v18";
+const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
                 "./manifest.json", "./logo.png", "./icon.png"];
 
 self.addEventListener("install", e => {

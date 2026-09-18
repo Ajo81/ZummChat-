@@ -147,7 +147,7 @@ function stopRingtone() {
   if (navigator.vibrate) navigator.vibrate(0);
 }
 
-// ============ COLORES Y AVATARES ============
+// ============ COLORES ============
 function colorForUser(name) {
   if (!name) name = "Anónimo";
   let hash = 0;
@@ -186,6 +186,7 @@ function switchRoom(room) {
   if (messagesEl) messagesEl.innerHTML = "";
   updateActiveTab();
   loadHistory();
+  subscribeToSignaling();
 }
 
 function updateActiveTab() {
@@ -526,7 +527,7 @@ if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
 supabaseClient
-  .channel("messages-realtime")
+  .channel("messages-realtime-" + Math.random().toString(36).slice(2, 8))
   .on("postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
       payload => renderMessage(payload.new, true))
@@ -557,7 +558,7 @@ function openImageModal(url) {
 }
 
 // ================================================================
-// ============ LLAMADAS WEBRTC CON SUPABASE (COMO MI CÍRCULO) =====
+// ============ LLAMADAS WEBRTC CON SUPABASE =====================
 // ================================================================
 
 let pc = null;
@@ -568,26 +569,33 @@ let pendingKind = "audio";
 let signalingChannel = null;
 let usersOnline = [];
 
-// Genera un nombre de canal de llamada (por sala privada)
 function roomChannelName() {
-  return "zummchat-rt-" + currentRoom.replace(/[^a-zA-Z0-9]/g, "_");
+  return "zummchat-presence-" + currentRoom.replace(/[^a-zA-Z0-9]/g, "_");
 }
 
-// ---- CANAL DE SEÑALIZACIÓN (presence + broadcast) ----
 function subscribeToSignaling() {
   if (signalingChannel) {
+    try { signalingChannel.unsubscribe(); } catch (e) {}
     try { supabaseClient.removeChannel(signalingChannel); } catch (e) {}
     signalingChannel = null;
   }
 
+  usersOnline = [];
+  renderUserList();
+
   signalingChannel = supabaseClient.channel(roomChannelName(), {
-    config: { presence: { key: username } }
+    config: {
+      presence: { key: username },
+      broadcast: { self: false }
+    }
   });
 
   signalingChannel
     .on("presence", { event: "sync" }, () => {
       const state = signalingChannel.presenceState();
-      usersOnline = Object.keys(state).filter(u => u.toLowerCase() !== username.toLowerCase());
+      const nuevos = Object.keys(state).filter(u => u.toLowerCase() !== username.toLowerCase());
+      console.log("👥 Usuarios en línea:", nuevos);
+      usersOnline = nuevos;
       renderUserList();
     })
     .on("broadcast", { event: "call" }, ({ payload }) => {
@@ -603,8 +611,17 @@ function subscribeToSignaling() {
       if (payload.to.toLowerCase() === username.toLowerCase()) endCallUI();
     })
     .subscribe(async (status) => {
+      console.log("📡 Canal:", status);
       if (status === "SUBSCRIBED") {
-        await signalingChannel.track({ username: username, online_at: new Date().toISOString() });
+        try {
+          await signalingChannel.track({
+            username: username,
+            online_at: new Date().toISOString()
+          });
+          console.log("✅ Presencia registrada:", username);
+        } catch (e) {
+          console.error("Error presencia:", e);
+        }
       }
     });
 }
@@ -614,7 +631,6 @@ function sendSignal(event, payload) {
   signalingChannel.send({ type: "broadcast", event, payload });
 }
 
-// ---- LISTA DE USUARIOS ----
 function renderUserList() {
   if (!userList) return;
   userList.innerHTML = "";
@@ -637,7 +653,6 @@ function renderUserList() {
 
     const callB = document.createElement("button");
     callB.textContent = "📞";
-    callB.title = "Llamar";
     callB.addEventListener("click", (e) => {
       e.stopPropagation();
       startCall(u, false);
@@ -645,7 +660,6 @@ function renderUserList() {
 
     const vidB = document.createElement("button");
     vidB.textContent = "📹";
-    vidB.title = "Videollamar";
     vidB.addEventListener("click", (e) => {
       e.stopPropagation();
       startCall(u, true);
@@ -658,7 +672,6 @@ function renderUserList() {
   });
 }
 
-// ---- ABRIR / CERRAR PANEL DE USUARIOS ----
 if (usersBtn) {
   usersBtn.addEventListener("click", () => {
     if (usersPanel) usersPanel.classList.toggle("show");
@@ -670,17 +683,12 @@ if (usersPanelClose) {
   });
 }
 
-// ---- INICIAR LLAMADA ----
 async function startCall(toUser, withVideo) {
   if (!signalingChannel) {
-    alert("El servicio de llamadas no está listo. Espera unos segundos.");
+    alert("El servicio no está listo. Espera unos segundos.");
     return;
   }
-
-  if (toUser.toLowerCase() === username.toLowerCase()) {
-    alert("No puedes llamarte a ti mismo 😅");
-    return;
-  }
+  if (toUser.toLowerCase() === username.toLowerCase()) return;
 
   callPeer = toUser;
   callStatus.textContent = "Llamando a " + toUser + "...";
@@ -714,10 +722,8 @@ async function startCall(toUser, withVideo) {
   });
 }
 
-// ---- RECIBIR LLAMADA ----
 function onIncomingCall({ from, offer, kind }) {
   if (callPeer) {
-    // ya estoy en llamada
     sendSignal("hangup", { to: from, from: username });
     return;
   }
@@ -776,34 +782,28 @@ incomingAcceptBtn.addEventListener("click", async () => {
   pendingOffer = null;
 });
 
-// ---- RESPUESTA A MI LLAMADA ----
 async function onCallAnswered({ answer }) {
   if (!pc) return;
   callStatus.textContent = "En llamada con " + callPeer;
   await pc.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
-// ---- CANDIDATOS ICE ----
 function onRemoteIceCandidate({ candidate }) {
   if (pc && candidate) {
     pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
   }
 }
 
-// ---- CREAR CONEXIÓN WEBRTC ----
 function createPeerConnection() {
   const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-
   conn.onicecandidate = (e) => {
     if (e.candidate && callPeer) {
       sendSignal("ice", { to: callPeer, from: username, candidate: e.candidate });
     }
   };
-
   conn.ontrack = (e) => {
     if (remoteVideo) remoteVideo.srcObject = e.streams[0];
   };
-
   conn.onconnectionstatechange = () => {
     if (conn.connectionState === "connected") {
       callStatus.textContent = "En llamada con " + callPeer;
@@ -811,11 +811,9 @@ function createPeerConnection() {
       endCallUI();
     }
   };
-
   return conn;
 }
 
-// ---- COLGAR ----
 let muteado = false;
 if (muteBtn) {
   muteBtn.addEventListener("click", () => {
@@ -854,22 +852,21 @@ function endCallUI() {
   }
 }
 
-// ---- BOTONES DE LLAMADA DEL HEADER ----
 if (callBtn) {
   callBtn.addEventListener("click", () => {
     if (usersOnline.length === 0) {
-      alert("No hay otros usuarios en línea.");
+      alert("No hay otros usuarios en línea. Abre el 👥 para ver.");
       return;
     }
     const target = usersOnline.length === 1
       ? usersOnline[0]
       : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
     if (!target) return;
-    if (!usersOnline.some(u => u.toLowerCase() === target.trim().toLowerCase())) {
-      alert("Usuario no encontrado en línea: " + target);
+    const nombreReal = usersOnline.find(u => u.toLowerCase() === target.trim().toLowerCase());
+    if (!nombreReal) {
+      alert("Usuario no encontrado: " + target);
       return;
     }
-    const nombreReal = usersOnline.find(u => u.toLowerCase() === target.trim().toLowerCase());
     startCall(nombreReal, false);
   });
 }
@@ -877,18 +874,18 @@ if (callBtn) {
 if (videoBtn) {
   videoBtn.addEventListener("click", () => {
     if (usersOnline.length === 0) {
-      alert("No hay otros usuarios en línea.");
+      alert("No hay otros usuarios en línea. Abre el 👥 para ver.");
       return;
     }
     const target = usersOnline.length === 1
       ? usersOnline[0]
       : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
     if (!target) return;
-    if (!usersOnline.some(u => u.toLowerCase() === target.trim().toLowerCase())) {
-      alert("Usuario no encontrado en línea: " + target);
+    const nombreReal = usersOnline.find(u => u.toLowerCase() === target.trim().toLowerCase());
+    if (!nombreReal) {
+      alert("Usuario no encontrado: " + target);
       return;
     }
-    const nombreReal = usersOnline.find(u => u.toLowerCase() === target.trim().toLowerCase());
     startCall(nombreReal, true);
   });
 }

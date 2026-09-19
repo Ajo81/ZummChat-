@@ -48,9 +48,30 @@ const rejectBtn       = document.getElementById("rejectBtn");
 const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
 
 const MAX_SIZE_MB = 5;
+
+// ✅ SERVIDORES ICE CON TURN GRATUITO (más opciones para Cuba)
 const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" }
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  {
+    urls: [
+      "turn:turn.evan-brass.net:3478",
+      "turn:turn.evan-brass.net:3478?transport=tcp",
+      "turns:turn.evan-brass.net:5349?transport=tcp"
+    ],
+    username: "user",
+    credential: "password"
+  },
+  {
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:443",
+      "turn:openrelay.metered.ca:443?transport=tcp"
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject"
+  }
 ];
 
 // ============ ALMACENAMIENTO SEGURO ============

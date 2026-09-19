@@ -1,4 +1,4 @@
-const CACHE = "zummchat-v29";
+const CACHE = "zummchat-v30";
 const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
                 "./manifest.json", "./logo.png", "./icon.png", "./icon-192.png"];
 

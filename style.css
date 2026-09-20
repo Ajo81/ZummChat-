@@ -19,16 +19,10 @@
 }
 
 body.theme-light {
-  --bg: #f0f2f5;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-header: #ffffff;
-  --text: #111111;
-  --text-dim: #555555;
-  --text-muted: #999999;
-  --border: #cccccc;
-  --border-light: #e0e0e0;
+  --bg: #f0f2f5; --bg-secondary: #ffffff; --bg-card: #ffffff;
+  --bg-input: #ffffff; --bg-header: #ffffff;
+  --text: #111111; --text-dim: #555555; --text-muted: #999999;
+  --border: #cccccc; --border-light: #e0e0e0;
 }
 
 body.pack-neon { --bg: #0a0014; --bg-secondary: #14002a; --bg-card: #1e0040; --bg-input: #14002a; --bg-header: #1e0040; --accent: #ff00ff; --accent-dark: #cc00cc; }
@@ -42,12 +36,9 @@ body.pack-matrix { --bg: #000000; --bg-secondary: #001a00; --bg-card: #002800; -
 
 * { box-sizing: border-box; }
 
-/* ============ LAYOUT FIJO: header y input no se mueven ============ */
 html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow: hidden;
+  margin: 0; padding: 0;
+  height: 100%; overflow: hidden;
   background: var(--bg);
   font-family: system-ui, Arial, sans-serif;
   color: var(--text);
@@ -85,20 +76,17 @@ html, body {
   50%      { text-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent); }
 }
 
-/* CONTENEDOR PRINCIPAL: ocupa toda la pantalla y se divide en zonas */
 #chat-container {
   height: 100vh;
   height: 100dvh;
-  width: 100%;
-  max-width: 720px;
+  width: 100%; max-width: 720px;
   margin: 0 auto;
   padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   overflow: hidden;
 }
 
-/* HEADER FIJO */
+/* ============ HEADER FIJO ============ */
 #chat-header {
   display: flex; align-items: center; justify-content: space-between;
   gap: 6px; margin-bottom: 8px;
@@ -118,8 +106,7 @@ html, body {
   width: 40px; height: 40px;
   font-size: 18px; cursor: pointer; font-weight: bold;
   display: flex; align-items: center; justify-content: center;
-  transition: all .2s;
-  padding: 0;
+  transition: all .2s; padding: 0;
 }
 #usersBtn:active, #callBtn:active, #videoBtn:active, #configBtn:active {
   transform: scale(.94); background: var(--accent); color: var(--bg);
@@ -133,7 +120,7 @@ html, body {
   50%      { box-shadow: 0 0 0 8px transparent; }
 }
 
-/* PANEL DE CONFIGURACIÓN */
+/* ============ PANEL CONFIGURACIÓN ============ */
 #configPanel {
   position: fixed; top: 0; right: 0;
   width: 320px; max-width: 90vw;
@@ -180,7 +167,7 @@ html, body {
 .config-icon { font-size: 26px; line-height: 1; }
 .config-label { font-size: 12px; font-weight: bold; color: var(--text-dim); }
 
-/* MENÚ ADJUNTAR */
+/* ============ MENÚ ADJUNTAR ============ */
 #attachMenu {
   position: fixed;
   bottom: 80px; left: 12px;
@@ -207,16 +194,14 @@ html, body {
 .attach-item:active { background: var(--bg-card); }
 .attach-item span { font-size: 20px; }
 
-/* SEARCH BAR FIJO */
+/* ============ SEARCH BAR ============ */
 #searchBar {
   display: none;
   background: var(--bg-card);
   border: 1px solid var(--accent);
   border-radius: 10px;
-  padding: 8px;
-  margin-bottom: 8px;
-  gap: 8px;
-  align-items: center;
+  padding: 8px; margin-bottom: 8px;
+  gap: 8px; align-items: center;
   flex-shrink: 0;
 }
 #searchBar.show { display: flex; }
@@ -241,7 +226,7 @@ html, body {
   100% { background: var(--bg-card); }
 }
 
-/* PINNED BAR FIJO */
+/* ============ PINNED BAR ============ */
 #pinnedBar {
   display: none;
   background: var(--bg-card);
@@ -250,10 +235,8 @@ html, body {
   border-radius: 8px;
   padding: 8px 12px;
   margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--text);
-  align-items: center;
-  gap: 8px;
+  font-size: 13px; color: var(--text);
+  align-items: center; gap: 8px;
   flex-shrink: 0;
 }
 #pinnedBar.show { display: flex; }
@@ -267,14 +250,13 @@ html, body {
   cursor: pointer; padding: 2px 6px;
 }
 
-/* ROOM BAR FIJO */
+/* ============ ROOM BAR ============ */
 #room-bar {
   display: flex; gap: 8px; overflow-x: auto;
-  margin-bottom: 8px; padding-bottom: 4px; scrollbar-width: none;
-  flex-shrink: 0;
+  margin-bottom: 8px; padding-bottom: 4px;
+  scrollbar-width: none; flex-shrink: 0;
 }
 #room-bar::-webkit-scrollbar { display: none; }
-
 .room-btn {
   background: var(--bg-card); color: var(--text-dim);
   border: 1px solid var(--border); border-radius: 20px;
@@ -284,7 +266,6 @@ html, body {
 .room-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .room-btn.muted-room { opacity: 0.5; }
 .room-btn.muted-room::after { content: " 🔕"; font-size: 10px; }
-
 .room-btn-add {
   background: var(--bg-card); color: var(--accent);
   border: 1px dashed var(--accent); border-radius: 20px;
@@ -293,7 +274,7 @@ html, body {
 }
 .room-btn-add:active { background: var(--accent); color: var(--bg); }
 
-/* PRIV SECTION FIJO */
+/* ============ PRIV SECTION ============ */
 #priv-section {
   border-top: 1px solid var(--border-light);
   border-bottom: 1px solid var(--border-light);
@@ -301,20 +282,17 @@ html, body {
   flex-shrink: 0;
 }
 #priv-bar { margin-bottom: 6px; }
-
 #privateBtn {
   background: var(--bg-card); color: #ffb74d;
   border: 1px solid #ffb74d; border-radius: 8px;
   padding: 6px 12px; font-size: 13px; font-weight: bold; cursor: pointer;
 }
 #privateBtn:active { transform: scale(.97); background: #ffb74d; color: #000; }
-
 #priv-room-bar {
   display: flex; gap: 8px; overflow-x: auto;
   padding-bottom: 4px; scrollbar-width: none;
 }
 #priv-room-bar::-webkit-scrollbar { display: none; }
-
 .room-btn.priv {
   border-color: #ffb74d; color: #ffb74d;
   padding-right: 8px; display: flex; align-items: center; gap: 6px;
@@ -327,7 +305,7 @@ html, body {
   display: flex; align-items: center; justify-content: center; font-weight: bold;
 }
 
-/* MENSAJES: única zona que hace scroll */
+/* ============ MENSAJES (scroll) ============ */
 #messages {
   flex: 1 1 auto;
   min-height: 0;
@@ -343,6 +321,17 @@ html, body {
   margin-bottom: 6px;
 }
 
+.msg {
+  background: var(--bg-card); padding: 10px 12px; border-radius: 12px;
+  border-left: 3px solid var(--accent); word-wrap: break-word;
+  display: flex; gap: 10px; align-items: flex-start;
+  cursor: pointer; transition: background .15s;
+  position: relative;
+}
+.msg:active { background: var(--border-light); }
+.msg.pinned { border-left: 3px solid #ffb74d; box-shadow: 0 0 0 1px #ffb74d inset; }
+.msg.favorite { border-left: 3px solid #ffd700; }
+.msg.hot { border-left: 3px solid #ff5252; box-shadow: 0 0 12px rgba(255,82,82,0.3); }
 .msg.bot-msg {
   background: linear-gradient(135deg, rgba(0,255,102,0.1), rgba(0,255,102,0.02));
   border-left: 3px solid var(--accent);
@@ -351,51 +340,6 @@ html, body {
   border-bottom: 1px dashed var(--accent);
 }
 .msg.bot-msg .msg-name { color: var(--accent); font-style: italic; }
-
-#typingIndicator {
-  display: none;
-  color: var(--accent);
-  font-size: 12px;
-  font-style: italic;
-  padding: 4px 10px;
-  margin-bottom: 4px;
-  animation: fade-in-typing 0.3s ease;
-  flex-shrink: 0;
-}
-#typingIndicator.show { display: block; }
-@keyframes fade-in-typing {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-#scrollDownBtn {
-  position: fixed;
-  bottom: 130px;
-  right: 24px;
-  width: 46px; height: 46px;
-  border-radius: 50%;
-  background: var(--accent); color: var(--bg);
-  border: none; font-size: 22px; cursor: pointer;
-  z-index: 900;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  display: none;
-  align-items: center; justify-content: center;
-  transition: transform .2s;
-}
-#scrollDownBtn.show { display: flex; }
-#scrollDownBtn:active { transform: scale(.9); }
-
-.msg {
-  background: var(--bg-card); padding: 10px 12px; border-radius: 12px;
-  border-left: 3px solid var(--accent); word-wrap: break-word;
-  display: flex; gap: 10px; align-items: flex-start;
-  cursor: pointer;
-  transition: background .15s;
-  position: relative;
-}
-.msg:active { background: var(--border-light); }
-.msg.pinned { border-left: 3px solid #ffb74d; box-shadow: 0 0 0 1px #ffb74d inset; }
-.msg.favorite { border-left: 3px solid #ffd700; }
 
 .avatar {
   width: 38px; height: 38px; border-radius: 50%;
@@ -406,7 +350,6 @@ html, body {
 }
 
 .msg-content { flex: 1; min-width: 0; }
-
 .msg-header {
   display: flex; justify-content: space-between;
   align-items: baseline; margin-bottom: 4px; font-size: 12px;
@@ -416,12 +359,69 @@ html, body {
 .msg-right { display: flex; align-items: center; gap: 6px; }
 .msg-time { color: var(--text-dim); font-size: 11px; }
 .msg-edited { color: var(--text-muted); font-size: 10px; font-style: italic; }
-
 .msg-body { font-size: 15px; line-height: 1.4; word-wrap: break-word; }
 .msg-body a.auto-link {
   color: var(--accent); text-decoration: underline; word-break: break-all;
 }
 
+/* ============ ENCUESTAS ============ */
+.poll-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 6px;
+}
+.poll-question {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 15px;
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+.poll-option {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all .2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.poll-option:active { transform: scale(.98); }
+.poll-option.voted { border-color: var(--accent); }
+.poll-option.mine { background: rgba(0,255,102,0.1); }
+.poll-bar {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  background: var(--accent);
+  opacity: 0.15;
+  transition: width .4s;
+  z-index: 0;
+}
+.poll-text {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  flex: 1;
+  word-break: break-word;
+}
+.poll-count {
+  position: relative;
+  z-index: 1;
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 13px;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+/* ============ UBICACIÓN ============ */
 .location-msg {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -433,6 +433,7 @@ html, body {
 .location-msg .loc-icon { font-size: 26px; }
 .location-msg .loc-text { flex: 1; font-size: 14px; }
 
+/* ============ REACCIONES ============ */
 .reactions-bar {
   display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
 }
@@ -450,6 +451,7 @@ html, body {
   font-size: 11px; color: var(--text-dim); font-weight: bold;
 }
 
+/* ============ NOTAS DE VOZ ============ */
 .voice-note {
   display: flex; align-items: center; gap: 10px;
   background: var(--bg); border: 1px solid var(--border);
@@ -473,12 +475,12 @@ html, body {
   min-width: 32px; text-align: right;
 }
 
-/* EMOJI BAR FIJO (arriba del input) */
+/* ============ EMOJI BAR ============ */
 #emoji-bar {
   display: none; gap: 6px; overflow-x: auto;
   background: var(--bg-card); border-radius: 10px;
-  padding: 8px; margin-bottom: 6px; scrollbar-width: none;
-  flex-shrink: 0;
+  padding: 8px; margin-bottom: 6px;
+  scrollbar-width: none; flex-shrink: 0;
 }
 #emoji-bar.show { display: flex; }
 #emoji-bar::-webkit-scrollbar { display: none; }
@@ -487,12 +489,45 @@ html, body {
   cursor: pointer; padding: 4px 6px; border-radius: 6px; flex-shrink: 0;
 }
 
-/* INPUT FIJO ABAJO */
+/* ============ TYPING ============ */
+#typingIndicator {
+  display: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+  animation: fade-in-typing 0.3s ease;
+  flex-shrink: 0;
+}
+#typingIndicator.show { display: block; }
+@keyframes fade-in-typing {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============ SCROLL BTN ============ */
+#scrollDownBtn {
+  position: fixed;
+  bottom: 130px; right: 24px;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--accent); color: var(--bg);
+  border: none; font-size: 22px; cursor: pointer;
+  z-index: 900;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  display: none;
+  align-items: center; justify-content: center;
+  transition: transform .2s;
+}
+#scrollDownBtn.show { display: flex; }
+#scrollDownBtn:active { transform: scale(.9); }
+
+/* ============ INPUT FIJO ============ */
 #input-area {
   display: flex; gap: 6px; margin-bottom: 4px;
   flex-shrink: 0;
 }
-
 #emojiBtn, #attachBtn {
   background: var(--bg-card); color: var(--accent);
   border: 1px solid var(--border); border-radius: 8px;
@@ -501,28 +536,26 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; padding: 0;
 }
-
 #messageInput {
   flex: 1; padding: 12px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--bg-input); color: var(--text);
   font-size: 16px; min-width: 0;
 }
 #messageInput:focus { outline: 2px solid var(--accent); }
-
 #sendBtn {
   padding: 12px 14px; background: var(--accent); color: var(--bg);
   font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
   flex-shrink: 0;
 }
 
+/* ============ GRABACIÓN ============ */
 #recordingPanel {
   display: none;
   background: #2a0d0d;
   border: 2px solid #ff5252;
   border-radius: 12px;
   padding: 12px; margin-bottom: 6px;
-  text-align: center;
-  flex-shrink: 0;
+  text-align: center; flex-shrink: 0;
 }
 #recordingPanel.show { display: block; }
 #recordingIndicator {
@@ -531,9 +564,7 @@ html, body {
 #recordingIndicator span {
   color: #fff; font-family: monospace; margin-left: 6px;
 }
-#recordingActions {
-  display: flex; gap: 10px; justify-content: center;
-}
+#recordingActions { display: flex; gap: 10px; justify-content: center; }
 #recordingActions button {
   padding: 10px 20px; border-radius: 24px;
   border: none; font-weight: bold; font-size: 14px; cursor: pointer;
@@ -557,11 +588,11 @@ html, body {
 }
 .date-sep::before, .date-sep::after { content: " ─── "; color: var(--border); }
 
+/* ============ IMÁGENES ============ */
 .msg-file-img {
   max-width: 100%; max-height: 300px;
   border-radius: 8px; margin-top: 6px; cursor: pointer; display: block;
 }
-
 .msg-file-link {
   display: flex; align-items: center; gap: 8px;
   background: var(--bg); border: 1px solid var(--border);
@@ -584,6 +615,7 @@ html, body {
   font-size: 20px; font-weight: bold; cursor: pointer;
 }
 
+/* ============ USERS PANEL ============ */
 #usersPanel {
   position: fixed; top: 0; right: 0;
   width: 280px; max-width: 85vw; height: 100%;
@@ -603,7 +635,6 @@ html, body {
   background: transparent; border: none; color: var(--text-dim);
   font-size: 20px; cursor: pointer; padding: 4px 8px;
 }
-
 #userMeSection {
   display: flex; align-items: center; gap: 8px;
   background: var(--bg-card); border: 1px solid var(--accent);
@@ -626,8 +657,6 @@ html, body {
   background: transparent; border: none; color: var(--accent);
   font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 6px;
 }
-#changeNameBtn:active { background: rgba(0,255,102,0.2); }
-
 #userList {
   list-style: none; padding: 0; margin: 0;
   display: flex; flex-direction: column; gap: 8px;
@@ -639,7 +668,9 @@ html, body {
   display: flex; align-items: center; gap: 10px;
   cursor: pointer; border: 1px solid transparent; transition: all .2s;
 }
-#userList li:hover, #userList li:active { background: var(--bg-secondary); border-color: var(--accent); }
+#userList li:hover, #userList li:active {
+  background: var(--bg-secondary); border-color: var(--accent);
+}
 #userList li::before {
   content: ""; width: 10px; height: 10px;
   border-radius: 50%; background: var(--accent);
@@ -650,12 +681,12 @@ html, body {
   background: transparent; border: none;
   font-size: 16px; cursor: pointer; padding: 2px;
 }
-
 #noUsers {
   color: var(--text-muted); text-align: center;
   font-size: 13px; margin-top: 20px; font-style: italic;
 }
 
+/* ============ LLAMADAS ============ */
 #callOverlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.97); z-index: 10000;
@@ -736,17 +767,19 @@ html, body {
 #rejectBtn { background: #ff5252; color: #fff; }
 #incomingAcceptBtn { background: var(--accent); color: var(--bg); }
 
-#editModal {
+/* ============ MODALES GENERALES ============ */
+#editModal, #newReminderModal, #pollModal {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.9); z-index: 10002;
   justify-content: center; align-items: center; padding: 20px;
 }
-#editModal.show { display: flex; }
+#editModal.show, #newReminderModal.show, #pollModal.show { display: flex; }
 .edit-content {
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
   border-radius: 12px;
-  padding: 20px; width: 100%; max-width: 400px;
+  padding: 20px; width: 100%; max-width: 420px;
+  max-height: 90vh; overflow-y: auto;
 }
 .edit-content h3 { color: var(--accent); margin: 0 0 12px 0; font-size: 16px; }
 #editInput {
@@ -765,9 +798,10 @@ html, body {
   padding: 8px 16px; border-radius: 8px; border: none;
   font-weight: bold; cursor: pointer; font-size: 14px;
 }
-#editCancelBtn { background: var(--bg-card); color: var(--text); }
-#editSaveBtn { background: var(--accent); color: var(--bg); }
+#editCancelBtn, #reminderCancelBtn, #pollCancelBtn { background: var(--bg-card); color: var(--text); }
+#editSaveBtn, #reminderSaveBtn, #pollSaveBtn { background: var(--accent); color: var(--bg); }
 
+/* ============ MENÚ DE MENSAJE ============ */
 #msgMenu {
   display: none; position: fixed;
   background: var(--bg-secondary);
@@ -788,6 +822,7 @@ html, body {
 #msgMenu button:active { background: var(--bg-card); }
 #menuDeleteBtn { color: #ff5252; }
 
+/* ============ REACTION PICKER ============ */
 #reactionPicker {
   display: none; position: fixed;
   background: var(--bg-secondary);
@@ -805,12 +840,17 @@ html, body {
 }
 #reactionPicker button:active { transform: scale(1.3); }
 
-#profileModal {
+/* ============ MODALES GRANDES ============ */
+#profileModal, #statsModal, #groupStatsModal, #favModal,
+#highlightModal, #remindersModal, #blockedModal {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.9); z-index: 10005;
   justify-content: center; align-items: center; padding: 20px;
 }
-#profileModal.show { display: flex; }
+#profileModal.show, #statsModal.show, #groupStatsModal.show,
+#favModal.show, #highlightModal.show, #remindersModal.show,
+#blockedModal.show { display: flex; }
+
 .profile-content {
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
@@ -852,25 +892,21 @@ html, body {
   border: 1px solid var(--accent); border-radius: 8px;
   padding: 10px 12px; color: var(--text); font-size: 14px;
 }
-.profile-field input:focus { outline: 2px solid var(--accent); }
 #profileActions {
-  display: flex; gap: 10px; justify-content: center;
+  display: flex; gap: 8px; justify-content: center;
   margin-top: 16px; flex-wrap: wrap;
 }
 #profileActions button {
-  padding: 10px 18px; border-radius: 24px;
-  border: none; font-weight: bold; font-size: 14px; cursor: pointer;
+  padding: 10px 16px; border-radius: 24px;
+  border: none; font-weight: bold; font-size: 13px; cursor: pointer;
 }
 #profileEditBtn { background: var(--bg-card); color: var(--accent); border: 1px solid var(--accent); }
 #profileSaveBtn { background: var(--accent); color: var(--bg); }
 #profileCancelBtn { background: var(--bg-card); color: var(--text); }
+#profileBlockBtn { background: #ff5252; color: #fff; }
+#profileUnblockBtn { background: var(--accent); color: var(--bg); }
 
-#statsModal, #groupStatsModal {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.9); z-index: 10006;
-  justify-content: center; align-items: center; padding: 20px;
-}
-#statsModal.show, #groupStatsModal.show { display: flex; }
+/* ============ STATS ============ */
 .stats-content {
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
@@ -902,22 +938,11 @@ html, body {
   padding: 8px 10px; background: var(--bg-card);
   border-radius: 8px; margin-bottom: 6px; font-size: 13px;
 }
-.rank-pos {
-  font-weight: bold; color: var(--accent);
-  min-width: 26px; text-align: center;
-}
-.rank-name {
-  flex: 1; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+.rank-pos { font-weight: bold; color: var(--accent); min-width: 26px; text-align: center; }
+.rank-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-count { color: var(--accent); font-weight: bold; }
 
-#favModal {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.9); z-index: 10007;
-  justify-content: center; align-items: center; padding: 20px;
-}
-#favModal.show { display: flex; }
+/* ============ LISTAS ============ */
 .fav-content {
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
@@ -929,32 +954,38 @@ html, body {
   color: var(--accent); font-size: 20px;
   margin: 0 0 16px 0; text-align: center;
 }
-#favList {
+#favList, #highlightList, #remindersList, #blockedList {
   list-style: none; padding: 0; margin: 0;
   overflow-y: auto; flex: 1;
   display: flex; flex-direction: column; gap: 8px;
 }
-#favList li {
+#favList li, #highlightList li, #remindersList li, #blockedList li {
   background: var(--bg-card);
   border-left: 3px solid #ffd700;
   border-radius: 8px;
   padding: 10px 12px; font-size: 13px;
   cursor: pointer; word-break: break-word;
 }
-#favList li:active { background: var(--bg-secondary); }
-#favList li .fav-meta {
+#highlightList li { border-left: 3px solid #ff5252; }
+#remindersList li { border-left: 3px solid var(--accent); }
+#blockedList li { border-left: 3px solid #ff5252; }
+#favList li:active, #highlightList li:active,
+#remindersList li:active, #blockedList li:active {
+  background: var(--bg-secondary);
+}
+.list-meta {
   color: var(--text-dim); font-size: 11px; margin-bottom: 4px;
 }
-#favList li .fav-del {
+.list-del {
   float: right; color: #ff5252;
   background: transparent; border: none;
   font-size: 16px; cursor: pointer; padding: 0 4px;
 }
-#favEmpty {
+#favEmpty, #highlightEmpty, #remindersEmpty, #blockedEmpty {
   text-align: center; color: var(--text-muted);
   font-style: italic; padding: 20px 0;
 }
-#favCloseBtn {
+#favCloseBtn, #highlightCloseBtn, #remindersCloseBtn, #blockedCloseBtn {
   display: block; width: 100%; margin-top: 16px;
   padding: 12px; background: var(--accent); color: var(--bg);
   border: none; border-radius: 10px;

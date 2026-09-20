@@ -35,12 +35,20 @@
     <div id="chat-header">
       <span id="chat-title">ZummChat · General</span>
       <div id="header-buttons">
+        <button id="themeBtn" type="button" title="Modo claro/oscuro">🌙</button>
+        <button id="colorBtn" type="button" title="Cambiar color">🎨</button>
+        <button id="searchBtn" type="button" title="Buscar">🔍</button>
         <button id="soundBtn" type="button" title="Sonido">🔔</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
         <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
         <button id="shareBtn" type="button">📤</button>
       </div>
+    </div>
+
+    <div id="searchBar">
+      <input type="text" id="searchInput" placeholder="Buscar en este chat..." autocomplete="off">
+      <button id="searchClose" type="button">✕</button>
     </div>
 
     <div id="room-bar">
@@ -59,6 +67,8 @@
     </div>
 
     <div id="messages"></div>
+
+    <button id="scrollDownBtn" type="button" title="Ir al último mensaje">⬇️</button>
 
     <div id="emoji-bar"></div>
 
@@ -90,9 +100,11 @@
       <button id="usersPanelClose" type="button">✕</button>
     </div>
     <div id="userMeSection">
+      <div id="userMeAvatar" title="Cambiar foto">👤</div>
       <span id="userMeName">Tú: ...</span>
       <button id="changeNameBtn" type="button" title="Cambiar nombre">✏️</button>
     </div>
+    <input type="file" id="avatarInput" accept="image/*" style="display:none">
     <ul id="userList"></ul>
     <p id="noUsers">Conectando...</p>
   </div>
@@ -124,6 +136,32 @@
         <button id="incomingAcceptBtn" type="button" title="Aceptar">✅</button>
       </div>
     </div>
+  </div>
+
+  <div id="editModal">
+    <div class="edit-content">
+      <h3>✏️ Editar mensaje</h3>
+      <textarea id="editInput" maxlength="500"></textarea>
+      <div class="edit-actions">
+        <button id="editCancelBtn" type="button">Cancelar</button>
+        <button id="editSaveBtn" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="msgMenu">
+    <button id="menuCopyBtn" type="button">📋 Copiar</button>
+    <button id="menuEditBtn" type="button">✏️ Editar</button>
+    <button id="menuDeleteBtn" type="button">🗑️ Borrar</button>
+  </div>
+
+  <div id="reactionPicker">
+    <button data-emoji="❤️">❤️</button>
+    <button data-emoji="👍">👍</button>
+    <button data-emoji="😂">😂</button>
+    <button data-emoji="😮">😮</button>
+    <button data-emoji="😢">😢</button>
+    <button data-emoji="🔥">🔥</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>

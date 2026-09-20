@@ -58,10 +58,28 @@ const rejectBtn       = document.getElementById("rejectBtn");
 const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
 const userMeName      = document.getElementById("userMeName");
 const changeNameBtn   = document.getElementById("changeNameBtn");
+const userMeAvatar    = document.getElementById("userMeAvatar");
+const avatarInput     = document.getElementById("avatarInput");
 const recordingPanel  = document.getElementById("recordingPanel");
 const recordingTime   = document.getElementById("recordingTime");
 const cancelRecBtn    = document.getElementById("cancelRecBtn");
 const stopRecBtn      = document.getElementById("stopRecBtn");
+const themeBtn        = document.getElementById("themeBtn");
+const colorBtn        = document.getElementById("colorBtn");
+const searchBtn       = document.getElementById("searchBtn");
+const searchBar       = document.getElementById("searchBar");
+const searchInput     = document.getElementById("searchInput");
+const searchClose     = document.getElementById("searchClose");
+const scrollDownBtn   = document.getElementById("scrollDownBtn");
+const editModal       = document.getElementById("editModal");
+const editInput       = document.getElementById("editInput");
+const editCancelBtn   = document.getElementById("editCancelBtn");
+const editSaveBtn     = document.getElementById("editSaveBtn");
+const msgMenu         = document.getElementById("msgMenu");
+const menuCopyBtn     = document.getElementById("menuCopyBtn");
+const menuEditBtn     = document.getElementById("menuEditBtn");
+const menuDeleteBtn   = document.getElementById("menuDeleteBtn");
+const reactionPicker  = document.getElementById("reactionPicker");
 
 const MAX_SIZE_MB = 5;
 
@@ -112,6 +130,49 @@ if (!SS.getItem("zummchat_cid")) {
 }
 const myClientId = SS.getItem("zummchat_cid");
 
+let myAvatarUrl = LS.getItem("zummchat_avatar") || "";
+
+// ============ TEMA Y COLOR ============
+let temaActual = LS.getItem("zummchat_tema") || "dark";
+let colorActual = LS.getItem("zummchat_color") || "green";
+
+function aplicarTema() {
+  document.body.classList.toggle("theme-light", temaActual === "light");
+  if (themeBtn) themeBtn.textContent = temaActual === "light" ? "☀️" : "🌙";
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute("content", temaActual === "light" ? "#ffffff" : "#000000");
+}
+
+function aplicarColor() {
+  document.body.classList.remove("color-blue", "color-red", "color-purple", "color-orange", "color-pink");
+  if (colorActual !== "green") document.body.classList.add("color-" + colorActual);
+}
+
+aplicarTema();
+aplicarColor();
+
+if (themeBtn) {
+  themeBtn.addEventListener("click", () => {
+    temaActual = temaActual === "dark" ? "light" : "dark";
+    LS.setItem("zummchat_tema", temaActual);
+    aplicarTema();
+  });
+}
+
+const coloresDisponibles = ["green", "blue", "red", "purple", "orange", "pink"];
+
+if (colorBtn) {
+  colorBtn.addEventListener("click", () => {
+    const idxActual = coloresDisponibles.indexOf(colorActual);
+    const siguiente = coloresDisponibles[(idxActual + 1) % coloresDisponibles.length];
+    colorActual = siguiente;
+    LS.setItem("zummchat_color", colorActual);
+    aplicarColor();
+    const nombres = { green: "Verde", blue: "Azul", red: "Rojo", purple: "Morado", orange: "Naranja", pink: "Rosa" };
+    alert("🎨 Color cambiado a: " + nombres[colorActual]);
+  });
+}
+
 // ============ CAMBIAR NOMBRE ============
 function actualizarNombreEnUI() {
   if (userMeName) userMeName.textContent = "Tú: " + username;
@@ -133,13 +194,74 @@ if (changeNameBtn) {
     try {
       await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
       await supabaseClient.from("zumm_presence").upsert({
-        username: username, room: currentRoom, last_seen: new Date().toISOString()
+        username: username, room: currentRoom, last_seen: new Date().toISOString(), avatar_url: myAvatarUrl
       }, { onConflict: "username,room" });
     } catch (e) { console.warn(e); }
 
     alert("✅ Nombre cambiado a: " + username + "\n\nRecarga la página para que todos lo vean.");
   });
 }
+
+// ============ FOTO DE PERFIL ============
+function mostrarAvatarPropio() {
+  if (!userMeAvatar) return;
+  if (myAvatarUrl) {
+    userMeAvatar.textContent = "";
+    userMeAvatar.style.backgroundImage = "url(" + myAvatarUrl + ")";
+  } else {
+    userMeAvatar.textContent = avatarLetter(username);
+    userMeAvatar.style.backgroundImage = "";
+  }
+}
+
+if (userMeAvatar && avatarInput) {
+  userMeAvatar.addEventListener("click", () => avatarInput.click());
+}
+
+if (avatarInput) {
+  avatarInput.addEventListener("change", async () => {
+    const file = avatarInput.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("La foto debe pesar menos de 2 MB.");
+      avatarInput.value = "";
+      return;
+    }
+
+    userMeAvatar.textContent = "⏳";
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const nombreArchivo = "avatar_" + username.toLowerCase().replace(/\s/g, "") + "_" + Date.now() + "." + ext;
+
+      const { error: upErr } = await supabaseClient.storage.from("archivos")
+        .upload(nombreArchivo, file, { contentType: file.type, upsert: true });
+
+      if (upErr) {
+        alert("No se pudo subir: " + upErr.message);
+        mostrarAvatarPropio();
+        return;
+      }
+
+      const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
+      myAvatarUrl = urlData.publicUrl;
+      LS.setItem("zummchat_avatar", myAvatarUrl);
+      mostrarAvatarPropio();
+
+      await supabaseClient.from("zumm_presence").upsert({
+        username: username, room: currentRoom, last_seen: new Date().toISOString(), avatar_url: myAvatarUrl
+      }, { onConflict: "username,room" });
+
+      alert("✅ Foto de perfil actualizada");
+    } catch (e) {
+      alert("Error: " + e.message);
+      mostrarAvatarPropio();
+    } finally {
+      avatarInput.value = "";
+    }
+  });
+}
+
+mostrarAvatarPropio();
 
 let currentRoom = "general";
 
@@ -236,14 +358,8 @@ function mostrarNotificacion(remitente, texto) {
         : "(" + mensajesNoLeidos + ") 💬 ZummChat";
     }, 1000);
   }
-
   reproducirSonidoInsistente();
 }
-
-window.addEventListener("focus", resetearTitulo);
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) resetearTitulo();
-});
 
 function resetearTitulo() {
   mensajesNoLeidos = 0;
@@ -254,6 +370,11 @@ function resetearTitulo() {
     tituloParpadeando = false;
   }
 }
+
+window.addEventListener("focus", resetearTitulo);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) resetearTitulo();
+});
 
 // ============ RINGTONE ============
 let ringInterval = null;
@@ -320,10 +441,7 @@ function roomLabel(room) {
 function hidePrivados() { if (privRoomBar) privRoomBar.style.display = "none"; }
 function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
 
-// ================================================================
-// ============ GRUPOS PERSONALIZADOS ============================
-// ================================================================
-
+// ============ GRUPOS ============
 let gruposPersonalizados = JSON.parse(LS.getItem("zummchat_grupos") || "[]");
 
 function guardarGrupos() {
@@ -356,7 +474,6 @@ function crearBotonGrupo(nombreGrupo) {
     if (currentRoom === roomId) switchRoom("general");
   });
   btn.appendChild(close);
-
   btn.addEventListener("click", () => switchRoom(roomId));
   roomBar.insertBefore(btn, addRoomBtn);
 }
@@ -367,29 +484,17 @@ if (addRoomBtn) {
   addRoomBtn.addEventListener("click", () => {
     const nombre = prompt("Nombre del nuevo grupo:\n\n(Solo letras, números y guiones)");
     if (!nombre || !nombre.trim()) return;
-
-    const limpio = nombre.trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9\-]/g, "")
-      .substring(0, 30);
-
-    if (!limpio) {
-      alert("Nombre inválido. Usa letras o números.");
-      return;
-    }
-
+    const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
+    if (!limpio) { alert("Nombre inválido."); return; }
     if (gruposPersonalizados.includes(limpio)) {
       alert("Ese grupo ya existe.");
       switchRoom("grupo:" + limpio);
       return;
     }
-
     gruposPersonalizados.push(limpio);
     guardarGrupos();
     crearBotonGrupo(limpio);
     switchRoom("grupo:" + limpio);
-
     setTimeout(() => {
       alert("✅ Grupo '" + limpio + "' creado.\n\nPara invitar a otros, diles que toquen ➕ y escriban el mismo nombre: " + limpio);
     }, 300);
@@ -401,7 +506,6 @@ function switchRoom(room) {
   currentRoom = room;
   if (!room.startsWith("priv:")) hidePrivados();
   else showPrivados();
-
   if (chatTitle) chatTitle.textContent = "ZummChat · " + roomLabel(room);
   rendered.clear();
   lastDateKey = "";
@@ -422,9 +526,7 @@ document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
 });
 
 let privateRooms = JSON.parse(LS.getItem("zummchat_privrooms") || "[]");
-function savePrivateRooms() {
-  LS.setItem("zummchat_privrooms", JSON.stringify(privateRooms));
-}
+function savePrivateRooms() { LS.setItem("zummchat_privrooms", JSON.stringify(privateRooms)); }
 
 function createPrivateButton(room) {
   if (!privRoomBar) return;
@@ -439,7 +541,7 @@ function createPrivateButton(room) {
   close.textContent = "✕";
   close.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (!confirm("¿Eliminar este chat privado de tu lista?")) return;
+    if (!confirm("¿Eliminar este chat privado?")) return;
     privateRooms = privateRooms.filter(r => r !== room);
     savePrivateRooms();
     btn.remove();
@@ -470,7 +572,7 @@ function openPrivateWith(otroNombre) {
 
 if (privateBtn) {
   privateBtn.addEventListener("click", () => {
-    const otro = prompt("¿Con quién quieres hablar en privado? (escribe su nombre exacto)");
+    const otro = prompt("¿Con quién quieres hablar en privado?");
     if (!otro || !otro.trim()) return;
     openPrivateWith(otro);
   });
@@ -555,15 +657,11 @@ if (fileInput) {
 
     const { data, error } = await supabaseClient.from("zumm_messages")
       .insert([{
-        text: texto || "",
-        username: username,
-        room: currentRoom,
-        file_url: publicUrl,
-        file_name: file.name,
+        text: texto || "", username: username, room: currentRoom,
+        file_url: publicUrl, file_name: file.name,
         file_type: file.type || "application/octet-stream"
       }])
-      .select()
-      .single();
+      .select().single();
 
     fileBtn.textContent = "📎";
     fileBtn.disabled = false;
@@ -574,10 +672,7 @@ if (fileInput) {
   });
 }
 
-// ================================================================
-// ============ NOTAS DE VOZ =====================================
-// ================================================================
-
+// ============ NOTAS DE VOZ ============
 let mediaRecorder = null;
 let audioChunks = [];
 let grabando = false;
@@ -594,33 +689,23 @@ function formatearSegundos(s) {
 function iniciarGrabacion() {
   if (grabando) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Tu navegador no soporta grabación de audio.");
+    alert("Tu navegador no soporta grabación.");
     return;
   }
-  if (!window.MediaRecorder) {
-    alert("Tu navegador no soporta MediaRecorder.");
-    return;
-  }
+  if (!window.MediaRecorder) { alert("No soporta MediaRecorder."); return; }
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     audioStreamRec = stream;
     audioChunks = [];
-
     let mimeType = "audio/webm";
     if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
     else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
     else if (MediaRecorder.isTypeSupported("audio/ogg")) mimeType = "audio/ogg";
 
-    try {
-      mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
-    } catch (e) {
-      mediaRecorder = new MediaRecorder(stream);
-    }
+    try { mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType }); }
+    catch (e) { mediaRecorder = new MediaRecorder(stream); }
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) audioChunks.push(e.data);
-    };
-
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
     mediaRecorder.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
       audioStreamRec = null;
@@ -630,10 +715,7 @@ function iniciarGrabacion() {
     grabando = true;
     recSegundos = 0;
 
-    if (voiceBtn) {
-      voiceBtn.classList.add("recording");
-      voiceBtn.textContent = "⏹️";
-    }
+    if (voiceBtn) { voiceBtn.classList.add("recording"); voiceBtn.textContent = "⏹️"; }
     if (recordingPanel) recordingPanel.classList.add("show");
     if (recordingTime) recordingTime.textContent = "0:00";
 
@@ -641,16 +723,10 @@ function iniciarGrabacion() {
     recTimerInterval = setInterval(() => {
       recSegundos++;
       if (recordingTime) recordingTime.textContent = formatearSegundos(recSegundos);
-
-      // Límite de 2 minutos
-      if (recSegundos >= 120) {
-        detenerGrabacion(true);
-      }
+      if (recSegundos >= 120) detenerGrabacion(true);
     }, 1000);
 
-  }).catch(e => {
-    alert("No se pudo acceder al micrófono:\n" + e.message);
-  });
+  }).catch(e => alert("No se pudo acceder al micrófono:\n" + e.message));
 }
 
 function cancelarGrabacion() {
@@ -658,25 +734,16 @@ function cancelarGrabacion() {
   grabando = false;
   clearInterval(recTimerInterval);
   recTimerInterval = null;
-
   try {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.onstop = () => {
-        if (audioStreamRec) {
-          audioStreamRec.getTracks().forEach(t => t.stop());
-          audioStreamRec = null;
-        }
+        if (audioStreamRec) { audioStreamRec.getTracks().forEach(t => t.stop()); audioStreamRec = null; }
       };
       mediaRecorder.stop();
     }
   } catch (e) {}
-
   audioChunks = [];
-
-  if (voiceBtn) {
-    voiceBtn.classList.remove("recording");
-    voiceBtn.textContent = "🎤";
-  }
+  if (voiceBtn) { voiceBtn.classList.remove("recording"); voiceBtn.textContent = "🎤"; }
   if (recordingPanel) recordingPanel.classList.remove("show");
 }
 
@@ -685,30 +752,19 @@ async function detenerGrabacion(enviar) {
   grabando = false;
   clearInterval(recTimerInterval);
   recTimerInterval = null;
-
   const duracionFinal = recSegundos;
 
   const promesa = new Promise(resolve => {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
-      resolve();
-      return;
-    }
+    if (!mediaRecorder || mediaRecorder.state === "inactive") { resolve(); return; }
     mediaRecorder.onstop = () => {
-      if (audioStreamRec) {
-        audioStreamRec.getTracks().forEach(t => t.stop());
-        audioStreamRec = null;
-      }
+      if (audioStreamRec) { audioStreamRec.getTracks().forEach(t => t.stop()); audioStreamRec = null; }
       resolve();
     };
     try { mediaRecorder.stop(); } catch (e) { resolve(); }
   });
-
   await promesa;
 
-  if (voiceBtn) {
-    voiceBtn.classList.remove("recording");
-    voiceBtn.textContent = "🎤";
-  }
+  if (voiceBtn) { voiceBtn.classList.remove("recording"); voiceBtn.textContent = "🎤"; }
   if (recordingPanel) recordingPanel.classList.remove("show");
 
   if (!enviar) { audioChunks = []; return; }
@@ -717,11 +773,7 @@ async function detenerGrabacion(enviar) {
   const blob = new Blob(audioChunks, { type: audioChunks[0].type || "audio/webm" });
   audioChunks = [];
 
-  if (blob.size > MAX_SIZE_MB * 1024 * 1024) {
-    alert("La nota de voz es muy larga.");
-    return;
-  }
-
+  if (blob.size > MAX_SIZE_MB * 1024 * 1024) { alert("Nota muy larga."); return; }
   if (voiceBtn) { voiceBtn.textContent = "⏳"; voiceBtn.disabled = true; }
 
   try {
@@ -731,33 +783,23 @@ async function detenerGrabacion(enviar) {
     const { error: upErr } = await supabaseClient.storage.from("archivos")
       .upload(nombreArchivo, blob, { contentType: blob.type });
 
-    if (upErr) {
-      alert("No se pudo subir la nota de voz: " + upErr.message);
-      return;
-    }
+    if (upErr) { alert("No se pudo subir: " + upErr.message); return; }
 
     const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
     const publicUrl = urlData.publicUrl;
 
     const { data, error } = await supabaseClient.from("zumm_messages")
       .insert([{
-        text: "",
-        username: username,
-        room: currentRoom,
-        file_url: publicUrl,
-        file_name: "audio-" + formatearSegundos(duracionFinal),
+        text: "", username: username, room: currentRoom,
+        file_url: publicUrl, file_name: "audio-" + formatearSegundos(duracionFinal),
         file_type: blob.type
       }])
-      .select()
-      .single();
+      .select().single();
 
     if (error) { alert("No se pudo enviar: " + error.message); return; }
     renderMessage(data, false);
-  } catch (e) {
-    alert("Error al enviar: " + e.message);
-  } finally {
-    if (voiceBtn) { voiceBtn.textContent = "🎤"; voiceBtn.disabled = false; }
-  }
+  } catch (e) { alert("Error: " + e.message); }
+  finally { if (voiceBtn) { voiceBtn.textContent = "🎤"; voiceBtn.disabled = false; } }
 }
 
 if (voiceBtn) {
@@ -806,6 +848,15 @@ function formatTime(iso) {
   return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
+function buscarUsuarioPorNombre(nombre) {
+  return usersOnline.find(u => u.toLowerCase() === (nombre || "").toLowerCase());
+}
+
+function avatarUrlDe(nombre) {
+  if (nombre.toLowerCase() === username.toLowerCase()) return myAvatarUrl;
+  return "";
+}
+
 function renderMessage(m, esNuevo) {
   if (!m || !m.id || rendered.has(m.id)) return;
   if (m.room !== currentRoom) return;
@@ -832,8 +883,14 @@ function renderMessage(m, esNuevo) {
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.style.background = colorForUser(m.username);
-  avatar.textContent = avatarLetter(m.username);
+  const url = avatarUrlDe(m.username || "");
+  if (url) {
+    avatar.style.backgroundImage = "url(" + url + ")";
+    avatar.textContent = "";
+  } else {
+    avatar.style.background = colorForUser(m.username);
+    avatar.textContent = avatarLetter(m.username);
+  }
   div.appendChild(avatar);
 
   const content = document.createElement("div");
@@ -855,17 +912,11 @@ function renderMessage(m, esNuevo) {
   timeEl.textContent = formatTime(m.created_at);
   rightSide.appendChild(timeEl);
 
-  if ((m.username || "").toLowerCase() === username.toLowerCase()) {
-    const delBtn = document.createElement("button");
-    delBtn.className = "del-btn";
-    delBtn.textContent = "🗑️";
-    delBtn.addEventListener("click", async () => {
-      if (!confirm("¿Borrar este mensaje?")) return;
-      const { error } = await supabaseClient.from("zumm_messages").delete().eq("id", m.id);
-      if (error) { alert("No se pudo borrar: " + error.message); return; }
-      removeMessageFromDOM(m.id);
-    });
-    rightSide.appendChild(delBtn);
+  if (m.edited_at) {
+    const ed = document.createElement("span");
+    ed.className = "msg-edited";
+    ed.textContent = "(editado)";
+    rightSide.appendChild(ed);
   }
 
   header.appendChild(nameEl);
@@ -882,77 +933,57 @@ function renderMessage(m, esNuevo) {
 
   if (m.file_url) {
     const tipo = m.file_type || "";
-
     if (tipo.startsWith("audio/")) {
-      // Nota de voz
       const voiceDiv = document.createElement("div");
       voiceDiv.className = "voice-note";
-
       const playBtn = document.createElement("button");
       playBtn.className = "voice-play-btn";
       playBtn.textContent = "▶";
-
       const audio = document.createElement("audio");
       audio.src = m.file_url;
       audio.preload = "metadata";
-
       const wave = document.createElement("div");
       wave.className = "voice-wave";
-      const barras = 20;
-      for (let i = 0; i < barras; i++) {
+      for (let i = 0; i < 20; i++) {
         const span = document.createElement("span");
         span.style.height = (5 + Math.random() * 25) + "px";
         wave.appendChild(span);
       }
-
       const duracion = document.createElement("span");
       duracion.className = "voice-duration";
       duracion.textContent = "0:00";
-
       audio.addEventListener("loadedmetadata", () => {
-        if (isFinite(audio.duration)) {
-          duracion.textContent = formatearSegundos(Math.round(audio.duration));
-        }
+        if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
       });
-
       audio.addEventListener("timeupdate", () => {
         if (isFinite(audio.duration) && audio.duration > 0) {
-          const restante = Math.max(0, Math.round(audio.duration - audio.currentTime));
-          duracion.textContent = formatearSegundos(restante);
+          duracion.textContent = formatearSegundos(Math.max(0, Math.round(audio.duration - audio.currentTime)));
         }
       });
-
-      playBtn.addEventListener("click", () => {
+      playBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
         if (audio.paused) {
-          document.querySelectorAll("audio").forEach(a => {
-            if (a !== audio) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
-          });
+          document.querySelectorAll("audio").forEach(a => { if (a !== audio) { try { a.pause(); a.currentTime = 0; } catch (e) {} } });
           audio.play().catch(() => {});
-        } else {
-          audio.pause();
-        }
+        } else audio.pause();
       });
-
       audio.addEventListener("play", () => { playBtn.textContent = "⏸"; });
       audio.addEventListener("pause", () => { playBtn.textContent = "▶"; });
       audio.addEventListener("ended", () => {
-        playBtn.textContent = "▶";
-        audio.currentTime = 0;
+        playBtn.textContent = "▶"; audio.currentTime = 0;
         if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
       });
-
       voiceDiv.appendChild(playBtn);
       voiceDiv.appendChild(wave);
       voiceDiv.appendChild(duracion);
       voiceDiv.appendChild(audio);
       body.appendChild(voiceDiv);
-
     } else if (tipo.startsWith("image/")) {
       const img = document.createElement("img");
       img.src = m.file_url;
       img.className = "msg-file-img";
       img.loading = "lazy";
-      img.addEventListener("click", () => openImageModal(m.file_url));
+      img.addEventListener("click", (e) => { e.stopPropagation(); openImageModal(m.file_url); });
       body.appendChild(img);
     } else {
       const a = document.createElement("a");
@@ -974,7 +1005,50 @@ function renderMessage(m, esNuevo) {
 
   content.appendChild(header);
   content.appendChild(body);
+
+  // Reacciones
+  const reacciones = (m.reactions || "").split(",").filter(x => x.trim());
+  if (reacciones.length > 0) {
+    const bar = document.createElement("div");
+    bar.className = "reactions-bar";
+    const conteo = {};
+    reacciones.forEach(r => { conteo[r] = (conteo[r] || 0) + 1; });
+    Object.keys(conteo).forEach(emoji => {
+      const b = document.createElement("div");
+      b.className = "reaction-bubble";
+      b.textContent = emoji;
+      if (conteo[emoji] > 1) {
+        const c = document.createElement("span");
+        c.className = "count";
+        c.textContent = conteo[emoji];
+        b.appendChild(c);
+      }
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleReaccion(m.id, emoji);
+      });
+      bar.appendChild(b);
+    });
+    content.appendChild(bar);
+  }
+
   div.appendChild(content);
+
+  // Long press → menú
+  let longPressTimer = null;
+  div.addEventListener("touchstart", (e) => {
+    longPressTimer = setTimeout(() => {
+      mostrarMenuMensaje(m, e.touches[0].clientX, e.touches[0].clientY);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+  }, { passive: true });
+  div.addEventListener("touchend", () => clearTimeout(longPressTimer));
+  div.addEventListener("touchmove", () => clearTimeout(longPressTimer));
+  div.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    mostrarMenuMensaje(m, e.clientX, e.clientY);
+  });
+
   messagesEl.appendChild(div);
   scrollToBottom();
 }
@@ -987,7 +1061,7 @@ function removeMessageFromDOM(id) {
 
 async function loadHistory() {
   const { data, error } = await supabaseClient.from("zumm_messages")
-    .select("id, text, username, created_at, room, file_url, file_name, file_type")
+    .select("id, text, username, created_at, room, file_url, file_name, file_type, edited_at, reactions")
     .eq("room", currentRoom)
     .order("created_at", { ascending: true })
     .limit(200);
@@ -1003,8 +1077,7 @@ async function sendMessage() {
 
   const { data, error } = await supabaseClient.from("zumm_messages")
     .insert([{ text: text, username: username, room: currentRoom }])
-    .select()
-    .single();
+    .select().single();
 
   if (error) {
     console.error("ERROR insert:", error);
@@ -1024,10 +1097,216 @@ supabaseClient
       { event: "INSERT", schema: "public", table: "zumm_messages" },
       payload => renderMessage(payload.new, true))
   .on("postgres_changes",
+      { event: "UPDATE", schema: "public", table: "zumm_messages" },
+      payload => {
+        const m = payload.new;
+        if (!m || !m.id) return;
+        if (m.room !== currentRoom) return;
+        const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
+        if (el) {
+          rendered.delete(m.id);
+          el.remove();
+          renderMessage(m, false);
+        }
+      })
+  .on("postgres_changes",
       { event: "DELETE", schema: "public", table: "zumm_messages" },
       payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })
-  .subscribe(status => console.log("Realtime mensajes:", status));
+  .subscribe();
 
+// ============ EDITAR MENSAJE ============
+let mensajeEditando = null;
+
+function abrirEditorMensaje(m) {
+  if (!editModal || !editInput) return;
+  if ((m.username || "").toLowerCase() !== username.toLowerCase()) {
+    alert("Solo puedes editar tus propios mensajes.");
+    return;
+  }
+  mensajeEditando = m;
+  editInput.value = m.text || "";
+  editModal.classList.add("show");
+  setTimeout(() => editInput.focus(), 100);
+}
+
+if (editCancelBtn) editCancelBtn.addEventListener("click", () => {
+  editModal.classList.remove("show");
+  mensajeEditando = null;
+});
+
+if (editSaveBtn) {
+  editSaveBtn.addEventListener("click", async () => {
+    if (!mensajeEditando || !editInput) return;
+    const nuevoTexto = editInput.value.trim();
+    if (!nuevoTexto) { alert("El mensaje no puede estar vacío."); return; }
+    if (nuevoTexto === mensajeEditando.text) {
+      editModal.classList.remove("show");
+      mensajeEditando = null;
+      return;
+    }
+
+    const { error } = await supabaseClient.from("zumm_messages")
+      .update({ text: nuevoTexto, edited_at: new Date().toISOString() })
+      .eq("id", mensajeEditando.id);
+
+    if (error) { alert("No se pudo editar: " + error.message); return; }
+    editModal.classList.remove("show");
+    mensajeEditando = null;
+  });
+}
+
+// ============ MENÚ DE MENSAJE (long press) ============
+let mensajeMenuActual = null;
+
+function mostrarMenuMensaje(m, x, y) {
+  if (!msgMenu) return;
+  mensajeMenuActual = m;
+
+  const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
+  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text ? "block" : "none";
+  if (menuDeleteBtn) menuDeleteBtn.style.display = esMio ? "block" : "none";
+
+  msgMenu.classList.add("show");
+  const ancho = 160;
+  const alto = 160;
+  const xFinal = Math.min(x, window.innerWidth - ancho - 10);
+  const yFinal = Math.min(y, window.innerHeight - alto - 10);
+  msgMenu.style.left = Math.max(10, xFinal) + "px";
+  msgMenu.style.top = Math.max(10, yFinal) + "px";
+}
+
+function cerrarMenu() {
+  if (msgMenu) msgMenu.classList.remove("show");
+  if (reactionPicker) reactionPicker.classList.remove("show");
+}
+
+document.addEventListener("touchstart", (e) => {
+  if (msgMenu && msgMenu.classList.contains("show") && !msgMenu.contains(e.target)) {
+    cerrarMenu();
+  }
+  if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) {
+    reactionPicker.classList.remove("show");
+  }
+});
+
+if (menuCopyBtn) {
+  menuCopyBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    try {
+      await navigator.clipboard.writeText(mensajeMenuActual.text || "");
+      alert("📋 Mensaje copiado");
+    } catch (e) { alert("No se pudo copiar."); }
+    cerrarMenu();
+  });
+}
+
+if (menuEditBtn) {
+  menuEditBtn.addEventListener("click", () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    cerrarMenu();
+    setTimeout(() => abrirEditorMensaje(m), 150);
+  });
+}
+
+if (menuDeleteBtn) {
+  menuDeleteBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    cerrarMenu();
+    if (!confirm("¿Borrar este mensaje?")) return;
+    const { error } = await supabaseClient.from("zumm_messages").delete().eq("id", m.id);
+    if (error) { alert("No se pudo borrar: " + error.message); return; }
+    removeMessageFromDOM(m.id);
+  });
+}
+
+// ============ REACCIONES ============
+async function toggleReaccion(msgId, emoji) {
+  try {
+    const { data: msg } = await supabaseClient.from("zumm_messages")
+      .select("reactions").eq("id", msgId).single();
+    if (!msg) return;
+
+    const actuales = (msg.reactions || "").split(",").filter(x => x.trim());
+    const miTag = emoji + ":" + username;
+
+    let nuevas;
+    if (actuales.includes(miTag)) {
+      nuevas = actuales.filter(x => x !== miTag);
+    } else {
+      nuevas = actuales.filter(x => !x.endsWith(":" + username));
+      nuevas.push(miTag);
+    }
+
+    await supabaseClient.from("zumm_messages")
+      .update({ reactions: nuevas.join(",") })
+      .eq("id", msgId);
+  } catch (e) { console.warn(e); }
+}
+
+// ============ BÚSQUEDA ============
+if (searchBtn) {
+  searchBtn.addEventListener("click", () => {
+    if (!searchBar) return;
+    searchBar.classList.toggle("show");
+    if (searchBar.classList.contains("show") && searchInput) {
+      setTimeout(() => searchInput.focus(), 100);
+    } else {
+      limpiarBusqueda();
+    }
+  });
+}
+
+if (searchClose) {
+  searchClose.addEventListener("click", () => {
+    if (searchBar) searchBar.classList.remove("show");
+    limpiarBusqueda();
+  });
+}
+
+function limpiarBusqueda() {
+  if (searchInput) searchInput.value = "";
+  document.querySelectorAll(".msg.highlight").forEach(el => el.classList.remove("highlight"));
+  document.querySelectorAll(".msg").forEach(el => { el.style.display = "flex"; });
+}
+
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.toLowerCase().trim();
+    const mensajes = document.querySelectorAll(".msg");
+    if (!q) {
+      mensajes.forEach(el => { el.style.display = "flex"; el.classList.remove("highlight"); });
+      return;
+    }
+    mensajes.forEach(el => {
+      const texto = (el.textContent || "").toLowerCase();
+      const coincide = texto.includes(q);
+      el.style.display = coincide ? "flex" : "none";
+      el.classList.toggle("highlight", coincide);
+    });
+  });
+}
+
+// ============ BOTÓN IR ABAJO ============
+function actualizarBotonAbajo() {
+  if (!messagesEl || !scrollDownBtn) return;
+  const distanciaAbajo = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+  scrollDownBtn.classList.toggle("show", distanciaAbajo > 150);
+}
+
+if (messagesEl) {
+  messagesEl.addEventListener("scroll", actualizarBotonAbajo);
+}
+
+if (scrollDownBtn) {
+  scrollDownBtn.addEventListener("click", () => {
+    if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollDownBtn.classList.remove("show");
+  });
+}
+
+// ============ IMAGEN MODAL ============
 function openImageModal(url) {
   let modal = document.getElementById("imgModal");
   if (!modal) {
@@ -1040,29 +1319,26 @@ function openImageModal(url) {
     close.addEventListener("click", () => modal.classList.remove("show"));
     modal.appendChild(img);
     modal.appendChild(close);
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) modal.classList.remove("show");
-    });
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
     document.body.appendChild(modal);
   }
   modal.querySelector("img").src = url;
   modal.classList.add("show");
 }
 
-// ================================================================
-// ============ PRESENCIA VIA TABLA ==============================
-// ================================================================
-
+// ============ PRESENCIA ============
 let usersOnline = [];
 let presenceInterval = null;
 let presenceRefreshInterval = null;
+let avataresPorUsuario = {};
 
 async function registrarPresencia() {
   try {
-    const { error } = await supabaseClient
-      .from("zumm_presence")
+    const { error } = await supabaseClient.from("zumm_presence")
       .upsert({
-        username: username, room: currentRoom, last_seen: new Date().toISOString()
+        username: username, room: currentRoom,
+        last_seen: new Date().toISOString(),
+        avatar_url: myAvatarUrl || null
       }, { onConflict: "username,room" });
     if (error) console.warn("Presencia error:", error.message);
   } catch (e) { console.warn("Presencia excepción:", e); }
@@ -1071,9 +1347,8 @@ async function registrarPresencia() {
 async function leerPresencia() {
   try {
     const hace30s = new Date(Date.now() - 30000).toISOString();
-    const { data, error } = await supabaseClient
-      .from("zumm_presence")
-      .select("username, last_seen")
+    const { data, error } = await supabaseClient.from("zumm_presence")
+      .select("username, last_seen, avatar_url")
       .eq("room", currentRoom)
       .gte("last_seen", hace30s);
 
@@ -1082,6 +1357,11 @@ async function leerPresencia() {
     usersOnline = (data || [])
       .map(u => u.username)
       .filter(u => u.toLowerCase() !== username.toLowerCase());
+
+    avataresPorUsuario = {};
+    (data || []).forEach(u => {
+      if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
+    });
 
     renderUserList();
   } catch (e) { console.warn("Leer presencia excepción:", e); }
@@ -1101,12 +1381,9 @@ supabaseClient
   .on("postgres_changes",
       { event: "*", schema: "public", table: "zumm_presence" },
       () => { leerPresencia(); })
-  .subscribe(status => console.log("Realtime presencia:", status));
+  .subscribe();
 
-// ================================================================
-// ============ LISTA DE USUARIOS ================================
-// ================================================================
-
+// ============ LISTA DE USUARIOS ============
 function updateUsersBtn() {
   if (usersBtn) {
     const hay = usersOnline.length > 0;
@@ -1167,10 +1444,7 @@ if (usersPanelClose) {
   });
 }
 
-// ================================================================
-// ============ LLAMADAS WEBRTC VIA TABLA ========================
-// ================================================================
-
+// ============ LLAMADAS WEBRTC ============
 let pc = null;
 let localStream = null;
 let activeCall = null;
@@ -1193,8 +1467,7 @@ async function cargarListaCamaras() {
 
 async function enviarSenal(toUser, signalType, payload) {
   try {
-    const { error } = await supabaseClient
-      .from("zumm_signals")
+    const { error } = await supabaseClient.from("zumm_signals")
       .insert([{
         from_user: username, to_user: toUser, from_client: myClientId,
         signal_type: signalType, payload: JSON.stringify(payload || {})
@@ -1205,10 +1478,8 @@ async function enviarSenal(toUser, signalType, payload) {
 
 async function leerSenales() {
   try {
-    const { data, error } = await supabaseClient
-      .from("zumm_signals")
-      .select("*")
-      .eq("to_user", username)
+    const { data, error } = await supabaseClient.from("zumm_signals")
+      .select("*").eq("to_user", username)
       .gt("id", signalsLastId)
       .order("id", { ascending: true })
       .limit(50);
@@ -1228,7 +1499,6 @@ async function leerSenales() {
 function procesarSenal(s) {
   let payload = {};
   try { payload = JSON.parse(s.payload || "{}"); } catch (e) {}
-
   const fromName = s.from_user;
   const callId = payload.callId;
 
@@ -1278,9 +1548,7 @@ function procesarSenal(s) {
       if (!payload.candidate) return;
       if (pc && pc.remoteDescription) {
         pc.addIceCandidate(new RTCIceCandidate(payload.candidate)).catch(() => {});
-      } else {
-        iceQueue.push(payload.candidate);
-      }
+      } else { iceQueue.push(payload.candidate); }
       break;
 
     case "hangup":
@@ -1292,7 +1560,7 @@ function procesarSenal(s) {
 
     case "reject":
       if (!activeCall || activeCall.callId !== callId) return;
-      const razon = (payload.reason === "busy") ? fromName + " está en otra llamada." : fromName + " rechazó la llamada.";
+      const razon = (payload.reason === "busy") ? fromName + " está en otra llamada." : fromName + " rechazó.";
       endCall(false);
       alert(razon);
       break;
@@ -1363,7 +1631,6 @@ if (incomingAcceptBtn) {
     stopRingtone();
     clearTimeout(ringTimeout);
     if (incomingModal) incomingModal.classList.remove("show");
-
     if (!supportsCalls()) { enviarSenal(call.fromName, "reject", { callId: call.callId }); return; }
 
     try {
@@ -1380,11 +1647,7 @@ if (incomingAcceptBtn) {
     currentFacingMode = "user";
     await cargarListaCamaras();
 
-    activeCall = {
-      callId: call.callId, peerName: call.fromName, peerId: call.fromId,
-      role: "callee", video: call.video
-    };
-
+    activeCall = { callId: call.callId, peerName: call.fromName, peerId: call.fromId, role: "callee", video: call.video };
     showCallOverlay("Conectando con " + call.fromName + "...");
     attachLocalPreview();
     await enviarSenal(call.fromName, "accept", { callId: call.callId });
@@ -1393,20 +1656,17 @@ if (incomingAcceptBtn) {
 
 function createPeer() {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-
   pc.onicecandidate = (e) => {
     if (e.candidate && activeCall) {
       enviarSenal(activeCall.peerName, "ice", { callId: activeCall.callId, candidate: e.candidate });
     }
   };
-
   pc.ontrack = (e) => {
     if (remoteVideo) {
       remoteVideo.srcObject = e.streams[0];
       remoteVideo.play().catch(() => {});
     }
   };
-
   pc.onconnectionstatechange = () => {
     if (!pc || !activeCall) return;
     if (pc.connectionState === "connected") {
@@ -1492,18 +1752,12 @@ function showCallOverlay(texto) {
 }
 
 function endCall(notify) {
-  if (notify && activeCall) {
-    enviarSenal(activeCall.peerName, "hangup", { callId: activeCall.callId });
-  }
-  clearTimeout(inviteTimer);
-  inviteTimer = null;
+  if (notify && activeCall) enviarSenal(activeCall.peerName, "hangup", { callId: activeCall.callId });
+  clearTimeout(inviteTimer); inviteTimer = null;
   clearTimeout(ringTimeout);
 
   if (pc) { try { pc.close(); } catch (e) {} pc = null; }
-  if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-  }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   iceQueue = [];
   activeCall = null;
   muted = false;
@@ -1531,18 +1785,15 @@ async function cambiarCamara() {
   if (!activeCall || !activeCall.video) { alert("Solo en videollamadas."); return; }
 
   try {
-    const pistasViejas = localStream.getVideoTracks();
-    pistasViejas.forEach(t => {
+    localStream.getVideoTracks().forEach(t => {
       try { t.stop(); } catch (e) {}
       try { localStream.removeTrack(t); } catch (e) {}
     });
-
     await new Promise(r => setTimeout(r, 300));
     await cargarListaCamaras();
     currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
 
     let nuevoStream = null;
-
     if (listaCamaras.length >= 2) {
       const idxDeseado = currentFacingMode === "user" ? 0 : (listaCamaras.length - 1);
       try {
@@ -1552,7 +1803,6 @@ async function cambiarCamara() {
         });
       } catch (e1) {}
     }
-
     if (!nuevoStream) {
       try {
         nuevoStream = await navigator.mediaDevices.getUserMedia({
@@ -1561,7 +1811,6 @@ async function cambiarCamara() {
         });
       } catch (e2) {}
     }
-
     if (!nuevoStream) {
       try {
         nuevoStream = await navigator.mediaDevices.getUserMedia({
@@ -1569,7 +1818,6 @@ async function cambiarCamara() {
         });
       } catch (e3) {}
     }
-
     if (!nuevoStream) { alert("No se pudo cambiar la cámara."); return; }
 
     const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
@@ -1584,7 +1832,6 @@ async function cambiarCamara() {
       localVideo.srcObject = localStream;
       await localVideo.play().catch(() => {});
     }
-
     if (switchCamBtn) {
       switchCamBtn.textContent = currentFacingMode === "user" ? "🔄 Frontal" : "🔄 Trasera";
     }
@@ -1625,5 +1872,6 @@ loadHistory();
 iniciarPresencia();
 leerSenales();
 cargarListaCamaras();
+actualizarBotonAbajo();
 
 // © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

@@ -31,19 +31,13 @@ body.theme-light {
   --border-light: #e0e0e0;
 }
 
-/* PACKS DE TEMAS — color de acento */
-body.color-blue { --accent: #4fc3f7; --accent-dark: #29b6f6; }
-body.color-red { --accent: #ff5252; --accent-dark: #e53935; }
-body.color-purple { --accent: #ba68c8; --accent-dark: #9c27b0; }
-body.color-orange { --accent: #ffb74d; --accent-dark: #ff9800; }
-body.color-pink { --accent: #f06292; --accent-dark: #e91e63; }
-
-/* PACKS COMBINADOS (tema + color) */
+/* ============ PACKS DE TEMAS (8 TOTAL) ============ */
 body.pack-neon {
   --bg: #0a0014;
   --bg-secondary: #14002a;
   --bg-card: #1e0040;
   --bg-input: #14002a;
+  --bg-header: #1e0040;
   --accent: #ff00ff;
   --accent-dark: #cc00cc;
 }
@@ -52,6 +46,7 @@ body.pack-ocean {
   --bg-secondary: #002a45;
   --bg-card: #003a5c;
   --bg-input: #002a45;
+  --bg-header: #003a5c;
   --accent: #00d4ff;
   --accent-dark: #00a0cc;
 }
@@ -60,6 +55,7 @@ body.pack-sunset {
   --bg-secondary: #2d1408;
   --bg-card: #3d1c0a;
   --bg-input: #2d1408;
+  --bg-header: #3d1c0a;
   --accent: #ff6600;
   --accent-dark: #cc5200;
 }
@@ -68,8 +64,45 @@ body.pack-forest {
   --bg-secondary: #0f2e0f;
   --bg-card: #144014;
   --bg-input: #0f2e0f;
+  --bg-header: #144014;
   --accent: #66ff00;
   --accent-dark: #52cc00;
+}
+body.pack-rose {
+  --bg: #1a0510;
+  --bg-secondary: #2d0a1e;
+  --bg-card: #3d0f28;
+  --bg-input: #2d0a1e;
+  --bg-header: #3d0f28;
+  --accent: #ff66cc;
+  --accent-dark: #cc52a0;
+}
+body.pack-gold {
+  --bg: #1a1405;
+  --bg-secondary: #2d2208;
+  --bg-card: #3d2e0a;
+  --bg-input: #2d2208;
+  --bg-header: #3d2e0a;
+  --accent: #ffd700;
+  --accent-dark: #cca800;
+}
+body.pack-midnight {
+  --bg: #0a0a1a;
+  --bg-secondary: #14142d;
+  --bg-card: #1e1e3d;
+  --bg-input: #14142d;
+  --bg-header: #1e1e3d;
+  --accent: #6699ff;
+  --accent-dark: #527acc;
+}
+body.pack-matrix {
+  --bg: #000000;
+  --bg-secondary: #001a00;
+  --bg-card: #002800;
+  --bg-input: #001a00;
+  --bg-header: #002800;
+  --accent: #00ff00;
+  --accent-dark: #00cc00;
 }
 
 * { box-sizing: border-box; }
@@ -136,7 +169,8 @@ body {
 }
 #header-buttons { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
 
-#soundBtn, #callBtn, #videoBtn, #shareBtn, #usersBtn, #themeBtn, #colorBtn, #searchBtn, #statsBtn, #favBtn {
+#soundBtn, #callBtn, #videoBtn, #shareBtn, #usersBtn, #themeBtn,
+#colorBtn, #searchBtn, #statsBtn, #favBtn, #groupStatsBtn {
   background: var(--bg-header); color: var(--accent);
   border: 1px solid var(--accent); border-radius: 8px;
   padding: 6px 8px; font-size: 14px; cursor: pointer; font-weight: bold;
@@ -144,7 +178,7 @@ body {
 }
 #soundBtn:active, #callBtn:active, #videoBtn:active, #shareBtn:active,
 #usersBtn:active, #themeBtn:active, #colorBtn:active, #searchBtn:active,
-#statsBtn:active, #favBtn:active {
+#statsBtn:active, #favBtn:active, #groupStatsBtn:active {
   transform: scale(.94); background: var(--accent); color: var(--bg);
 }
 #usersBtn.has-users {
@@ -203,18 +237,13 @@ body {
 }
 #pinnedBar.show { display: flex; }
 #pinnedText {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
 }
 #unpinBtn {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 2px 6px;
+  background: transparent; border: none;
+  color: var(--text-dim); font-size: 16px;
+  cursor: pointer; padding: 2px 6px;
 }
 
 #room-bar {
@@ -284,6 +313,19 @@ body {
   gap: 10px;
   position: relative;
   margin-bottom: 4px;
+}
+
+/* ============ MENSAJE DE BIENVENIDA DEL BOT ============ */
+.msg.bot-msg {
+  background: linear-gradient(135deg, rgba(0,255,102,0.1), rgba(0,255,102,0.02));
+  border-left: 3px solid var(--accent);
+  border-top: 1px dashed var(--accent);
+  border-right: 1px dashed var(--accent);
+  border-bottom: 1px dashed var(--accent);
+}
+.msg.bot-msg .msg-name {
+  color: var(--accent);
+  font-style: italic;
 }
 
 #typingIndicator {
@@ -358,15 +400,12 @@ body {
 .msg-edited { color: var(--text-muted); font-size: 10px; font-style: italic; }
 
 .msg-body { font-size: 15px; line-height: 1.4; word-wrap: break-word; }
-
-/* Enlaces clickables */
 .msg-body a.auto-link {
   color: var(--accent);
   text-decoration: underline;
   word-break: break-all;
 }
 
-/* Ubicación compartida */
 .location-msg {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -383,10 +422,7 @@ body {
 .location-msg .loc-text { flex: 1; font-size: 14px; }
 
 .reactions-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
 }
 .reaction-bubble {
   background: var(--bg);
@@ -396,9 +432,7 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: transform .15s;
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  display: flex; align-items: center; gap: 3px;
 }
 .reaction-bubble:active { transform: scale(.9); }
 .reaction-bubble.mine { border-color: var(--accent); background: var(--bg-card); }
@@ -692,12 +726,9 @@ body {
 #incomingAcceptBtn { background: var(--accent); color: var(--bg); }
 
 #editModal {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.9);
-  z-index: 10002;
-  justify-content: center; align-items: center;
-  padding: 20px;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 10002;
+  justify-content: center; align-items: center; padding: 20px;
 }
 #editModal.show { display: flex; }
 .edit-content {
@@ -707,19 +738,14 @@ body {
   padding: 20px;
   width: 100%; max-width: 400px;
 }
-.edit-content h3 {
-  color: var(--accent); margin: 0 0 12px 0; font-size: 16px;
-}
+.edit-content h3 { color: var(--accent); margin: 0 0 12px 0; font-size: 16px; }
 #editInput {
   width: 100%; min-height: 100px;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px;
-  color: var(--text);
-  font-size: 14px;
-  font-family: inherit;
-  resize: vertical;
+  padding: 10px; color: var(--text);
+  font-size: 14px; font-family: inherit; resize: vertical;
 }
 #editInput:focus { outline: 2px solid var(--accent); }
 .edit-actions {
@@ -733,41 +759,31 @@ body {
 #editSaveBtn { background: var(--accent); color: var(--bg); }
 
 #msgMenu {
-  display: none;
-  position: fixed;
+  display: none; position: fixed;
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
   border-radius: 10px;
-  padding: 6px;
-  z-index: 10003;
+  padding: 6px; z-index: 10003;
   box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: column; gap: 4px;
   min-width: 150px;
 }
 #msgMenu.show { display: flex; }
 #msgMenu button {
-  background: transparent;
-  border: none;
-  color: var(--text);
-  padding: 10px 14px;
-  text-align: left;
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: 6px;
-  font-weight: bold;
+  background: transparent; border: none;
+  color: var(--text); padding: 10px 14px;
+  text-align: left; font-size: 14px;
+  cursor: pointer; border-radius: 6px; font-weight: bold;
 }
 #msgMenu button:active { background: var(--bg-card); }
 #menuDeleteBtn { color: #ff5252; }
 
 #reactionPicker {
-  display: none;
-  position: fixed;
+  display: none; position: fixed;
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
   border-radius: 30px;
-  padding: 8px 12px;
-  z-index: 10004;
+  padding: 8px 12px; z-index: 10004;
   box-shadow: 0 4px 16px rgba(0,0,0,0.6);
   gap: 8px;
 }
@@ -791,8 +807,7 @@ body {
   border-radius: 16px;
   padding: 24px;
   width: 100%; max-width: 360px;
-  text-align: center;
-  position: relative;
+  text-align: center; position: relative;
 }
 #profileCloseBtn {
   position: absolute; top: 10px; right: 14px;
@@ -841,18 +856,21 @@ body {
 #profileSaveBtn { background: var(--accent); color: var(--bg); }
 #profileCancelBtn { background: var(--bg-card); color: var(--text); }
 
-#statsModal {
+/* ESTADÍSTICAS (personal y grupo comparten) */
+#statsModal, #groupStatsModal {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.9); z-index: 10006;
   justify-content: center; align-items: center; padding: 20px;
 }
-#statsModal.show { display: flex; }
+#statsModal.show, #groupStatsModal.show { display: flex; }
 .stats-content {
   background: var(--bg-secondary);
   border: 2px solid var(--accent);
   border-radius: 16px;
   padding: 22px;
-  width: 100%; max-width: 380px;
+  width: 100%; max-width: 400px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 .stats-content h3 {
   color: var(--accent); font-size: 20px;
@@ -866,14 +884,42 @@ body {
 }
 .stat-label { color: var(--text); }
 .stat-value { color: var(--accent); font-weight: bold; font-size: 16px; }
-#statsCloseBtn {
+#statsCloseBtn, #groupStatsCloseBtn {
   display: block; width: 100%; margin-top: 16px;
   padding: 12px; background: var(--accent); color: var(--bg);
   border: none; border-radius: 10px;
   font-weight: bold; font-size: 15px; cursor: pointer;
 }
 
-/* ============ FAVORITOS ============ */
+/* RANKING DE PARTICIPANTES */
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.rank-pos {
+  font-weight: bold;
+  color: var(--accent);
+  min-width: 26px;
+  text-align: center;
+}
+.rank-name {
+  flex: 1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-count {
+  color: var(--accent);
+  font-weight: bold;
+}
+
 #favModal {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.9); z-index: 10007;
@@ -887,22 +933,16 @@ body {
   padding: 22px;
   width: 100%; max-width: 420px;
   max-height: 80vh;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
 }
 .fav-content h3 {
   color: var(--accent); font-size: 20px;
   margin: 0 0 16px 0; text-align: center;
 }
 #favList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  list-style: none; padding: 0; margin: 0;
+  overflow-y: auto; flex: 1;
+  display: flex; flex-direction: column; gap: 8px;
 }
 #favList li {
   background: var(--bg-card);

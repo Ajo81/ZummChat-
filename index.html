@@ -1,9 +1,21 @@
 <!DOCTYPE html>
+<!--
+  ============================================================
+  ZummChat - App de mensajería con llamadas y videollamadas
+  Creado por: José Yudier Arencibia Ajo
+  GitHub: https://github.com/Ajo81/ZummChat-
+  Año: 2026
+  Todos los derechos reservados.
+  ============================================================
+-->
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#00ff66">
+  <meta name="author" content="José Yudier Arencibia Ajo">
+  <meta name="creator" content="José Yudier Arencibia Ajo">
+  <meta name="copyright" content="José Yudier Arencibia Ajo - 2026">
   <title>ZummChat</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon.png">
@@ -57,12 +69,20 @@
       <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
       <button id="sendBtn" type="button">Enviar</button>
     </div>
+
+    <div id="footer-credit">
+      Creado por <strong>José Yudier Arencibia Ajo</strong> · ZummChat © 2026
+    </div>
   </div>
 
   <div id="usersPanel">
     <div id="usersPanelHeader">
       <span>👥 En línea</span>
       <button id="usersPanelClose" type="button">✕</button>
+    </div>
+    <div id="userMeSection">
+      <span id="userMeName">Tú: ...</span>
+      <button id="changeNameBtn" type="button" title="Cambiar nombre">✏️</button>
     </div>
     <ul id="userList"></ul>
     <p id="noUsers">Conectando...</p>

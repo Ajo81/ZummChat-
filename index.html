@@ -34,20 +34,14 @@
   </div>
 
   <div id="chat-container">
+    <!-- HEADER: solo 4 botones -->
     <div id="chat-header">
       <span id="chat-title">ZummChat · General</span>
       <div id="header-buttons">
-        <button id="themeBtn" type="button" title="Modo claro/oscuro">🌙</button>
-        <button id="colorBtn" type="button" title="Packs de temas">🎨</button>
-        <button id="searchBtn" type="button" title="Buscar">🔍</button>
-        <button id="statsBtn" type="button" title="Mis estadísticas">📊</button>
-        <button id="groupStatsBtn" type="button" title="Estadísticas del grupo">📈</button>
-        <button id="favBtn" type="button" title="Favoritos">⭐</button>
-        <button id="soundBtn" type="button" title="Sonido">🔔</button>
+        <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
-        <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
-        <button id="shareBtn" type="button">📤</button>
+        <button id="configBtn" type="button" title="Configuración">⚙️</button>
       </div>
     </div>
 
@@ -84,12 +78,10 @@
 
     <div id="emoji-bar"></div>
 
+    <!-- INPUT: solo 3 botones -->
     <div id="input-area">
-      <button id="emojiBtn" type="button">😀</button>
-      <button id="fileBtn" type="button">📎</button>
-      <button id="cameraBtn" type="button" title="Cámara">📷</button>
-      <button id="locationBtn" type="button" title="Ubicación">📍</button>
-      <button id="voiceBtn" type="button" title="Nota de voz">🎤</button>
+      <button id="emojiBtn" type="button" title="Emojis">😀</button>
+      <button id="attachBtn" type="button" title="Adjuntar">📎</button>
       <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" style="display:none">
       <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
       <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
@@ -107,6 +99,64 @@
     <div id="footer-credit">
       Creado por <strong>José Yudier Arencibia Ajo</strong> · ZummChat © 2026
     </div>
+  </div>
+
+  <!-- PANEL DE CONFIGURACIÓN (se abre con ⚙️) -->
+  <div id="configPanel">
+    <div id="configPanelHeader">
+      <span>⚙️ Configuración</span>
+      <button id="configPanelClose" type="button">✕</button>
+    </div>
+    <div id="configGrid">
+      <button class="config-item" id="themeBtn" type="button">
+        <span class="config-icon">🌙</span>
+        <span class="config-label">Tema</span>
+      </button>
+      <button class="config-item" id="colorBtn" type="button">
+        <span class="config-icon">🎨</span>
+        <span class="config-label">Packs</span>
+      </button>
+      <button class="config-item" id="searchBtn" type="button">
+        <span class="config-icon">🔍</span>
+        <span class="config-label">Buscar</span>
+      </button>
+      <button class="config-item" id="soundBtn" type="button">
+        <span class="config-icon" id="soundIcon">🔔</span>
+        <span class="config-label">Sonido</span>
+      </button>
+      <button class="config-item" id="statsBtn" type="button">
+        <span class="config-icon">📊</span>
+        <span class="config-label">Mis stats</span>
+      </button>
+      <button class="config-item" id="groupStatsBtn" type="button">
+        <span class="config-icon">📈</span>
+        <span class="config-label">Stats grupo</span>
+      </button>
+      <button class="config-item" id="favBtn" type="button">
+        <span class="config-icon">⭐</span>
+        <span class="config-label">Favoritos</span>
+      </button>
+      <button class="config-item" id="shareBtn" type="button">
+        <span class="config-icon">📤</span>
+        <span class="config-label">Compartir</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MENÚ DE ADJUNTAR (se abre con 📎) -->
+  <div id="attachMenu">
+    <button class="attach-item" id="menuFileBtn" type="button">
+      <span>📎</span> Archivo
+    </button>
+    <button class="attach-item" id="menuCameraBtn" type="button">
+      <span>📷</span> Cámara
+    </button>
+    <button class="attach-item" id="menuLocationBtn" type="button">
+      <span>📍</span> Ubicación
+    </button>
+    <button class="attach-item" id="menuVoiceBtn" type="button">
+      <span>🎤</span> Nota de voz
+    </button>
   </div>
 
   <div id="usersPanel">
@@ -207,58 +257,24 @@
   <div id="statsModal">
     <div class="stats-content">
       <h3>📊 Tus estadísticas</h3>
-      <div class="stat-item">
-        <span class="stat-label">💬 Mensajes totales</span>
-        <span class="stat-value" id="statTotalMsgs">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">📁 Archivos enviados</span>
-        <span class="stat-value" id="statFiles">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">🎤 Notas de voz</span>
-        <span class="stat-value" id="statVoice">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">📅 Días activo</span>
-        <span class="stat-value" id="statDays">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">🏆 Primer mensaje</span>
-        <span class="stat-value" id="statFirst">...</span>
-      </div>
+      <div class="stat-item"><span class="stat-label">💬 Mensajes totales</span><span class="stat-value" id="statTotalMsgs">...</span></div>
+      <div class="stat-item"><span class="stat-label">📁 Archivos enviados</span><span class="stat-value" id="statFiles">...</span></div>
+      <div class="stat-item"><span class="stat-label">🎤 Notas de voz</span><span class="stat-value" id="statVoice">...</span></div>
+      <div class="stat-item"><span class="stat-label">📅 Días activo</span><span class="stat-value" id="statDays">...</span></div>
+      <div class="stat-item"><span class="stat-label">🏆 Primer mensaje</span><span class="stat-value" id="statFirst">...</span></div>
       <button id="statsCloseBtn" type="button">Cerrar</button>
     </div>
   </div>
 
-  <!-- ESTADÍSTICAS DEL GRUPO -->
   <div id="groupStatsModal">
     <div class="stats-content">
       <h3>📈 Estadísticas del grupo</h3>
-      <div class="stat-item">
-        <span class="stat-label">💬 Mensajes en esta sala</span>
-        <span class="stat-value" id="gStatTotal">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">👥 Participantes</span>
-        <span class="stat-value" id="gStatUsers">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">🏆 Más activo</span>
-        <span class="stat-value" id="gStatTop">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">📁 Archivos compartidos</span>
-        <span class="stat-value" id="gStatFiles">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">🎤 Notas de voz</span>
-        <span class="stat-value" id="gStatVoice">...</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">📅 Primer mensaje</span>
-        <span class="stat-value" id="gStatFirst">...</span>
-      </div>
+      <div class="stat-item"><span class="stat-label">💬 Mensajes en esta sala</span><span class="stat-value" id="gStatTotal">...</span></div>
+      <div class="stat-item"><span class="stat-label">👥 Participantes</span><span class="stat-value" id="gStatUsers">...</span></div>
+      <div class="stat-item"><span class="stat-label">🏆 Más activo</span><span class="stat-value" id="gStatTop">...</span></div>
+      <div class="stat-item"><span class="stat-label">📁 Archivos compartidos</span><span class="stat-value" id="gStatFiles">...</span></div>
+      <div class="stat-item"><span class="stat-label">🎤 Notas de voz</span><span class="stat-value" id="gStatVoice">...</span></div>
+      <div class="stat-item"><span class="stat-label">📅 Primer mensaje</span><span class="stat-value" id="gStatFirst">...</span></div>
       <div id="gStatRanking" style="margin-top:10px;"></div>
       <button id="groupStatsCloseBtn" type="button">Cerrar</button>
     </div>

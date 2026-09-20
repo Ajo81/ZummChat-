@@ -34,7 +34,6 @@
   </div>
 
   <div id="chat-container">
-    <!-- HEADER: solo 4 botones -->
     <div id="chat-header">
       <span id="chat-title">ZummChat · General</span>
       <div id="header-buttons">
@@ -78,7 +77,6 @@
 
     <div id="emoji-bar"></div>
 
-    <!-- INPUT: solo 3 botones -->
     <div id="input-area">
       <button id="emojiBtn" type="button" title="Emojis">😀</button>
       <button id="attachBtn" type="button" title="Adjuntar">📎</button>
@@ -101,7 +99,7 @@
     </div>
   </div>
 
-  <!-- PANEL DE CONFIGURACIÓN (se abre con ⚙️) -->
+  <!-- PANEL DE CONFIGURACIÓN -->
   <div id="configPanel">
     <div id="configPanelHeader">
       <span>⚙️ Configuración</span>
@@ -140,10 +138,26 @@
         <span class="config-icon">📤</span>
         <span class="config-label">Compartir</span>
       </button>
+      <button class="config-item" id="highlightBtn" type="button">
+        <span class="config-icon">🔥</span>
+        <span class="config-label">Destacados</span>
+      </button>
+      <button class="config-item" id="remindersBtn" type="button">
+        <span class="config-icon">📅</span>
+        <span class="config-label">Recordatorios</span>
+      </button>
+      <button class="config-item" id="pollBtn" type="button">
+        <span class="config-icon">📊</span>
+        <span class="config-label">Encuesta</span>
+      </button>
+      <button class="config-item" id="blockedBtn" type="button">
+        <span class="config-icon">🚫</span>
+        <span class="config-label">Bloqueados</span>
+      </button>
     </div>
   </div>
 
-  <!-- MENÚ DE ADJUNTAR (se abre con 📎) -->
+  <!-- MENÚ ADJUNTAR -->
   <div id="attachMenu">
     <button class="attach-item" id="menuFileBtn" type="button">
       <span>📎</span> Archivo
@@ -231,6 +245,7 @@
     <button data-emoji="🔥">🔥</button>
   </div>
 
+  <!-- MODAL DE PERFIL -->
   <div id="profileModal">
     <div class="profile-content">
       <button id="profileCloseBtn" type="button">✕</button>
@@ -250,10 +265,13 @@
         <button id="profileEditBtn" type="button">✏️ Editar mi perfil</button>
         <button id="profileSaveBtn" type="button" style="display:none">💾 Guardar</button>
         <button id="profileCancelBtn" type="button" style="display:none">❌ Cancelar</button>
+        <button id="profileBlockBtn" type="button" style="display:none">🚫 Bloquear</button>
+        <button id="profileUnblockBtn" type="button" style="display:none">✅ Desbloquear</button>
       </div>
     </div>
   </div>
 
+  <!-- MODAL DE ESTADÍSTICAS PERSONALES -->
   <div id="statsModal">
     <div class="stats-content">
       <h3>📊 Tus estadísticas</h3>
@@ -266,6 +284,7 @@
     </div>
   </div>
 
+  <!-- MODAL DE ESTADÍSTICAS DE GRUPO -->
   <div id="groupStatsModal">
     <div class="stats-content">
       <h3>📈 Estadísticas del grupo</h3>
@@ -280,12 +299,80 @@
     </div>
   </div>
 
+  <!-- MODAL DE FAVORITOS -->
   <div id="favModal">
     <div class="fav-content">
       <h3>⭐ Mis favoritos</h3>
       <ul id="favList"></ul>
       <p id="favEmpty" style="display:none">Aún no tienes favoritos.</p>
       <button id="favCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE MENSAJES DESTACADOS -->
+  <div id="highlightModal">
+    <div class="fav-content">
+      <h3>🔥 Mensajes destacados</h3>
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px;">Los mensajes con más reacciones</p>
+      <ul id="highlightList"></ul>
+      <p id="highlightEmpty" style="display:none">Aún no hay mensajes destacados.</p>
+      <button id="highlightCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE RECORDATORIOS -->
+  <div id="remindersModal">
+    <div class="fav-content">
+      <h3>📅 Recordatorios</h3>
+      <button id="newReminderBtn" type="button" style="width:100%;padding:12px;background:var(--accent);color:var(--bg);border:none;border-radius:10px;font-weight:bold;font-size:15px;cursor:pointer;margin-bottom:12px;">➕ Nuevo recordatorio</button>
+      <ul id="remindersList"></ul>
+      <p id="remindersEmpty" style="display:none">No tienes recordatorios.</p>
+      <button id="remindersCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- MODAL CREAR RECORDATORIO -->
+  <div id="newReminderModal">
+    <div class="edit-content">
+      <h3>📅 Nuevo recordatorio</h3>
+      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Texto del recordatorio</label>
+      <input type="text" id="reminderText" placeholder="Ej: Llamar a mamá" maxlength="80" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
+      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Fecha y hora</label>
+      <input type="datetime-local" id="reminderDate" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
+      <div class="edit-actions">
+        <button id="reminderCancelBtn" type="button">Cancelar</button>
+        <button id="reminderSaveBtn" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CREAR ENCUESTA -->
+  <div id="pollModal">
+    <div class="edit-content">
+      <h3>📊 Nueva encuesta</h3>
+      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Pregunta</label>
+      <input type="text" id="pollQuestion" placeholder="¿Qué vamos a comer hoy?" maxlength="100" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
+      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Opción 1</label>
+      <input type="text" id="pollOpt1" maxlength="50" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px;">
+      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Opción 2</label>
+      <input type="text" id="pollOpt2" maxlength="50" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px;">
+      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Opción 3 (opcional)</label>
+      <input type="text" id="pollOpt3" maxlength="50" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
+      <div class="edit-actions">
+        <button id="pollCancelBtn" type="button">Cancelar</button>
+        <button id="pollSaveBtn" type="button">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE BLOQUEADOS -->
+  <div id="blockedModal">
+    <div class="fav-content">
+      <h3>🚫 Usuarios bloqueados</h3>
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px;">No verás sus mensajes en el chat</p>
+      <ul id="blockedList"></ul>
+      <p id="blockedEmpty" style="display:none">No has bloqueado a nadie.</p>
+      <button id="blockedCloseBtn" type="button">Cerrar</button>
     </div>
   </div>
 

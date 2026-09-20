@@ -76,10 +76,34 @@ const editInput       = document.getElementById("editInput");
 const editCancelBtn   = document.getElementById("editCancelBtn");
 const editSaveBtn     = document.getElementById("editSaveBtn");
 const msgMenu         = document.getElementById("msgMenu");
+const menuPinBtn      = document.getElementById("menuPinBtn");
 const menuCopyBtn     = document.getElementById("menuCopyBtn");
 const menuEditBtn     = document.getElementById("menuEditBtn");
 const menuDeleteBtn   = document.getElementById("menuDeleteBtn");
 const reactionPicker  = document.getElementById("reactionPicker");
+const typingIndicator = document.getElementById("typingIndicator");
+const pinnedBar       = document.getElementById("pinnedBar");
+const pinnedText      = document.getElementById("pinnedText");
+const unpinBtn        = document.getElementById("unpinBtn");
+const statsBtn        = document.getElementById("statsBtn");
+const statsModal      = document.getElementById("statsModal");
+const statsCloseBtn   = document.getElementById("statsCloseBtn");
+const statTotalMsgs   = document.getElementById("statTotalMsgs");
+const statFiles       = document.getElementById("statFiles");
+const statVoice       = document.getElementById("statVoice");
+const statDays        = document.getElementById("statDays");
+const statFirst       = document.getElementById("statFirst");
+const profileModal    = document.getElementById("profileModal");
+const profileCloseBtn = document.getElementById("profileCloseBtn");
+const profileAvatar   = document.getElementById("profileAvatar");
+const profileName     = document.getElementById("profileName");
+const profileBioDisplay = document.getElementById("profileBioDisplay");
+const profileBioInput = document.getElementById("profileBioInput");
+const profileStatusDisplay = document.getElementById("profileStatusDisplay");
+const profileStatusInput = document.getElementById("profileStatusInput");
+const profileEditBtn  = document.getElementById("profileEditBtn");
+const profileSaveBtn  = document.getElementById("profileSaveBtn");
+const profileCancelBtn = document.getElementById("profileCancelBtn");
 
 const MAX_SIZE_MB = 5;
 
@@ -131,6 +155,10 @@ if (!SS.getItem("zummchat_cid")) {
 const myClientId = SS.getItem("zummchat_cid");
 
 let myAvatarUrl = LS.getItem("zummchat_avatar") || "";
+let myBio = LS.getItem("zummchat_bio") || "";
+let myStatus = LS.getItem("zummchat_status") || "";
+
+let currentRoom = "general";
 
 // ============ TEMA Y COLOR ============
 let temaActual = LS.getItem("zummchat_tema") || "dark";
@@ -173,98 +201,6 @@ if (colorBtn) {
   });
 }
 
-// ============ CAMBIAR NOMBRE ============
-function actualizarNombreEnUI() {
-  if (userMeName) userMeName.textContent = "Tú: " + username;
-}
-actualizarNombreEnUI();
-
-if (changeNameBtn) {
-  changeNameBtn.addEventListener("click", async () => {
-    const nuevo = prompt("Escribe tu nuevo nombre:", username);
-    if (!nuevo || !nuevo.trim()) return;
-    const limpio = nuevo.trim().substring(0, 20);
-    if (limpio.toLowerCase() === username.toLowerCase()) return;
-
-    const viejo = username;
-    username = limpio;
-    LS.setItem("zummchat_user", username);
-    actualizarNombreEnUI();
-
-    try {
-      await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
-      await supabaseClient.from("zumm_presence").upsert({
-        username: username, room: currentRoom, last_seen: new Date().toISOString(), avatar_url: myAvatarUrl
-      }, { onConflict: "username,room" });
-    } catch (e) { console.warn(e); }
-
-    alert("✅ Nombre cambiado a: " + username + "\n\nRecarga la página para que todos lo vean.");
-  });
-}
-
-// ============ FOTO DE PERFIL ============
-function mostrarAvatarPropio() {
-  if (!userMeAvatar) return;
-  if (myAvatarUrl) {
-    userMeAvatar.textContent = "";
-    userMeAvatar.style.backgroundImage = "url(" + myAvatarUrl + ")";
-  } else {
-    userMeAvatar.textContent = avatarLetter(username);
-    userMeAvatar.style.backgroundImage = "";
-  }
-}
-
-if (userMeAvatar && avatarInput) {
-  userMeAvatar.addEventListener("click", () => avatarInput.click());
-}
-
-if (avatarInput) {
-  avatarInput.addEventListener("change", async () => {
-    const file = avatarInput.files[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("La foto debe pesar menos de 2 MB.");
-      avatarInput.value = "";
-      return;
-    }
-
-    userMeAvatar.textContent = "⏳";
-    try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const nombreArchivo = "avatar_" + username.toLowerCase().replace(/\s/g, "") + "_" + Date.now() + "." + ext;
-
-      const { error: upErr } = await supabaseClient.storage.from("archivos")
-        .upload(nombreArchivo, file, { contentType: file.type, upsert: true });
-
-      if (upErr) {
-        alert("No se pudo subir: " + upErr.message);
-        mostrarAvatarPropio();
-        return;
-      }
-
-      const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
-      myAvatarUrl = urlData.publicUrl;
-      LS.setItem("zummchat_avatar", myAvatarUrl);
-      mostrarAvatarPropio();
-
-      await supabaseClient.from("zumm_presence").upsert({
-        username: username, room: currentRoom, last_seen: new Date().toISOString(), avatar_url: myAvatarUrl
-      }, { onConflict: "username,room" });
-
-      alert("✅ Foto de perfil actualizada");
-    } catch (e) {
-      alert("Error: " + e.message);
-      mostrarAvatarPropio();
-    } finally {
-      avatarInput.value = "";
-    }
-  });
-}
-
-mostrarAvatarPropio();
-
-let currentRoom = "general";
-
 // ============ SONIDO ============
 let sonidoActivo = LS.getItem("zummchat_sonido") !== "off";
 let audioCtx = null;
@@ -281,7 +217,6 @@ function reproducirSonidoInsistente() {
   if (!sonidoActivo) return;
   initAudio();
   if (!audioCtx) return;
-
   const tonos = [880, 1100, 880];
   tonos.forEach((freq, idx) => {
     setTimeout(() => {
@@ -300,7 +235,6 @@ function reproducirSonidoInsistente() {
       } catch (e) {}
     }, idx * 350);
   });
-
   if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
 }
 
@@ -337,7 +271,7 @@ function mostrarNotificacion(remitente, texto) {
       const n = new Notification("💬 " + remitente, {
         body: texto || "Nuevo mensaje",
         icon: "icon.png",
-        badge: "icon-192.png",
+        badge: "icon.png",
         tag: "zummchat-msg",
         renotify: true,
         vibrate: [200, 100, 200, 100, 200],
@@ -443,13 +377,18 @@ function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
 
 // ============ GRUPOS ============
 let gruposPersonalizados = JSON.parse(LS.getItem("zummchat_grupos") || "[]");
+let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
 
 function guardarGrupos() {
   LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados));
 }
+function guardarGruposOcultos() {
+  LS.setItem("zummchat_grupos_ocultos", JSON.stringify(gruposOcultos));
+}
 
 function crearBotonGrupo(nombreGrupo) {
   if (!roomBar) return;
+  if (gruposOcultos.includes(nombreGrupo)) return;
   const roomId = "grupo:" + nombreGrupo;
   if (roomBar.querySelector('[data-room="' + roomId + '"]')) return;
 
@@ -467,11 +406,18 @@ function crearBotonGrupo(nombreGrupo) {
   close.style.cssText = "background:rgba(0,0,0,0.3);border:none;color:inherit;border-radius:50%;width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;margin-left:6px;padding:0;";
   close.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (!confirm("¿Eliminar el grupo '" + nombreGrupo + "' de tu lista?")) return;
+    if (!confirm("¿SALIR del grupo '" + nombreGrupo + "'?\n\nNo verás más sus mensajes (pero el grupo sigue existiendo para los demás).")) return;
+
+    if (!gruposOcultos.includes(nombreGrupo)) {
+      gruposOcultos.push(nombreGrupo);
+      guardarGruposOcultos();
+    }
     gruposPersonalizados = gruposPersonalizados.filter(g => g !== nombreGrupo);
     guardarGrupos();
+
     btn.remove();
     if (currentRoom === roomId) switchRoom("general");
+    alert("✅ Saliste del grupo '" + nombreGrupo + "'");
   });
   btn.appendChild(close);
   btn.addEventListener("click", () => switchRoom(roomId));
@@ -486,6 +432,12 @@ if (addRoomBtn) {
     if (!nombre || !nombre.trim()) return;
     const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
     if (!limpio) { alert("Nombre inválido."); return; }
+
+    if (gruposOcultos.includes(limpio)) {
+      gruposOcultos = gruposOcultos.filter(g => g !== limpio);
+      guardarGruposOcultos();
+    }
+
     if (gruposPersonalizados.includes(limpio)) {
       alert("Ese grupo ya existe.");
       switchRoom("grupo:" + limpio);
@@ -512,6 +464,7 @@ function switchRoom(room) {
   if (messagesEl) messagesEl.innerHTML = "";
   updateActiveTab();
   loadHistory();
+  cargarMensajeFijado();
 }
 
 function updateActiveTab() {
@@ -689,8 +642,7 @@ function formatearSegundos(s) {
 function iniciarGrabacion() {
   if (grabando) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Tu navegador no soporta grabación.");
-    return;
+    alert("Tu navegador no soporta grabación."); return;
   }
   if (!window.MediaRecorder) { alert("No soporta MediaRecorder."); return; }
 
@@ -725,15 +677,13 @@ function iniciarGrabacion() {
       if (recordingTime) recordingTime.textContent = formatearSegundos(recSegundos);
       if (recSegundos >= 120) detenerGrabacion(true);
     }, 1000);
-
   }).catch(e => alert("No se pudo acceder al micrófono:\n" + e.message));
 }
 
 function cancelarGrabacion() {
   if (!grabando) return;
   grabando = false;
-  clearInterval(recTimerInterval);
-  recTimerInterval = null;
+  clearInterval(recTimerInterval); recTimerInterval = null;
   try {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.onstop = () => {
@@ -750,8 +700,7 @@ function cancelarGrabacion() {
 async function detenerGrabacion(enviar) {
   if (!grabando) return;
   grabando = false;
-  clearInterval(recTimerInterval);
-  recTimerInterval = null;
+  clearInterval(recTimerInterval); recTimerInterval = null;
   const duracionFinal = recSegundos;
 
   const promesa = new Promise(resolve => {
@@ -772,7 +721,6 @@ async function detenerGrabacion(enviar) {
 
   const blob = new Blob(audioChunks, { type: audioChunks[0].type || "audio/webm" });
   audioChunks = [];
-
   if (blob.size > MAX_SIZE_MB * 1024 * 1024) { alert("Nota muy larga."); return; }
   if (voiceBtn) { voiceBtn.textContent = "⏳"; voiceBtn.disabled = true; }
 
@@ -782,7 +730,6 @@ async function detenerGrabacion(enviar) {
 
     const { error: upErr } = await supabaseClient.storage.from("archivos")
       .upload(nombreArchivo, blob, { contentType: blob.type });
-
     if (upErr) { alert("No se pudo subir: " + upErr.message); return; }
 
     const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
@@ -795,7 +742,6 @@ async function detenerGrabacion(enviar) {
         file_type: blob.type
       }])
       .select().single();
-
     if (error) { alert("No se pudo enviar: " + error.message); return; }
     renderMessage(data, false);
   } catch (e) { alert("Error: " + e.message); }
@@ -848,13 +794,9 @@ function formatTime(iso) {
   return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
-function buscarUsuarioPorNombre(nombre) {
-  return usersOnline.find(u => u.toLowerCase() === (nombre || "").toLowerCase());
-}
-
 function avatarUrlDe(nombre) {
   if (nombre.toLowerCase() === username.toLowerCase()) return myAvatarUrl;
-  return "";
+  return avataresPorUsuario[(nombre || "").toLowerCase()] || "";
 }
 
 function renderMessage(m, esNuevo) {
@@ -880,6 +822,7 @@ function renderMessage(m, esNuevo) {
   const div = document.createElement("div");
   div.className = "msg";
   div.dataset.msgId = m.id;
+  if (m.pinned) div.classList.add("pinned");
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
@@ -901,8 +844,12 @@ function renderMessage(m, esNuevo) {
 
   const nameEl = document.createElement("span");
   nameEl.className = "msg-name";
-  nameEl.textContent = m.username || "Anónimo";
+  nameEl.textContent = (m.username || "Anónimo") + (m.pinned ? " 📌" : "");
   nameEl.style.color = colorForUser(m.username);
+  nameEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    abrirPerfil(m.username, false);
+  });
 
   const rightSide = document.createElement("span");
   rightSide.className = "msg-right";
@@ -1006,13 +953,15 @@ function renderMessage(m, esNuevo) {
   content.appendChild(header);
   content.appendChild(body);
 
-  // Reacciones
   const reacciones = (m.reactions || "").split(",").filter(x => x.trim());
   if (reacciones.length > 0) {
     const bar = document.createElement("div");
     bar.className = "reactions-bar";
     const conteo = {};
-    reacciones.forEach(r => { conteo[r] = (conteo[r] || 0) + 1; });
+    reacciones.forEach(r => {
+      const emoji = r.split(":")[0];
+      conteo[emoji] = (conteo[emoji] || 0) + 1;
+    });
     Object.keys(conteo).forEach(emoji => {
       const b = document.createElement("div");
       b.className = "reaction-bubble";
@@ -1034,7 +983,6 @@ function renderMessage(m, esNuevo) {
 
   div.appendChild(content);
 
-  // Long press → menú
   let longPressTimer = null;
   div.addEventListener("touchstart", (e) => {
     longPressTimer = setTimeout(() => {
@@ -1061,7 +1009,7 @@ function removeMessageFromDOM(id) {
 
 async function loadHistory() {
   const { data, error } = await supabaseClient.from("zumm_messages")
-    .select("id, text, username, created_at, room, file_url, file_name, file_type, edited_at, reactions")
+    .select("id, text, username, created_at, room, file_url, file_name, file_type, edited_at, reactions, pinned")
     .eq("room", currentRoom)
     .order("created_at", { ascending: true })
     .limit(200);
@@ -1074,6 +1022,7 @@ async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
   inputEl.value = "";
+  enviarTypingStop();
 
   const { data, error } = await supabaseClient.from("zumm_messages")
     .insert([{ text: text, username: username, room: currentRoom }])
@@ -1108,11 +1057,107 @@ supabaseClient
           el.remove();
           renderMessage(m, false);
         }
+        if (m.pinned) {
+          cargarMensajeFijado();
+        }
       })
   .on("postgres_changes",
       { event: "DELETE", schema: "public", table: "zumm_messages" },
       payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })
   .subscribe();
+
+// ============ INDICADOR "ESCRIBIENDO..." ============
+let typingTimeout = null;
+let ultimoTypingEnviado = 0;
+
+function enviarTyping() {
+  const ahora = Date.now();
+  if (ahora - ultimoTypingEnviado < 2000) return;
+  ultimoTypingEnviado = ahora;
+  supabaseClient.from("zumm_presence").upsert({
+    username: username,
+    room: currentRoom,
+    last_seen: new Date().toISOString(),
+    avatar_url: myAvatarUrl || null,
+    typing_at: new Date().toISOString()
+  }, { onConflict: "username,room" }).then(() => {}).catch(() => {});
+}
+
+function enviarTypingStop() {
+  supabaseClient.from("zumm_presence").upsert({
+    username: username,
+    room: currentRoom,
+    last_seen: new Date().toISOString(),
+    avatar_url: myAvatarUrl || null,
+    typing_at: null
+  }, { onConflict: "username,room" }).then(() => {}).catch(() => {});
+}
+
+if (inputEl) {
+  inputEl.addEventListener("input", () => {
+    if (!inputEl.value.trim()) {
+      enviarTypingStop();
+      clearTimeout(typingTimeout);
+      return;
+    }
+    enviarTyping();
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => { enviarTypingStop(); }, 3500);
+  });
+}
+
+function actualizarIndicadorTyping(usuariosTyping) {
+  if (!typingIndicator) return;
+  if (usuariosTyping.length === 0) {
+    typingIndicator.classList.remove("show");
+    return;
+  }
+  let texto;
+  if (usuariosTyping.length === 1) texto = usuariosTyping[0] + " está escribiendo...";
+  else if (usuariosTyping.length === 2) texto = usuariosTyping[0] + " y " + usuariosTyping[1] + " están escribiendo...";
+  else texto = usuariosTyping.length + " personas están escribiendo...";
+  typingIndicator.textContent = texto;
+  typingIndicator.classList.add("show");
+}
+
+// ============ MENSAJE FIJADO ============
+async function cargarMensajeFijado() {
+  if (!pinnedBar || !pinnedText) return;
+  try {
+    const { data } = await supabaseClient.from("zumm_messages")
+      .select("text, username, file_type")
+      .eq("room", currentRoom)
+      .eq("pinned", true)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (!data || data.length === 0) {
+      pinnedBar.classList.remove("show");
+      return;
+    }
+    const m = data[0];
+    let preview = (m.username || "?") + ": ";
+    if (m.file_type && m.file_type.startsWith("audio/")) preview += "🎤 Nota de voz";
+    else if (m.text) preview += m.text;
+    else preview += "📎 Archivo";
+    if (preview.length > 60) preview = preview.substring(0, 60) + "...";
+    pinnedText.textContent = "📌 " + preview;
+    pinnedBar.classList.add("show");
+  } catch (e) { console.warn(e); }
+}
+
+if (unpinBtn) {
+  unpinBtn.addEventListener("click", async () => {
+    if (!confirm("¿Quitar el mensaje fijado?")) return;
+    try {
+      await supabaseClient.from("zumm_messages")
+        .update({ pinned: false })
+        .eq("room", currentRoom)
+        .eq("pinned", true);
+      pinnedBar.classList.remove("show");
+    } catch (e) {}
+  });
+}
 
 // ============ EDITAR MENSAJE ============
 let mensajeEditando = null;
@@ -1120,8 +1165,7 @@ let mensajeEditando = null;
 function abrirEditorMensaje(m) {
   if (!editModal || !editInput) return;
   if ((m.username || "").toLowerCase() !== username.toLowerCase()) {
-    alert("Solo puedes editar tus propios mensajes.");
-    return;
+    alert("Solo puedes editar tus propios mensajes."); return;
   }
   mensajeEditando = m;
   editInput.value = m.text || "";
@@ -1130,8 +1174,7 @@ function abrirEditorMensaje(m) {
 }
 
 if (editCancelBtn) editCancelBtn.addEventListener("click", () => {
-  editModal.classList.remove("show");
-  mensajeEditando = null;
+  editModal.classList.remove("show"); mensajeEditando = null;
 });
 
 if (editSaveBtn) {
@@ -1140,35 +1183,29 @@ if (editSaveBtn) {
     const nuevoTexto = editInput.value.trim();
     if (!nuevoTexto) { alert("El mensaje no puede estar vacío."); return; }
     if (nuevoTexto === mensajeEditando.text) {
-      editModal.classList.remove("show");
-      mensajeEditando = null;
-      return;
+      editModal.classList.remove("show"); mensajeEditando = null; return;
     }
-
     const { error } = await supabaseClient.from("zumm_messages")
       .update({ text: nuevoTexto, edited_at: new Date().toISOString() })
       .eq("id", mensajeEditando.id);
-
     if (error) { alert("No se pudo editar: " + error.message); return; }
-    editModal.classList.remove("show");
-    mensajeEditando = null;
+    editModal.classList.remove("show"); mensajeEditando = null;
   });
 }
 
-// ============ MENÚ DE MENSAJE (long press) ============
+// ============ MENÚ DE MENSAJE ============
 let mensajeMenuActual = null;
 
 function mostrarMenuMensaje(m, x, y) {
   if (!msgMenu) return;
   mensajeMenuActual = m;
-
   const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
   if (menuEditBtn) menuEditBtn.style.display = esMio && m.text ? "block" : "none";
   if (menuDeleteBtn) menuDeleteBtn.style.display = esMio ? "block" : "none";
+  if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
 
   msgMenu.classList.add("show");
-  const ancho = 160;
-  const alto = 160;
+  const ancho = 170; const alto = 220;
   const xFinal = Math.min(x, window.innerWidth - ancho - 10);
   const yFinal = Math.min(y, window.innerHeight - alto - 10);
   msgMenu.style.left = Math.max(10, xFinal) + "px";
@@ -1181,13 +1218,28 @@ function cerrarMenu() {
 }
 
 document.addEventListener("touchstart", (e) => {
-  if (msgMenu && msgMenu.classList.contains("show") && !msgMenu.contains(e.target)) {
-    cerrarMenu();
-  }
+  if (msgMenu && msgMenu.classList.contains("show") && !msgMenu.contains(e.target)) cerrarMenu();
   if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) {
     reactionPicker.classList.remove("show");
   }
 });
+
+if (menuPinBtn) {
+  menuPinBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    const nuevo = !m.pinned;
+    cerrarMenu();
+    try {
+      if (nuevo) {
+        await supabaseClient.from("zumm_messages").update({ pinned: false })
+          .eq("room", currentRoom).eq("pinned", true);
+      }
+      await supabaseClient.from("zumm_messages").update({ pinned: nuevo }).eq("id", m.id);
+      cargarMensajeFijado();
+    } catch (e) {}
+  });
+}
 
 if (menuCopyBtn) {
   menuCopyBtn.addEventListener("click", async () => {
@@ -1227,10 +1279,8 @@ async function toggleReaccion(msgId, emoji) {
     const { data: msg } = await supabaseClient.from("zumm_messages")
       .select("reactions").eq("id", msgId).single();
     if (!msg) return;
-
     const actuales = (msg.reactions || "").split(",").filter(x => x.trim());
     const miTag = emoji + ":" + username;
-
     let nuevas;
     if (actuales.includes(miTag)) {
       nuevas = actuales.filter(x => x !== miTag);
@@ -1238,7 +1288,6 @@ async function toggleReaccion(msgId, emoji) {
       nuevas = actuales.filter(x => !x.endsWith(":" + username));
       nuevas.push(miTag);
     }
-
     await supabaseClient.from("zumm_messages")
       .update({ reactions: nuevas.join(",") })
       .eq("id", msgId);
@@ -1250,11 +1299,8 @@ if (searchBtn) {
   searchBtn.addEventListener("click", () => {
     if (!searchBar) return;
     searchBar.classList.toggle("show");
-    if (searchBar.classList.contains("show") && searchInput) {
-      setTimeout(() => searchInput.focus(), 100);
-    } else {
-      limpiarBusqueda();
-    }
+    if (searchBar.classList.contains("show") && searchInput) setTimeout(() => searchInput.focus(), 100);
+    else limpiarBusqueda();
   });
 }
 
@@ -1275,10 +1321,7 @@ if (searchInput) {
   searchInput.addEventListener("input", () => {
     const q = searchInput.value.toLowerCase().trim();
     const mensajes = document.querySelectorAll(".msg");
-    if (!q) {
-      mensajes.forEach(el => { el.style.display = "flex"; el.classList.remove("highlight"); });
-      return;
-    }
+    if (!q) { mensajes.forEach(el => { el.style.display = "flex"; el.classList.remove("highlight"); }); return; }
     mensajes.forEach(el => {
       const texto = (el.textContent || "").toLowerCase();
       const coincide = texto.includes(q);
@@ -1294,11 +1337,7 @@ function actualizarBotonAbajo() {
   const distanciaAbajo = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
   scrollDownBtn.classList.toggle("show", distanciaAbajo > 150);
 }
-
-if (messagesEl) {
-  messagesEl.addEventListener("scroll", actualizarBotonAbajo);
-}
-
+if (messagesEl) messagesEl.addEventListener("scroll", actualizarBotonAbajo);
 if (scrollDownBtn) {
   scrollDownBtn.addEventListener("click", () => {
     if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1306,7 +1345,7 @@ if (scrollDownBtn) {
   });
 }
 
-// ============ IMAGEN MODAL ============
+// ============ MODAL DE IMAGEN ============
 function openImageModal(url) {
   let modal = document.getElementById("imgModal");
   if (!modal) {
@@ -1348,10 +1387,9 @@ async function leerPresencia() {
   try {
     const hace30s = new Date(Date.now() - 30000).toISOString();
     const { data, error } = await supabaseClient.from("zumm_presence")
-      .select("username, last_seen, avatar_url")
+      .select("username, last_seen, avatar_url, typing_at")
       .eq("room", currentRoom)
       .gte("last_seen", hace30s);
-
     if (error) { console.warn("Leer presencia error:", error.message); return; }
 
     usersOnline = (data || [])
@@ -1363,6 +1401,13 @@ async function leerPresencia() {
       if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
     });
 
+    const ahora = Date.now();
+    const escribiendo = (data || [])
+      .filter(u => u.username.toLowerCase() !== username.toLowerCase())
+      .filter(u => u.typing_at && (ahora - new Date(u.typing_at).getTime() < 5000))
+      .map(u => u.username);
+
+    actualizarIndicadorTyping(escribiendo);
     renderUserList();
   } catch (e) { console.warn("Leer presencia excepción:", e); }
 }
@@ -1373,7 +1418,7 @@ function iniciarPresencia() {
   clearInterval(presenceInterval);
   presenceInterval = setInterval(registrarPresencia, 8000);
   clearInterval(presenceRefreshInterval);
-  presenceRefreshInterval = setInterval(leerPresencia, 5000);
+  presenceRefreshInterval = setInterval(leerPresencia, 3000);
 }
 
 supabaseClient
@@ -1394,19 +1439,18 @@ function updateUsersBtn() {
 function renderUserList() {
   if (!userList) return;
   userList.innerHTML = "";
-
   if (usersOnline.length === 0) {
     if (noUsers) { noUsers.style.display = "block"; noUsers.textContent = "Nadie más conectado"; }
     updateUsersBtn();
     return;
   }
-
   if (noUsers) noUsers.style.display = "none";
 
   usersOnline.forEach(name => {
     const li = document.createElement("li");
     const span = document.createElement("span");
     span.textContent = name;
+    span.addEventListener("click", (e) => { e.stopPropagation(); abrirPerfil(name, false); });
     li.appendChild(span);
 
     const actions = document.createElement("div");
@@ -1426,7 +1470,6 @@ function renderUserList() {
     actions.appendChild(mkBtn("📹", "Videollamada", () => startCall(name, true)));
 
     li.appendChild(actions);
-    li.addEventListener("click", () => openPrivateWith(name));
     userList.appendChild(li);
   });
   updateUsersBtn();
@@ -1442,6 +1485,228 @@ if (usersPanelClose) {
   usersPanelClose.addEventListener("click", () => {
     if (usersPanel) usersPanel.classList.remove("show");
   });
+}
+
+// ============ PERFIL ============
+let perfilActual = null;
+
+function mostrarAvatarPropio() {
+  if (!userMeAvatar) return;
+  if (myAvatarUrl) {
+    userMeAvatar.textContent = "";
+    userMeAvatar.style.backgroundImage = "url(" + myAvatarUrl + ")";
+  } else {
+    userMeAvatar.textContent = avatarLetter(username);
+    userMeAvatar.style.backgroundImage = "";
+  }
+}
+
+mostrarAvatarPropio();
+
+function abrirPerfil(nombre, editable) {
+  if (!profileModal) return;
+  perfilActual = nombre;
+  const esMio = nombre.toLowerCase() === username.toLowerCase();
+
+  const url = esMio ? myAvatarUrl : (avataresPorUsuario[nombre.toLowerCase()] || "");
+  if (url) {
+    profileAvatar.style.backgroundImage = "url(" + url + ")";
+    profileAvatar.textContent = "";
+  } else {
+    profileAvatar.style.backgroundImage = "";
+    profileAvatar.textContent = avatarLetter(nombre);
+    profileAvatar.style.background = colorForUser(nombre);
+  }
+
+  profileName.textContent = nombre;
+
+  if (esMio) {
+    profileBioDisplay.textContent = myBio || "Sin bio";
+    profileStatusDisplay.textContent = myStatus || "Sin estado";
+  } else {
+    profileBioDisplay.textContent = "Cargando...";
+    profileStatusDisplay.textContent = "Cargando...";
+    supabaseClient.from("zumm_presence").select("bio, status_text")
+      .eq("username", nombre).limit(1).then(({ data }) => {
+        if (data && data[0]) {
+          profileBioDisplay.textContent = data[0].bio || "Sin bio";
+          profileStatusDisplay.textContent = data[0].status_text || "Sin estado";
+        }
+      });
+  }
+
+  profileBioInput.style.display = "none";
+  profileStatusInput.style.display = "none";
+  profileBioDisplay.style.display = "block";
+  profileStatusDisplay.style.display = "block";
+  profileEditBtn.style.display = esMio ? "block" : "none";
+  profileSaveBtn.style.display = "none";
+  profileCancelBtn.style.display = "none";
+
+  profileModal.classList.add("show");
+}
+
+if (userMeAvatar) {
+  userMeAvatar.addEventListener("click", () => abrirPerfil(username, true));
+}
+
+if (profileCloseBtn) {
+  profileCloseBtn.addEventListener("click", () => profileModal.classList.remove("show"));
+}
+
+if (profileEditBtn) {
+  profileEditBtn.addEventListener("click", () => {
+    if (!perfilActual || perfilActual.toLowerCase() !== username.toLowerCase()) return;
+    profileBioInput.value = myBio;
+    profileStatusInput.value = myStatus;
+    profileBioDisplay.style.display = "none";
+    profileStatusDisplay.style.display = "none";
+    profileBioInput.style.display = "block";
+    profileStatusInput.style.display = "block";
+    profileEditBtn.style.display = "none";
+    profileSaveBtn.style.display = "block";
+    profileCancelBtn.style.display = "block";
+  });
+}
+
+if (profileCancelBtn) {
+  profileCancelBtn.addEventListener("click", () => abrirPerfil(username, true));
+}
+
+if (profileSaveBtn) {
+  profileSaveBtn.addEventListener("click", async () => {
+    const nuevaBio = (profileBioInput.value || "").trim().substring(0, 100);
+    const nuevoStatus = (profileStatusInput.value || "").trim().substring(0, 60);
+    myBio = nuevaBio;
+    myStatus = nuevoStatus;
+    LS.setItem("zummchat_bio", myBio);
+    LS.setItem("zummchat_status", myStatus);
+
+    try {
+      await supabaseClient.from("zumm_presence").upsert({
+        username: username, room: currentRoom,
+        last_seen: new Date().toISOString(),
+        avatar_url: myAvatarUrl || null,
+        bio: myBio,
+        status_text: myStatus
+      }, { onConflict: "username,room" });
+    } catch (e) {}
+
+    abrirPerfil(username, true);
+    alert("✅ Perfil actualizado");
+  });
+}
+
+// Foto de perfil
+if (avatarInput) {
+  avatarInput.addEventListener("change", async () => {
+    const file = avatarInput.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("La foto debe pesar menos de 2 MB.");
+      avatarInput.value = ""; return;
+    }
+    userMeAvatar.textContent = "⏳";
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const nombreArchivo = "avatar_" + username.toLowerCase().replace(/\s/g, "") + "_" + Date.now() + "." + ext;
+      const { error: upErr } = await supabaseClient.storage.from("archivos")
+        .upload(nombreArchivo, file, { contentType: file.type, upsert: true });
+      if (upErr) { alert("No se pudo subir: " + upErr.message); mostrarAvatarPropio(); return; }
+      const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
+      myAvatarUrl = urlData.publicUrl;
+      LS.setItem("zummchat_avatar", myAvatarUrl);
+      mostrarAvatarPropio();
+      await supabaseClient.from("zumm_presence").upsert({
+        username: username, room: currentRoom,
+        last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
+        bio: myBio, status_text: myStatus
+      }, { onConflict: "username,room" });
+      alert("✅ Foto de perfil actualizada");
+    } catch (e) { alert("Error: " + e.message); mostrarAvatarPropio(); }
+    finally { avatarInput.value = ""; }
+  });
+}
+
+// Botón de foto (desde el modal de perfil se puede cambiar tocando el avatar)
+// No hace falta agregar otro botón, ya está en el panel de usuarios
+
+// Cambiar nombre
+function actualizarNombreEnUI() {
+  if (userMeName) userMeName.textContent = "Tú: " + username;
+}
+actualizarNombreEnUI();
+
+if (changeNameBtn) {
+  changeNameBtn.addEventListener("click", async () => {
+    const nuevo = prompt("Escribe tu nuevo nombre:", username);
+    if (!nuevo || !nuevo.trim()) return;
+    const limpio = nuevo.trim().substring(0, 20);
+    if (limpio.toLowerCase() === username.toLowerCase()) return;
+    const viejo = username;
+    username = limpio;
+    LS.setItem("zummchat_user", username);
+    actualizarNombreEnUI();
+    try {
+      await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
+      await supabaseClient.from("zumm_presence").upsert({
+        username: username, room: currentRoom,
+        last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
+        bio: myBio, status_text: myStatus
+      }, { onConflict: "username,room" });
+    } catch (e) {}
+    alert("✅ Nombre cambiado a: " + username + "\n\nRecarga la página para que todos lo vean.");
+  });
+}
+
+// ============ ESTADÍSTICAS ============
+if (statsBtn) {
+  statsBtn.addEventListener("click", async () => {
+    if (!statsModal) return;
+    statsModal.classList.add("show");
+    if (statTotalMsgs) statTotalMsgs.textContent = "...";
+    if (statFiles) statFiles.textContent = "...";
+    if (statVoice) statVoice.textContent = "...";
+    if (statDays) statDays.textContent = "...";
+    if (statFirst) statFirst.textContent = "...";
+
+    try {
+      const { data } = await supabaseClient.from("zumm_messages")
+        .select("created_at, file_type")
+        .eq("username", username);
+
+      if (!data || data.length === 0) {
+        if (statTotalMsgs) statTotalMsgs.textContent = "0";
+        if (statFiles) statFiles.textContent = "0";
+        if (statVoice) statVoice.textContent = "0";
+        if (statDays) statDays.textContent = "0";
+        if (statFirst) statFirst.textContent = "—";
+        return;
+      }
+
+      const total = data.length;
+      const conArchivo = data.filter(m => m.file_type && !m.file_type.startsWith("audio/")).length;
+      const conVoz = data.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
+
+      const fechas = new Set(data.map(m => m.created_at.substring(0, 10)));
+      const dias = fechas.size;
+
+      const primera = new Date(data[data.length - 1].created_at);
+      const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
+
+      if (statTotalMsgs) statTotalMsgs.textContent = total;
+      if (statFiles) statFiles.textContent = conArchivo;
+      if (statVoice) statVoice.textContent = conVoz;
+      if (statDays) statDays.textContent = dias;
+      if (statFirst) statFirst.textContent = primeraStr;
+    } catch (e) {
+      console.warn(e);
+    }
+  });
+}
+
+if (statsCloseBtn) {
+  statsCloseBtn.addEventListener("click", () => statsModal.classList.remove("show"));
 }
 
 // ============ LLAMADAS WEBRTC ============
@@ -1483,9 +1748,7 @@ async function leerSenales() {
       .gt("id", signalsLastId)
       .order("id", { ascending: true })
       .limit(50);
-
     if (error) { console.warn("Leer señales error:", error.message); return; }
-
     for (const s of (data || [])) {
       if (s.from_client === myClientId) continue;
       if (s.id > signalsLastId) signalsLastId = s.id;
@@ -1506,8 +1769,7 @@ function procesarSenal(s) {
     case "invite":
       if (payload.targetName && payload.targetName.toLowerCase() !== username.toLowerCase()) return;
       if (activeCall || incomingCall) {
-        enviarSenal(fromName, "reject", { callId, reason: "busy" });
-        return;
+        enviarSenal(fromName, "reject", { callId, reason: "busy" }); return;
       }
       incomingCall = { callId, fromName, fromId: s.from_client, video: !!payload.video };
       if (incomingAvatar) {
@@ -1527,8 +1789,7 @@ function procesarSenal(s) {
     case "accept":
       if (!activeCall || activeCall.role !== "caller" || activeCall.callId !== callId) return;
       activeCall.peerId = s.from_client;
-      clearTimeout(inviteTimer);
-      inviteTimer = null;
+      clearTimeout(inviteTimer); inviteTimer = null;
       if (callStatus) callStatus.textContent = "Conectando...";
       crearOferta();
       break;
@@ -1561,8 +1822,7 @@ function procesarSenal(s) {
     case "reject":
       if (!activeCall || activeCall.callId !== callId) return;
       const razon = (payload.reason === "busy") ? fromName + " está en otra llamada." : fromName + " rechazó.";
-      endCall(false);
-      alert(razon);
+      endCall(false); alert(razon);
       break;
   }
 }
@@ -1576,7 +1836,6 @@ function supportsCalls() {
 async function startCall(targetName, withVideo) {
   if (activeCall || incomingCall) { alert("Ya tienes una llamada activa."); return; }
   if (!supportsCalls()) return;
-
   const match = usersOnline.find(u => u.toLowerCase() === targetName.toLowerCase());
   if (!match) { alert(targetName + " no está en línea."); return; }
   targetName = match;
@@ -1587,10 +1846,7 @@ async function startCall(targetName, withVideo) {
       audio: true,
       video: withVideo ? { width: 640, height: 480, facingMode: "user" } : false
     });
-  } catch (e) {
-    alert("No se pudo acceder al micrófono/cámara:\n" + e.message);
-    return;
-  }
+  } catch (e) { alert("No se pudo acceder al micrófono/cámara:\n" + e.message); return; }
 
   localStream = stream;
   currentFacingMode = "user";
@@ -1598,7 +1854,6 @@ async function startCall(targetName, withVideo) {
 
   const callId = myClientId + "-" + Date.now();
   activeCall = { callId, peerName: targetName, peerId: null, role: "caller", video: !!withVideo };
-
   showCallOverlay("Llamando a " + targetName + "...");
   await enviarSenal(targetName, "invite", { targetName, callId, video: !!withVideo });
 
@@ -1628,11 +1883,9 @@ if (incomingAcceptBtn) {
     if (!incomingCall) return;
     const call = incomingCall;
     incomingCall = null;
-    stopRingtone();
-    clearTimeout(ringTimeout);
+    stopRingtone(); clearTimeout(ringTimeout);
     if (incomingModal) incomingModal.classList.remove("show");
     if (!supportsCalls()) { enviarSenal(call.fromName, "reject", { callId: call.callId }); return; }
-
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -1640,13 +1893,10 @@ if (incomingAcceptBtn) {
       });
     } catch (e) {
       alert("No se pudo acceder al micrófono/cámara:\n" + e.message);
-      enviarSenal(call.fromName, "reject", { callId: call.callId });
-      return;
+      enviarSenal(call.fromName, "reject", { callId: call.callId }); return;
     }
-
     currentFacingMode = "user";
     await cargarListaCamaras();
-
     activeCall = { callId: call.callId, peerName: call.fromName, peerId: call.fromId, role: "callee", video: call.video };
     showCallOverlay("Conectando con " + call.fromName + "...");
     attachLocalPreview();
@@ -1672,8 +1922,7 @@ function createPeer() {
     if (pc.connectionState === "connected") {
       if (callStatus) callStatus.textContent = "En llamada con " + activeCall.peerName;
     } else if (pc.connectionState === "failed") {
-      alert("Se perdió la conexión.");
-      endCall(true);
+      alert("Se perdió la conexión."); endCall(true);
     }
   };
 }
@@ -1755,14 +2004,12 @@ function endCall(notify) {
   if (notify && activeCall) enviarSenal(activeCall.peerName, "hangup", { callId: activeCall.callId });
   clearTimeout(inviteTimer); inviteTimer = null;
   clearTimeout(ringTimeout);
-
   if (pc) { try { pc.close(); } catch (e) {} pc = null; }
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   iceQueue = [];
   activeCall = null;
   muted = false;
   currentFacingMode = "user";
-
   if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
   if (switchCamBtn) switchCamBtn.style.display = "none";
   if (localVideo) localVideo.srcObject = null;
@@ -1783,7 +2030,6 @@ if (muteBtn) {
 async function cambiarCamara() {
   if (!localStream) { alert("No hay stream activo."); return; }
   if (!activeCall || !activeCall.video) { alert("Solo en videollamadas."); return; }
-
   try {
     localStream.getVideoTracks().forEach(t => {
       try { t.stop(); } catch (e) {}
@@ -1873,5 +2119,6 @@ iniciarPresencia();
 leerSenales();
 cargarListaCamaras();
 actualizarBotonAbajo();
+cargarMensajeFijado();
 
 // © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

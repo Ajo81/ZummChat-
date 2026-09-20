@@ -18,7 +18,7 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
-// ============ REFERENCIAS DOM ============
+// ============ DOM ============
 const messagesEl      = document.getElementById("messages");
 const inputEl         = document.getElementById("messageInput");
 const sendBtn         = document.getElementById("sendBtn");
@@ -230,7 +230,6 @@ if (!SS.getItem("zummchat_cid")) {
     (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "c" + Date.now() + Math.random().toString(36).slice(2));
 }
 const myClientId = SS.getItem("zummchat_cid");
-
 let myAvatarUrl = LS.getItem("zummchat_avatar") || "";
 let myBio = LS.getItem("zummchat_bio") || "";
 let myStatus = LS.getItem("zummchat_status") || "";
@@ -240,8 +239,7 @@ let currentRoom = "general";
 let bloqueados = new Set();
 async function cargarBloqueados() {
   try {
-    const { data } = await supabaseClient.from("zumm_bloqueados")
-      .select("bloqueado").eq("owner", username);
+    const { data } = await supabaseClient.from("zumm_bloqueados").select("bloqueado").eq("owner", username);
     bloqueados = new Set((data || []).map(b => b.bloqueado.toLowerCase()));
   } catch (e) {}
 }
@@ -250,8 +248,7 @@ async function cargarBloqueados() {
 let misContactos = [];
 async function cargarContactos() {
   try {
-    const { data } = await supabaseClient.from("zumm_contactos")
-      .select("contacto").eq("owner", username).order("contacto", { ascending: true });
+    const { data } = await supabaseClient.from("zumm_contactos").select("contacto").eq("owner", username).order("contacto", { ascending: true });
     misContactos = (data || []).map(c => c.contacto);
   } catch (e) { misContactos = []; }
 }
@@ -311,27 +308,25 @@ function aplicarPack() {
   if (packActual) document.body.classList.add("pack-" + packActual);
 }
 aplicarTema(); aplicarPack();
-
 if (themeBtn) themeBtn.addEventListener("click", () => {
   temaActual = temaActual === "dark" ? "light" : "dark";
   LS.setItem("zummchat_tema", temaActual);
   aplicarTema();
 });
-
 const packsDisponibles = [
   { id: "", nombre: "🎨 Verde (original)" },
-  { id: "neon", nombre: "💜 Neón (magenta)" },
-  { id: "ocean", nombre: "🌊 Océano (cyan)" },
-  { id: "sunset", nombre: "🌅 Atardecer (naranja)" },
-  { id: "forest", nombre: "🌲 Bosque (verde lima)" },
+  { id: "neon", nombre: "💜 Neón" },
+  { id: "ocean", nombre: "🌊 Océano" },
+  { id: "sunset", nombre: "🌅 Atardecer" },
+  { id: "forest", nombre: "🌲 Bosque" },
   { id: "rose", nombre: "🌸 Rosa" },
   { id: "gold", nombre: "👑 Dorado" },
-  { id: "midnight", nombre: "🌌 Medianoche (azul)" },
-  { id: "matrix", nombre: "🟢 Matrix (verde puro)" }
+  { id: "midnight", nombre: "🌌 Medianoche" },
+  { id: "matrix", nombre: "🟢 Matrix" }
 ];
 if (colorBtn) colorBtn.addEventListener("click", () => {
   const lista = packsDisponibles.map((p, i) => (i + 1) + ". " + p.nombre).join("\n");
-  const eleccion = prompt("Elige un tema:\n\n" + lista + "\n\nEscribe el número (1-9):");
+  const eleccion = prompt("Tema:\n\n" + lista + "\n\nNúmero (1-9):");
   const idx = parseInt(eleccion) - 1;
   if (isNaN(idx) || idx < 0 || idx >= packsDisponibles.length) return;
   packActual = packsDisponibles[idx].id;
@@ -391,7 +386,8 @@ function mostrarNotificacion(remitente, texto, room) {
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       const n = new Notification("💬 " + remitente, {
-        body: texto || "Nuevo mensaje", icon: "icon.png", badge: "icon.png",
+        body: texto || "Nuevo mensaje",
+        icon: "icon.png", badge: "icon.png",
         tag: "zummchat-msg", renotify: true,
         vibrate: [200, 100, 200, 100, 200], silent: false
       });
@@ -514,7 +510,7 @@ function linkify(texto) {
   return frag;
 }
 
-// ============ BOT BIENVENIDA ============
+// ============ BOT ============
 const mensajesBienvenida = [
   "¡Hola {nombre}! 👋 Bienvenido a {sala}.",
   "🎉 {nombre} se unió a {sala}. ¡Saluda!",
@@ -576,7 +572,7 @@ function crearBotonGrupo(nombreGrupo) {
 }
 gruposPersonalizados.forEach(g => crearBotonGrupo(g));
 if (addRoomBtn) addRoomBtn.addEventListener("click", () => {
-  const nombre = prompt("Nombre del nuevo grupo:");
+  const nombre = prompt("Nombre del grupo:");
   if (!nombre || !nombre.trim()) return;
   const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
   if (!limpio) { alert("Inválido."); return; }
@@ -649,7 +645,7 @@ function openPrivateWith(otroNombre) {
   if (usersPanel) usersPanel.classList.remove("show");
 }
 if (privateBtn) privateBtn.addEventListener("click", () => {
-  const otro = prompt("¿Con quién quieres hablar en privado?");
+  const otro = prompt("¿Con quién en privado?");
   if (!otro || !otro.trim()) return;
   openPrivateWith(otro);
 });
@@ -693,7 +689,7 @@ async function subirYEnviarArchivo(file, tipo) {
   const nombreArchivo = Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "." + ext;
   const { error: upErr } = await supabaseClient.storage.from("archivos")
     .upload(nombreArchivo, file, { contentType: file.type || "application/octet-stream" });
-  if (upErr) { alert("Error: " + upErr.message); return; }
+  if (upErr) { alert("No se pudo subir: " + upErr.message); return; }
   const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
   const publicUrl = urlData.publicUrl;
   const texto = inputEl ? inputEl.value.trim() : "";
@@ -858,7 +854,6 @@ function avatarUrlDe(nombre) {
   if (nombre.toLowerCase() === username.toLowerCase()) return myAvatarUrl;
   return avataresPorUsuario[(nombre || "").toLowerCase()] || "";
 }
-
 function renderMessage(m, esNuevo) {
   if (!m || !m.id || rendered.has(m.id)) return;
   if (m.room !== currentRoom) return;
@@ -1086,13 +1081,11 @@ function renderMessage(m, esNuevo) {
   messagesEl.appendChild(div);
   scrollToBottom();
 }
-
 function removeMessageFromDOM(id) {
   rendered.delete(id);
   const el = messagesEl.querySelector('[data-msg-id="' + id + '"]');
   if (el) el.remove();
 }
-
 async function loadHistory() {
   const { data, error } = await supabaseClient.from("zumm_messages")
     .select("id, text, username, created_at, room, file_url, file_name, file_type, edited_at, reactions, pinned")
@@ -1102,7 +1095,6 @@ async function loadHistory() {
   if (error) { console.error("ERROR:", error); return; }
   data.forEach(m => renderMessage(m, false));
 }
-
 async function sendMessage() {
   if (!inputEl) return;
   const text = inputEl.value.trim();
@@ -1116,7 +1108,6 @@ async function sendMessage() {
 }
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
-
 supabaseClient
   .channel("zumm-messages-realtime")
   .on("postgres_changes", { event: "INSERT", schema: "public", table: "zumm_messages" },
@@ -1269,6 +1260,7 @@ if (gameSaveBtn) gameSaveBtn.addEventListener("click", async () => {
 
 // ============ REGALOS ============
 let regaloSeleccionado = null;
+
 if (giftsBtn) giftsBtn.addEventListener("click", () => {
   cerrarPaneles();
   giftTo.value = "";
@@ -1276,6 +1268,7 @@ if (giftsBtn) giftsBtn.addEventListener("click", () => {
   document.querySelectorAll(".gift-opt").forEach(b => b.classList.remove("selected"));
   giftModal.classList.add("show");
 });
+
 document.querySelectorAll(".gift-opt").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".gift-opt").forEach(b => b.classList.remove("selected"));
@@ -1287,14 +1280,17 @@ document.querySelectorAll(".gift-opt").forEach(btn => {
     };
   });
 });
+
 if (giftCancelBtn) giftCancelBtn.addEventListener("click", () => giftModal.classList.remove("show"));
+
 if (giftSaveBtn) giftSaveBtn.addEventListener("click", async () => {
   const paraQuien = giftTo.value.trim();
   if (!paraQuien) { alert("Escribe a quién."); return; }
   if (paraQuien.toLowerCase() === username.toLowerCase()) { alert("No puedes regalarte a ti mismo."); return; }
   if (!regaloSeleccionado) { alert("Elige un regalo."); return; }
   const giftData = {
-    from: username, to: paraQuien,
+    from: username,
+    to: paraQuien,
     type: regaloSeleccionado.type,
     emoji: regaloSeleccionado.emoji,
     label: regaloSeleccionado.label
@@ -1895,6 +1891,7 @@ function openImageModal(url) {
 let usersOnline = [];
 let presenceInterval = null, presenceRefreshInterval = null;
 let avataresPorUsuario = {};
+
 async function registrarPresencia() {
   await supabaseClient.from("zumm_presence").upsert({
     username: username, room: currentRoom,
@@ -1902,6 +1899,7 @@ async function registrarPresencia() {
     avatar_url: myAvatarUrl || null
   }, { onConflict: "username,room" }).catch(() => {});
 }
+
 async function leerPresencia() {
   try {
     const hace30s = new Date(Date.now() - 30000).toISOString();
@@ -1925,6 +1923,7 @@ async function leerPresencia() {
     renderUserList();
   } catch (e) {}
 }
+
 function iniciarPresencia() {
   registrarPresencia(); leerPresencia();
   clearInterval(presenceInterval); presenceInterval = setInterval(registrarPresencia, 8000);
@@ -2045,24 +2044,24 @@ function abrirPerfil(nombre, editable) {
   profileModal.classList.add("show");
 }
 
-// Avatar propio: toque corto = perfil, mantener = regalos
+// Tocar avatar propio: corto = perfil, mantener = regalos
 if (userMeAvatar) {
-  let timerAvatar = null;
-  let longPressAvatar = false;
-  userMeAvatar.addEventListener("touchstart", () => {
-    longPressAvatar = false;
-    timerAvatar = setTimeout(() => {
-      longPressAvatar = true;
+  let longPressHecho = false;
+  let timer = null;
+  const iniciar = () => {
+    longPressHecho = false;
+    timer = setTimeout(() => {
+      longPressHecho = true;
       mostrarMisRegalos();
     }, 700);
-  }, { passive: true });
-  userMeAvatar.addEventListener("touchend", () => {
-    clearTimeout(timerAvatar);
-    if (!longPressAvatar) abrirPerfil(username, true);
-  });
-  userMeAvatar.addEventListener("click", () => {
-    if (!longPressAvatar) abrirPerfil(username, true);
-  });
+  };
+  const terminar = () => {
+    clearTimeout(timer);
+    if (!longPressHecho) abrirPerfil(username, true);
+  };
+  userMeAvatar.addEventListener("touchstart", iniciar, { passive: true });
+  userMeAvatar.addEventListener("touchend", terminar);
+  userMeAvatar.addEventListener("touchcancel", () => clearTimeout(timer));
 }
 
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", () => profileModal.classList.remove("show"));
@@ -2135,7 +2134,7 @@ if (changeNameBtn) changeNameBtn.addEventListener("click", async () => {
   alert("✅ Nombre: " + username);
 });
 
-// ============ ESTADÍSTICAS PERSONALES ============
+// ============ STATS PERSONALES ============
 if (statsBtn) statsBtn.addEventListener("click", async () => {
   cerrarPaneles();
   if (!statsModal) return;
@@ -2162,7 +2161,7 @@ if (statsBtn) statsBtn.addEventListener("click", async () => {
 });
 if (statsCloseBtn) statsCloseBtn.addEventListener("click", () => statsModal.classList.remove("show"));
 
-// ============ ESTADÍSTICAS GRUPO ============
+// ============ STATS GRUPO ============
 if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
   cerrarPaneles();
   if (!groupStatsModal) return;

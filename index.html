@@ -40,7 +40,8 @@
         <button id="themeBtn" type="button" title="Modo claro/oscuro">🌙</button>
         <button id="colorBtn" type="button" title="Packs de temas">🎨</button>
         <button id="searchBtn" type="button" title="Buscar">🔍</button>
-        <button id="statsBtn" type="button" title="Estadísticas">📊</button>
+        <button id="statsBtn" type="button" title="Mis estadísticas">📊</button>
+        <button id="groupStatsBtn" type="button" title="Estadísticas del grupo">📈</button>
         <button id="favBtn" type="button" title="Favoritos">⭐</button>
         <button id="soundBtn" type="button" title="Sonido">🔔</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
@@ -230,7 +231,39 @@
     </div>
   </div>
 
-  <!-- FAVORITOS -->
+  <!-- ESTADÍSTICAS DEL GRUPO -->
+  <div id="groupStatsModal">
+    <div class="stats-content">
+      <h3>📈 Estadísticas del grupo</h3>
+      <div class="stat-item">
+        <span class="stat-label">💬 Mensajes en esta sala</span>
+        <span class="stat-value" id="gStatTotal">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">👥 Participantes</span>
+        <span class="stat-value" id="gStatUsers">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">🏆 Más activo</span>
+        <span class="stat-value" id="gStatTop">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">📁 Archivos compartidos</span>
+        <span class="stat-value" id="gStatFiles">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">🎤 Notas de voz</span>
+        <span class="stat-value" id="gStatVoice">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">📅 Primer mensaje</span>
+        <span class="stat-value" id="gStatFirst">...</span>
+      </div>
+      <div id="gStatRanking" style="margin-top:10px;"></div>
+      <button id="groupStatsCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
   <div id="favModal">
     <div class="fav-content">
       <h3>⭐ Mis favoritos</h3>

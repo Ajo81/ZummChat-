@@ -50,26 +50,16 @@ const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
 
 const MAX_SIZE_MB = 5;
 
-// Servidores ICE (STUN + TURN gratuitos)
 const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   {
-    urls: [
-      "turn:turn.evan-brass.net:3478",
-      "turn:turn.evan-brass.net:3478?transport=tcp"
-    ],
-    username: "user",
-    credential: "password"
+    urls: ["turn:turn.evan-brass.net:3478", "turn:turn.evan-brass.net:3478?transport=tcp"],
+    username: "user", credential: "password"
   },
   {
-    urls: [
-      "turn:openrelay.metered.ca:80",
-      "turn:openrelay.metered.ca:443",
-      "turn:openrelay.metered.ca:443?transport=tcp"
-    ],
-    username: "openrelayproject",
-    credential: "openrelayproject"
+    urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turn:openrelay.metered.ca:443?transport=tcp"],
+    username: "openrelayproject", credential: "openrelayproject"
   }
 ];
 
@@ -103,9 +93,7 @@ if (!username) {
 
 if (!SS.getItem("zummchat_cid")) {
   SS.setItem("zummchat_cid",
-    (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : "c" + Date.now() + Math.random().toString(36).slice(2));
+    (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "c" + Date.now() + Math.random().toString(36).slice(2));
 }
 const myClientId = SS.getItem("zummchat_cid");
 
@@ -123,23 +111,34 @@ function initAudio() {
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
 
-function playBeep() {
+// ✅ Sonido insistente de 3 tonos + vibración
+function reproducirSonidoInsistente() {
   if (!sonidoActivo) return;
   initAudio();
   if (!audioCtx) return;
-  try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
-  } catch (e) {}
+
+  const tonos = [880, 1100, 880];
+  tonos.forEach((freq, idx) => {
+    setTimeout(() => {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      } catch (e) {}
+    }, idx * 350);
+  });
+
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 100, 200, 100, 200]);
+  }
 }
 
 document.body.addEventListener("touchstart", initAudio, { once: true });
@@ -155,11 +154,88 @@ if (soundBtn) {
     sonidoActivo = !sonidoActivo;
     LS.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
     updateSoundBtn();
-    if (sonidoActivo) playBeep();
+    if (sonidoActivo) reproducirSonidoInsistente();
   });
 }
 
-// ============ RINGTONE ============
+// ================================================================
+// ============ 🔔 NOTIFICACIONES (SISTEMA + TÍTULO) =============
+// ================================================================
+
+// Pedir permiso para notificaciones del sistema
+if ("Notification" in window && Notification.permission === "default") {
+  setTimeout(() => {
+    Notification.requestPermission().catch(() => {});
+  }, 3000);
+}
+
+let mensajesNoLeidos = 0;
+let tituloParpadeoInterval = null;
+let tituloParpadeando = false;
+const TITULO_BASE = "ZummChat";
+
+function mostrarNotificacion(remitente, texto) {
+  // 🔔 A) Notificación del sistema
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      const n = new Notification("💬 " + remitente, {
+        body: texto || "Nuevo mensaje",
+        icon: "icon.png",
+        badge: "icon-192.png",
+        tag: "zummchat-msg",
+        renotify: true,
+        vibrate: [200, 100, 200, 100, 200],
+        silent: false
+      });
+      n.onclick = () => {
+        try { window.focus(); } catch (e) {}
+        n.close();
+      };
+      setTimeout(() => { try { n.close(); } catch (e) {} }, 8000);
+    }
+  } catch (e) { console.warn("Notif error:", e); }
+
+  // 📢 B) Título parpadeante
+  mensajesNoLeidos++;
+  document.title = "(" + mensajesNoLeidos + ") 💬 ZummChat";
+  if (!tituloParpadeando) {
+    tituloParpadeando = true;
+    tituloParpadeoInterval = setInterval(() => {
+      document.title = document.title.startsWith("(")
+        ? "💬 ZummChat"
+        : "(" + mensajesNoLeidos + ") 💬 ZummChat";
+    }, 1000);
+  }
+
+  // 🔊 C) Sonido insistente
+  reproducirSonidoInsistente();
+}
+
+// Reset cuando vuelve a la pestaña
+window.addEventListener("focus", () => {
+  mensajesNoLeidos = 0;
+  document.title = TITULO_BASE;
+  if (tituloParpadeoInterval) {
+    clearInterval(tituloParpadeoInterval);
+    tituloParpadeoInterval = null;
+    tituloParpadeando = false;
+  }
+});
+
+// También cuando la pestaña se hace visible
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    mensajesNoLeidos = 0;
+    document.title = TITULO_BASE;
+    if (tituloParpadeoInterval) {
+      clearInterval(tituloParpadeoInterval);
+      tituloParpadeoInterval = null;
+      tituloParpadeando = false;
+    }
+  }
+});
+
+// ============ RINGTONE (llamadas) ============
 let ringInterval = null;
 
 function playRingtone() {
@@ -441,9 +517,13 @@ function renderMessage(m, esNuevo) {
   if (!messagesEl) return;
   rendered.add(m.id);
 
+  // ✅ NOTIFICACIÓN cuando es mensaje nuevo y no es mío
   if (esNuevo) {
     const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
-    if (!esMio) playBeep();
+    if (!esMio) {
+      const textoNotif = m.text || (m.file_url ? "📎 Archivo" : "Nuevo mensaje");
+      mostrarNotificacion(m.username || "Alguien", textoNotif);
+    }
   }
 
   maybeAddDateSeparator(m.created_at);
@@ -607,7 +687,7 @@ function openImageModal(url) {
 }
 
 // ================================================================
-// ============ PRESENCIA VIA TABLA (postgres_changes) ============
+// ============ PRESENCIA VIA TABLA ==============================
 // ================================================================
 
 let usersOnline = [];
@@ -649,10 +729,8 @@ async function leerPresencia() {
 function iniciarPresencia() {
   registrarPresencia();
   leerPresencia();
-
   clearInterval(presenceInterval);
   presenceInterval = setInterval(registrarPresencia, 8000);
-
   clearInterval(presenceRefreshInterval);
   presenceRefreshInterval = setInterval(leerPresencia, 5000);
 }
@@ -749,10 +827,8 @@ async function cargarListaCamaras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     listaCamaras = devices.filter(d => d.kind === "videoinput");
-    console.log("📷 Cámaras disponibles:", listaCamaras.length, listaCamaras.map(c => c.label));
-  } catch (e) {
-    console.warn("Error enumerando cámaras:", e);
-  }
+    console.log("📷 Cámaras:", listaCamaras.length);
+  } catch (e) { console.warn("Error cámaras:", e); }
 }
 
 async function enviarSenal(toUser, signalType, payload) {
@@ -785,10 +861,8 @@ async function leerSenales() {
     for (const s of (data || [])) {
       if (s.from_client === myClientId) continue;
       if (s.id > signalsLastId) signalsLastId = s.id;
-
       const edad = Date.now() - new Date(s.created_at).getTime();
       if (edad > 60000) continue;
-
       procesarSenal(s);
     }
   } catch (e) { console.warn("Leer señales excepción:", e); }
@@ -800,8 +874,6 @@ function procesarSenal(s) {
 
   const fromName = s.from_user;
   const callId = payload.callId;
-
-  console.log("📨 Señal:", s.signal_type, "de", fromName);
 
   switch (s.signal_type) {
     case "invite":
@@ -903,21 +975,11 @@ async function startCall(targetName, withVideo) {
   await cargarListaCamaras();
 
   const callId = myClientId + "-" + Date.now();
-  activeCall = {
-    callId,
-    peerName: targetName,
-    peerId: null,
-    role: "caller",
-    video: !!withVideo
-  };
+  activeCall = { callId, peerName: targetName, peerId: null, role: "caller", video: !!withVideo };
 
   showCallOverlay("Llamando a " + targetName + "...");
 
-  await enviarSenal(targetName, "invite", {
-    targetName,
-    callId,
-    video: !!withVideo
-  });
+  await enviarSenal(targetName, "invite", { targetName, callId, video: !!withVideo });
 
   clearTimeout(inviteTimer);
   inviteTimer = setTimeout(() => {
@@ -989,10 +1051,7 @@ function createPeer() {
 
   pc.onicecandidate = (e) => {
     if (e.candidate && activeCall) {
-      enviarSenal(activeCall.peerName, "ice", {
-        callId: activeCall.callId,
-        candidate: e.candidate
-      });
+      enviarSenal(activeCall.peerName, "ice", { callId: activeCall.callId, candidate: e.candidate });
     }
   };
 
@@ -1021,12 +1080,9 @@ async function crearOferta() {
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    await enviarSenal(activeCall.peerName, "offer", {
-      callId: activeCall.callId,
-      sdp: pc.localDescription
-    });
+    await enviarSenal(activeCall.peerName, "offer", { callId: activeCall.callId, sdp: pc.localDescription });
   } catch (e) {
-    alert("Error al iniciar la llamada: " + e.message);
+    alert("Error: " + e.message);
     endCall(true);
   }
 }
@@ -1039,13 +1095,10 @@ async function recibirOferta(sdp) {
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    await enviarSenal(activeCall.peerName, "answer", {
-      callId: activeCall.callId,
-      sdp: pc.localDescription
-    });
+    await enviarSenal(activeCall.peerName, "answer", { callId: activeCall.callId, sdp: pc.localDescription });
     flushIce();
   } catch (e) {
-    alert("Error al conectar: " + e.message);
+    alert("Error: " + e.message);
     endCall(true);
   }
 }
@@ -1054,10 +1107,7 @@ async function recibirRespuesta(sdp) {
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     flushIce();
-  } catch (e) {
-    console.error("Error respuesta:", e);
-    endCall(true);
-  }
+  } catch (e) { endCall(true); }
 }
 
 function flushIce() {
@@ -1143,96 +1193,61 @@ if (muteBtn) {
 
 // ============ CAMBIAR CÁMARA ============
 async function cambiarCamara() {
-  if (!localStream) {
-    alert("No hay stream de video activo.");
-    return;
-  }
-  if (!activeCall || !activeCall.video) {
-    alert("Solo se puede cambiar la cámara durante una videollamada.");
-    return;
-  }
+  if (!localStream) { alert("No hay stream activo."); return; }
+  if (!activeCall || !activeCall.video) { alert("Solo en videollamadas."); return; }
 
   try {
-    // 1) Detener pistas de video actuales
     const pistasViejas = localStream.getVideoTracks();
     pistasViejas.forEach(t => {
       try { t.stop(); } catch (e) {}
       try { localStream.removeTrack(t); } catch (e) {}
     });
 
-    // 2) Pausa breve
     await new Promise(r => setTimeout(r, 300));
-
-    // 3) Recargar lista
     await cargarListaCamaras();
-
-    // 4) Alternar
     currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
 
     let nuevoStream = null;
 
-    // Intento 1: deviceId
     if (listaCamaras.length >= 2) {
       const idxDeseado = currentFacingMode === "user" ? 0 : (listaCamaras.length - 1);
       try {
         nuevoStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: {
-            deviceId: { exact: listaCamaras[idxDeseado].deviceId },
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          }
+          video: { deviceId: { exact: listaCamaras[idxDeseado].deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
         });
-        console.log("📷 Cambiada por deviceId");
-      } catch (e1) {
-        console.warn("Falló deviceId:", e1.message);
-      }
+      } catch (e1) {}
     }
 
-    // Intento 2: facingMode exact
     if (!nuevoStream) {
       try {
         nuevoStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: { facingMode: { exact: currentFacingMode }, width: { ideal: 640 }, height: { ideal: 480 } }
         });
-        console.log("📷 Cambiada por facingMode exact");
-      } catch (e2) {
-        console.warn("Falló facingMode exact:", e2.message);
-      }
+      } catch (e2) {}
     }
 
-    // Intento 3: facingMode ideal
     if (!nuevoStream) {
       try {
         nuevoStream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: currentFacingMode }
+          audio: false, video: { facingMode: currentFacingMode }
         });
-        console.log("📷 Cambiada por facingMode ideal");
-      } catch (e3) {
-        console.warn("Falló facingMode ideal:", e3.message);
-      }
+      } catch (e3) {}
     }
 
     if (!nuevoStream) {
-      alert("No se pudo cambiar la cámara.\nTu celular puede no permitirlo.");
+      alert("No se pudo cambiar la cámara.");
       return;
     }
 
     const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
 
-    // Reemplazar en WebRTC
     if (pc) {
-      const senders = pc.getSenders();
-      const senderVideo = senders.find(s => s.track && s.track.kind === "video");
-      if (senderVideo) {
-        await senderVideo.replaceTrack(nuevaPistaVideo);
-        console.log("📷 Pista reemplazada");
-      }
+      const senderVideo = pc.getSenders().find(s => s.track && s.track.kind === "video");
+      if (senderVideo) await senderVideo.replaceTrack(nuevaPistaVideo);
     }
 
-    // Actualizar stream local
     localStream.addTrack(nuevaPistaVideo);
 
     if (localVideo) {
@@ -1244,10 +1259,7 @@ async function cambiarCamara() {
     if (switchCamBtn) {
       switchCamBtn.textContent = currentFacingMode === "user" ? "🔄 Frontal" : "🔄 Trasera";
     }
-
-    console.log("✅ Cámara cambiada a:", currentFacingMode);
   } catch (e) {
-    console.error("❌ Error al cambiar cámara:", e);
     alert("No se pudo cambiar la cámara:\n" + e.message);
     if (switchCamBtn) switchCamBtn.textContent = "🔄 Cám";
   }
@@ -1263,10 +1275,7 @@ if (hangupBtn) {
 
 if (callBtn) {
   callBtn.addEventListener("click", () => {
-    if (usersOnline.length === 0) {
-      alert("No hay otros usuarios en línea.");
-      return;
-    }
+    if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
     const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
     if (!target || !target.trim()) return;
     startCall(target.trim(), false);
@@ -1275,10 +1284,7 @@ if (callBtn) {
 
 if (videoBtn) {
   videoBtn.addEventListener("click", () => {
-    if (usersOnline.length === 0) {
-      alert("No hay otros usuarios en línea.");
-      return;
-    }
+    if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
     const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
     if (!target || !target.trim()) return;
     startCall(target.trim(), true);

@@ -23,7 +23,6 @@ setTimeout(() => {
 const messagesEl      = document.getElementById("messages");
 const inputEl         = document.getElementById("messageInput");
 const sendBtn         = document.getElementById("sendBtn");
-const shareBtn        = document.getElementById("shareBtn");
 const chatTitle       = document.getElementById("chat-title");
 const privateBtn      = document.getElementById("privateBtn");
 const privRoomBar     = document.getElementById("priv-room-bar");
@@ -31,45 +30,32 @@ const roomBar         = document.getElementById("room-bar");
 const addRoomBtn      = document.getElementById("addRoomBtn");
 const emojiBtn        = document.getElementById("emojiBtn");
 const emojiBar        = document.getElementById("emoji-bar");
-const fileBtn         = document.getElementById("fileBtn");
+const attachBtn       = document.getElementById("attachBtn");
+const attachMenu      = document.getElementById("attachMenu");
+const menuFileBtn     = document.getElementById("menuFileBtn");
+const menuCameraBtn   = document.getElementById("menuCameraBtn");
+const menuLocationBtn = document.getElementById("menuLocationBtn");
+const menuVoiceBtn    = document.getElementById("menuVoiceBtn");
 const fileInput       = document.getElementById("fileInput");
-const cameraBtn       = document.getElementById("cameraBtn");
 const cameraInput     = document.getElementById("cameraInput");
-const locationBtn     = document.getElementById("locationBtn");
-const voiceBtn        = document.getElementById("voiceBtn");
-const soundBtn        = document.getElementById("soundBtn");
+
+const usersBtn        = document.getElementById("usersBtn");
 const callBtn         = document.getElementById("callBtn");
 const videoBtn        = document.getElementById("videoBtn");
-const usersBtn        = document.getElementById("usersBtn");
-const usersPanel      = document.getElementById("usersPanel");
-const usersPanelClose = document.getElementById("usersPanelClose");
-const userList        = document.getElementById("userList");
-const noUsers         = document.getElementById("noUsers");
-const callOverlay     = document.getElementById("callOverlay");
-const callStatus      = document.getElementById("callStatus");
-const localVideo      = document.getElementById("localVideo");
-const remoteVideo     = document.getElementById("remoteVideo");
-const muteBtn         = document.getElementById("muteBtn");
-const acceptCallBtn   = document.getElementById("acceptCallBtn");
-const hangupBtn       = document.getElementById("hangupBtn");
-const switchCamBtn    = document.getElementById("switchCamBtn");
-const incomingModal   = document.getElementById("incomingModal");
-const incomingAvatar  = document.getElementById("incomingAvatar");
-const incomingName    = document.getElementById("incomingName");
-const incomingText    = document.getElementById("incomingText");
-const rejectBtn       = document.getElementById("rejectBtn");
-const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
-const userMeName      = document.getElementById("userMeName");
-const changeNameBtn   = document.getElementById("changeNameBtn");
-const userMeAvatar    = document.getElementById("userMeAvatar");
-const avatarInput     = document.getElementById("avatarInput");
-const recordingPanel  = document.getElementById("recordingPanel");
-const recordingTime   = document.getElementById("recordingTime");
-const cancelRecBtn    = document.getElementById("cancelRecBtn");
-const stopRecBtn      = document.getElementById("stopRecBtn");
+const configBtn       = document.getElementById("configBtn");
+const configPanel     = document.getElementById("configPanel");
+const configPanelClose = document.getElementById("configPanelClose");
+
 const themeBtn        = document.getElementById("themeBtn");
 const colorBtn        = document.getElementById("colorBtn");
 const searchBtn       = document.getElementById("searchBtn");
+const soundBtn        = document.getElementById("soundBtn");
+const soundIcon       = document.getElementById("soundIcon");
+const statsBtn        = document.getElementById("statsBtn");
+const groupStatsBtn   = document.getElementById("groupStatsBtn");
+const favBtn          = document.getElementById("favBtn");
+const shareBtn        = document.getElementById("shareBtn");
+
 const searchBar       = document.getElementById("searchBar");
 const searchInput     = document.getElementById("searchInput");
 const searchClose     = document.getElementById("searchClose");
@@ -89,7 +75,6 @@ const typingIndicator = document.getElementById("typingIndicator");
 const pinnedBar       = document.getElementById("pinnedBar");
 const pinnedText      = document.getElementById("pinnedText");
 const unpinBtn        = document.getElementById("unpinBtn");
-const statsBtn        = document.getElementById("statsBtn");
 const statsModal      = document.getElementById("statsModal");
 const statsCloseBtn   = document.getElementById("statsCloseBtn");
 const statTotalMsgs   = document.getElementById("statTotalMsgs");
@@ -97,7 +82,6 @@ const statFiles       = document.getElementById("statFiles");
 const statVoice       = document.getElementById("statVoice");
 const statDays        = document.getElementById("statDays");
 const statFirst       = document.getElementById("statFirst");
-const groupStatsBtn   = document.getElementById("groupStatsBtn");
 const groupStatsModal = document.getElementById("groupStatsModal");
 const groupStatsCloseBtn = document.getElementById("groupStatsCloseBtn");
 const gStatTotal      = document.getElementById("gStatTotal");
@@ -118,11 +102,36 @@ const profileStatusInput = document.getElementById("profileStatusInput");
 const profileEditBtn  = document.getElementById("profileEditBtn");
 const profileSaveBtn  = document.getElementById("profileSaveBtn");
 const profileCancelBtn = document.getElementById("profileCancelBtn");
-const favBtn          = document.getElementById("favBtn");
 const favModal        = document.getElementById("favModal");
 const favList         = document.getElementById("favList");
 const favEmpty        = document.getElementById("favEmpty");
 const favCloseBtn     = document.getElementById("favCloseBtn");
+const usersPanel      = document.getElementById("usersPanel");
+const usersPanelClose = document.getElementById("usersPanelClose");
+const userList        = document.getElementById("userList");
+const noUsers         = document.getElementById("noUsers");
+const userMeName      = document.getElementById("userMeName");
+const changeNameBtn   = document.getElementById("changeNameBtn");
+const userMeAvatar    = document.getElementById("userMeAvatar");
+const avatarInput     = document.getElementById("avatarInput");
+const callOverlay     = document.getElementById("callOverlay");
+const callStatus      = document.getElementById("callStatus");
+const localVideo      = document.getElementById("localVideo");
+const remoteVideo     = document.getElementById("remoteVideo");
+const muteBtn         = document.getElementById("muteBtn");
+const acceptCallBtn   = document.getElementById("acceptCallBtn");
+const hangupBtn       = document.getElementById("hangupBtn");
+const switchCamBtn    = document.getElementById("switchCamBtn");
+const incomingModal   = document.getElementById("incomingModal");
+const incomingAvatar  = document.getElementById("incomingAvatar");
+const incomingName    = document.getElementById("incomingName");
+const incomingText    = document.getElementById("incomingText");
+const rejectBtn       = document.getElementById("rejectBtn");
+const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
+const recordingPanel  = document.getElementById("recordingPanel");
+const recordingTime   = document.getElementById("recordingTime");
+const cancelRecBtn    = document.getElementById("cancelRecBtn");
+const stopRecBtn      = document.getElementById("stopRecBtn");
 
 const MAX_SIZE_MB = 5;
 const BOT_NAME = "🤖 ZummBot";
@@ -191,7 +200,7 @@ function chatEstaSilenciado(room) {
 function toggleSilenciar(room) {
   if (chatsSilenciados.includes(room)) {
     chatsSilenciados = chatsSilenciados.filter(r => r !== room);
-    alert("🔔 Notificaciones ACTIVADAS para este chat");
+    alert("🔔 Notificaciones ACTIVADAS");
   } else {
     chatsSilenciados.push(room);
     alert("🔕 Chat SILENCIADO");
@@ -212,7 +221,7 @@ let packActual = LS.getItem("zummchat_pack") || "";
 
 function aplicarTema() {
   document.body.classList.toggle("theme-light", temaActual === "light");
-  if (themeBtn) themeBtn.textContent = temaActual === "light" ? "☀️" : "🌙";
+  if (themeBtn) themeBtn.querySelector(".config-icon").textContent = temaActual === "light" ? "☀️" : "🌙";
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) metaTheme.setAttribute("content", temaActual === "light" ? "#ffffff" : "#000000");
 }
@@ -232,6 +241,7 @@ if (themeBtn) {
     temaActual = temaActual === "dark" ? "light" : "dark";
     LS.setItem("zummchat_tema", temaActual);
     aplicarTema();
+    cerrarPaneles();
   });
 }
 
@@ -249,6 +259,7 @@ const packsDisponibles = [
 
 if (colorBtn) {
   colorBtn.addEventListener("click", () => {
+    cerrarPaneles();
     const lista = packsDisponibles.map((p, i) => (i + 1) + ". " + p.nombre).join("\n");
     const eleccion = prompt("Elige un tema:\n\n" + lista + "\n\nEscribe el número (1-9):");
     const idx = parseInt(eleccion) - 1;
@@ -299,7 +310,7 @@ document.body.addEventListener("touchstart", initAudio, { once: true });
 document.body.addEventListener("click", initAudio, { once: true });
 
 function updateSoundBtn() {
-  if (soundBtn) soundBtn.textContent = sonidoActivo ? "🔔" : "🔕";
+  if (soundIcon) soundIcon.textContent = sonidoActivo ? "🔔" : "🔕";
 }
 updateSoundBtn();
 
@@ -309,6 +320,7 @@ if (soundBtn) {
     LS.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
     updateSoundBtn();
     if (sonidoActivo) reproducirSonidoInsistente();
+    cerrarPaneles();
   });
 }
 
@@ -345,8 +357,7 @@ function mostrarNotificacion(remitente, texto, room) {
     tituloParpadeando = true;
     tituloParpadeoInterval = setInterval(() => {
       document.title = document.title.startsWith("(")
-        ? "💬 ZummChat"
-        : "(" + mensajesNoLeidos + ") 💬 ZummChat";
+        ? "💬 ZummChat" : "(" + mensajesNoLeidos + ") 💬 ZummChat";
     }, 1000);
   }
   reproducirSonidoInsistente();
@@ -428,6 +439,45 @@ function formatearSegundos(s) {
   return m + ":" + String(seg).padStart(2, "0");
 }
 
+// ============ PANELES (config + adjuntar) ============
+function cerrarPaneles() {
+  if (configPanel) configPanel.classList.remove("show");
+  if (attachMenu) attachMenu.classList.remove("show");
+  if (usersPanel) usersPanel.classList.remove("show");
+}
+
+if (configBtn) {
+  configBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const abierto = configPanel.classList.contains("show");
+    cerrarPaneles();
+    if (!abierto) configPanel.classList.add("show");
+  });
+}
+if (configPanelClose) {
+  configPanelClose.addEventListener("click", cerrarPaneles);
+}
+if (attachBtn) {
+  attachBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const abierto = attachMenu.classList.contains("show");
+    cerrarPaneles();
+    if (!abierto) attachMenu.classList.add("show");
+  });
+}
+
+// Cerrar al tocar fuera
+document.addEventListener("touchstart", (e) => {
+  if (configPanel && configPanel.classList.contains("show") &&
+      !configPanel.contains(e.target) && e.target !== configBtn) {
+    configPanel.classList.remove("show");
+  }
+  if (attachMenu && attachMenu.classList.contains("show") &&
+      !attachMenu.contains(e.target) && e.target !== attachBtn) {
+    attachMenu.classList.remove("show");
+  }
+});
+
 // ============ ENLACES CLICKABLES ============
 function linkify(texto) {
   if (!texto) return "";
@@ -450,10 +500,7 @@ function linkify(texto) {
   return frag;
 }
 
-// ================================================================
-// ============ BOT DE BIENVENIDA ================================
-// ================================================================
-
+// ============ BOT DE BIENVENIDA ============
 const mensajesBienvenida = [
   "¡Hola {nombre}! 👋 Bienvenido a la sala {sala}. Escribe algo cuando quieras.",
   "🎉 {nombre} se unió a {sala}. ¡Saluda!",
@@ -465,9 +512,7 @@ const mensajesBienvenida = [
 async function enviarMensajeBot(texto) {
   try {
     await supabaseClient.from("zumm_messages").insert([{
-      text: texto,
-      username: BOT_NAME,
-      room: currentRoom
+      text: texto, username: BOT_NAME, room: currentRoom
     }]);
   } catch (e) { console.warn(e); }
 }
@@ -476,17 +521,11 @@ async function saludarBienvenida() {
   const key = "zummchat_bot_" + currentRoom + "_" + username.toLowerCase();
   const ultimo = LS.getItem(key);
   const ahora = Date.now();
-
-  // Solo saludar si han pasado más de 6 horas desde la última vez
   if (ultimo && (ahora - parseInt(ultimo)) < 6 * 60 * 60 * 1000) return;
-
   LS.setItem(key, String(ahora));
 
   const plantilla = mensajesBienvenida[Math.floor(Math.random() * mensajesBienvenida.length)];
-  const texto = plantilla
-    .replace("{nombre}", username)
-    .replace("{sala}", roomLabel(currentRoom));
-
+  const texto = plantilla.replace("{nombre}", username).replace("{sala}", roomLabel(currentRoom));
   setTimeout(() => { enviarMensajeBot(texto); }, 2000);
 }
 
@@ -533,9 +572,7 @@ function crearBotonGrupo(nombreGrupo) {
   let longPress = null;
   btn.addEventListener("touchstart", () => {
     longPress = setTimeout(() => {
-      if (confirm("¿Silenciar notificaciones del grupo '" + nombreGrupo + "'?")) {
-        toggleSilenciar(roomId);
-      }
+      if (confirm("¿Silenciar notificaciones del grupo '" + nombreGrupo + "'?")) toggleSilenciar(roomId);
     }, 700);
   }, { passive: true });
   btn.addEventListener("touchend", () => clearTimeout(longPress));
@@ -543,7 +580,6 @@ function crearBotonGrupo(nombreGrupo) {
 
   btn.addEventListener("click", () => switchRoom(roomId));
   roomBar.insertBefore(btn, addRoomBtn);
-
   if (chatEstaSilenciado(roomId)) btn.classList.add("muted-room");
 }
 
@@ -604,9 +640,7 @@ document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
   btn.addEventListener("touchstart", () => {
     longPress = setTimeout(() => {
       const r = btn.dataset.room;
-      if (confirm("¿Silenciar notificaciones de '" + roomLabel(r) + "'?")) {
-        toggleSilenciar(r);
-      }
+      if (confirm("¿Silenciar notificaciones de '" + roomLabel(r) + "'?")) toggleSilenciar(r);
     }, 700);
   }, { passive: true });
   btn.addEventListener("touchend", () => clearTimeout(longPress));
@@ -668,6 +702,7 @@ if (privateBtn) {
 
 if (shareBtn) {
   shareBtn.addEventListener("click", async () => {
+    cerrarPaneles();
     const url = location.href;
     const datos = { title: "ZummChat", text: "Únete a mi chat ZummChat 🐦💬", url };
     if (navigator.share) {
@@ -703,12 +738,13 @@ if (emojiBar) {
   });
 }
 if (emojiBtn) {
-  emojiBtn.addEventListener("click", () => {
+  emojiBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     if (emojiBar) emojiBar.classList.toggle("show");
   });
 }
 
-// ============ SUBIR ARCHIVOS ============
+// ============ SUBIR ARCHIVO ============
 async function subirYEnviarArchivo(file, tipo) {
   if (!file) return;
   if (file.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -738,37 +774,43 @@ async function subirYEnviarArchivo(file, tipo) {
   renderMessage(data, false);
 }
 
-if (fileBtn) fileBtn.addEventListener("click", () => fileInput && fileInput.click());
+// ============ MENÚ ADJUNTAR ============
+if (menuFileBtn) {
+  menuFileBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (fileInput) fileInput.click();
+  });
+}
 if (fileInput) {
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files[0];
     if (!file) return;
-    fileBtn.textContent = "⏳"; fileBtn.disabled = true;
     await subirYEnviarArchivo(file);
-    fileBtn.textContent = "📎"; fileBtn.disabled = false;
     fileInput.value = "";
   });
 }
 
-if (cameraBtn) cameraBtn.addEventListener("click", () => cameraInput && cameraInput.click());
+if (menuCameraBtn) {
+  menuCameraBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (cameraInput) cameraInput.click();
+  });
+}
 if (cameraInput) {
   cameraInput.addEventListener("change", async () => {
     const file = cameraInput.files[0];
     if (!file) return;
-    cameraBtn.textContent = "⏳"; cameraBtn.disabled = true;
     await subirYEnviarArchivo(file, file.type || "image/jpeg");
-    cameraBtn.textContent = "📷"; cameraBtn.disabled = false;
     cameraInput.value = "";
   });
 }
 
-// ============ COMPARTIR UBICACIÓN ============
-if (locationBtn) {
-  locationBtn.addEventListener("click", () => {
+if (menuLocationBtn) {
+  menuLocationBtn.addEventListener("click", () => {
+    cerrarPaneles();
     if (!navigator.geolocation) { alert("Tu navegador no soporta ubicación."); return; }
     if (!confirm("¿Compartir tu ubicación actual?")) return;
 
-    locationBtn.textContent = "⏳";
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude.toFixed(6);
@@ -785,14 +827,17 @@ if (locationBtn) {
           .select().single();
         if (error) alert("No se pudo enviar: " + error.message);
         else renderMessage(data, false);
-        locationBtn.textContent = "📍";
       },
-      (err) => {
-        alert("No se pudo obtener ubicación:\n" + err.message);
-        locationBtn.textContent = "📍";
-      },
+      (err) => alert("No se pudo obtener ubicación:\n" + err.message),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
+  });
+}
+
+if (menuVoiceBtn) {
+  menuVoiceBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    iniciarGrabacion();
   });
 }
 
@@ -829,7 +874,6 @@ function iniciarGrabacion() {
     grabando = true;
     recSegundos = 0;
 
-    if (voiceBtn) { voiceBtn.classList.add("recording"); voiceBtn.textContent = "⏹️"; }
     if (recordingPanel) recordingPanel.classList.add("show");
     if (recordingTime) recordingTime.textContent = "0:00";
 
@@ -855,7 +899,6 @@ function cancelarGrabacion() {
     }
   } catch (e) {}
   audioChunks = [];
-  if (voiceBtn) { voiceBtn.classList.remove("recording"); voiceBtn.textContent = "🎤"; }
   if (recordingPanel) recordingPanel.classList.remove("show");
 }
 
@@ -875,16 +918,13 @@ async function detenerGrabacion(enviar) {
   });
   await promesa;
 
-  if (voiceBtn) { voiceBtn.classList.remove("recording"); voiceBtn.textContent = "🎤"; }
   if (recordingPanel) recordingPanel.classList.remove("show");
-
   if (!enviar) { audioChunks = []; return; }
   if (audioChunks.length === 0) { alert("No se grabó nada."); return; }
 
   const blob = new Blob(audioChunks, { type: audioChunks[0].type || "audio/webm" });
   audioChunks = [];
   if (blob.size > MAX_SIZE_MB * 1024 * 1024) { alert("Nota muy larga."); return; }
-  if (voiceBtn) { voiceBtn.textContent = "⏳"; voiceBtn.disabled = true; }
 
   try {
     const ext = blob.type.includes("mp4") ? "m4a" : (blob.type.includes("ogg") ? "ogg" : "webm");
@@ -907,15 +947,8 @@ async function detenerGrabacion(enviar) {
     if (error) { alert("No se pudo enviar: " + error.message); return; }
     renderMessage(data, false);
   } catch (e) { alert("Error: " + e.message); }
-  finally { if (voiceBtn) { voiceBtn.textContent = "🎤"; voiceBtn.disabled = false; } }
 }
 
-if (voiceBtn) {
-  voiceBtn.addEventListener("click", () => {
-    if (grabando) detenerGrabacion(true);
-    else iniciarGrabacion();
-  });
-}
 if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
 if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
 
@@ -1017,10 +1050,7 @@ function renderMessage(m, esNuevo) {
   nameEl.textContent = (esBot ? BOT_NAME : (m.username || "Anónimo")) + (m.pinned ? " 📌" : "");
   nameEl.style.color = colorForUser(m.username);
   if (!esBot) {
-    nameEl.addEventListener("click", (e) => {
-      e.stopPropagation();
-      abrirPerfil(m.username, false);
-    });
+    nameEl.addEventListener("click", (e) => { e.stopPropagation(); abrirPerfil(m.username, false); });
   }
 
   const rightSide = document.createElement("span");
@@ -1059,8 +1089,7 @@ function renderMessage(m, esNuevo) {
       playBtn.className = "voice-play-btn";
       playBtn.textContent = "▶";
       const audio = document.createElement("audio");
-      audio.src = m.file_url;
-      audio.preload = "metadata";
+      audio.src = m.file_url; audio.preload = "metadata";
       const wave = document.createElement("div");
       wave.className = "voice-wave";
       for (let i = 0; i < 20; i++) {
@@ -1092,20 +1121,15 @@ function renderMessage(m, esNuevo) {
         playBtn.textContent = "▶"; audio.currentTime = 0;
         if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
       });
-      voiceDiv.appendChild(playBtn);
-      voiceDiv.appendChild(wave);
-      voiceDiv.appendChild(duracion);
-      voiceDiv.appendChild(audio);
+      voiceDiv.appendChild(playBtn); voiceDiv.appendChild(wave);
+      voiceDiv.appendChild(duracion); voiceDiv.appendChild(audio);
       body.appendChild(voiceDiv);
     } else if (tipo.startsWith("location/")) {
       const a = document.createElement("a");
-      a.href = m.file_url;
-      a.target = "_blank";
-      a.rel = "noopener";
+      a.href = m.file_url; a.target = "_blank"; a.rel = "noopener";
       a.className = "location-msg";
       const icon = document.createElement("span");
-      icon.className = "loc-icon";
-      icon.textContent = "📍";
+      icon.className = "loc-icon"; icon.textContent = "📍";
       const txt = document.createElement("span");
       txt.className = "loc-text";
       txt.textContent = "Ver ubicación en el mapa";
@@ -1114,9 +1138,7 @@ function renderMessage(m, esNuevo) {
       body.appendChild(a);
     } else if (tipo.startsWith("image/")) {
       const img = document.createElement("img");
-      img.src = m.file_url;
-      img.className = "msg-file-img";
-      img.loading = "lazy";
+      img.src = m.file_url; img.className = "msg-file-img"; img.loading = "lazy";
       img.addEventListener("click", (e) => { e.stopPropagation(); openImageModal(m.file_url); });
       body.appendChild(img);
     } else {
@@ -1152,8 +1174,7 @@ function renderMessage(m, esNuevo) {
       b.textContent = emoji;
       if (conteo[emoji] > 1) {
         const c = document.createElement("span");
-        c.className = "count";
-        c.textContent = conteo[emoji];
+        c.className = "count"; c.textContent = conteo[emoji];
         b.appendChild(c);
       }
       b.addEventListener("click", (e) => { e.stopPropagation(); toggleReaccion(m.id, emoji); });
@@ -1477,6 +1498,7 @@ if (menuFavBtn) {
 
 if (favBtn) {
   favBtn.addEventListener("click", async () => {
+    cerrarPaneles();
     if (!favModal) return;
     favModal.classList.add("show");
     favList.innerHTML = "";
@@ -1568,10 +1590,10 @@ async function toggleReaccion(msgId, emoji) {
 // ============ BÚSQUEDA ============
 if (searchBtn) {
   searchBtn.addEventListener("click", () => {
+    cerrarPaneles();
     if (!searchBar) return;
-    searchBar.classList.toggle("show");
-    if (searchBar.classList.contains("show") && searchInput) setTimeout(() => searchInput.focus(), 100);
-    else limpiarBusqueda();
+    searchBar.classList.add("show");
+    if (searchInput) setTimeout(() => searchInput.focus(), 100);
   });
 }
 if (searchClose) {
@@ -1737,7 +1759,8 @@ function renderUserList() {
 
 if (usersBtn) {
   usersBtn.addEventListener("click", () => {
-    if (usersPanel) usersPanel.classList.toggle("show");
+    cerrarPaneles();
+    if (usersPanel) usersPanel.classList.add("show");
     leerPresencia();
   });
 }
@@ -1899,6 +1922,7 @@ if (changeNameBtn) {
 // ============ ESTADÍSTICAS PERSONALES ============
 if (statsBtn) {
   statsBtn.addEventListener("click", async () => {
+    cerrarPaneles();
     if (!statsModal) return;
     statsModal.classList.add("show");
     statTotalMsgs.textContent = "..."; statFiles.textContent = "...";
@@ -1931,6 +1955,7 @@ if (statsCloseBtn) statsCloseBtn.addEventListener("click", () => statsModal.clas
 // ============ ESTADÍSTICAS DE GRUPO ============
 if (groupStatsBtn) {
   groupStatsBtn.addEventListener("click", async () => {
+    cerrarPaneles();
     if (!groupStatsModal) return;
     groupStatsModal.classList.add("show");
     gStatTotal.textContent = "..."; gStatUsers.textContent = "...";
@@ -1939,8 +1964,7 @@ if (groupStatsBtn) {
     gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-dim);font-size:13px;'>Cargando...</p>";
 
     const { data } = await supabaseClient.from("zumm_messages")
-      .select("username, created_at, file_type")
-      .eq("room", currentRoom);
+      .select("username, created_at, file_type").eq("room", currentRoom);
 
     if (!data || data.length === 0) {
       gStatTotal.textContent = "0"; gStatUsers.textContent = "0";
@@ -1953,7 +1977,6 @@ if (groupStatsBtn) {
     const total = data.length;
     const usuarios = {};
     const sinBot = data.filter(m => m.username !== BOT_NAME);
-
     sinBot.forEach(m => {
       const u = m.username || "Anónimo";
       usuarios[u] = (usuarios[u] || 0) + 1;
@@ -1975,28 +1998,21 @@ if (groupStatsBtn) {
     gStatVoice.textContent = conVoz;
     gStatFirst.textContent = primeraStr;
 
-    // Ranking
     gStatRanking.innerHTML = "<div style='color:var(--accent);font-weight:bold;margin:14px 0 8px 0;font-size:14px;text-align:center;'>🏆 Ranking de participantes</div>";
     const medallas = ["🥇", "🥈", "🥉"];
     lista.forEach((entry, idx) => {
       const row = document.createElement("div");
       row.className = "rank-row";
-
       const pos = document.createElement("span");
       pos.className = "rank-pos";
       pos.textContent = medallas[idx] || ("#" + (idx + 1));
-
       const nombre = document.createElement("span");
       nombre.className = "rank-name";
       nombre.textContent = entry[0];
-
       const count = document.createElement("span");
       count.className = "rank-count";
       count.textContent = entry[1] + " 💬";
-
-      row.appendChild(pos);
-      row.appendChild(nombre);
-      row.appendChild(count);
+      row.appendChild(pos); row.appendChild(nombre); row.appendChild(count);
       gStatRanking.appendChild(row);
     });
   });

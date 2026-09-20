@@ -742,7 +742,18 @@ let ringTimeout = null;
 let muted = false;
 let signalsLastId = 0;
 let signalsCheckInterval = null;
-let currentFacingMode = "user"; // "user" = frontal, "environment" = trasera
+let currentFacingMode = "user";
+let listaCamaras = [];
+
+async function cargarListaCamaras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    listaCamaras = devices.filter(d => d.kind === "videoinput");
+    console.log("📷 Cámaras disponibles:", listaCamaras.length, listaCamaras.map(c => c.label));
+  } catch (e) {
+    console.warn("Error enumerando cámaras:", e);
+  }
+}
 
 async function enviarSenal(toUser, signalType, payload) {
   try {
@@ -889,6 +900,8 @@ async function startCall(targetName, withVideo) {
 
   localStream = stream;
   currentFacingMode = "user";
+  await cargarListaCamaras();
+
   const callId = myClientId + "-" + Date.now();
   activeCall = {
     callId,
@@ -955,6 +968,8 @@ if (incomingAcceptBtn) {
     }
 
     currentFacingMode = "user";
+    await cargarListaCamaras();
+
     activeCall = {
       callId: call.callId,
       peerName: call.fromName,
@@ -1078,7 +1093,6 @@ function showCallOverlay(texto) {
     }
   }
 
-  // Mostrar/ocultar el botón de cambiar cámara
   if (switchCamBtn) {
     if (activeCall && activeCall.video) {
       switchCamBtn.style.display = "inline-block";
@@ -1127,41 +1141,114 @@ if (muteBtn) {
   });
 }
 
-// ============ CAMBIAR CÁMARA (frontal/trasera) ============
+// ============ CAMBIAR CÁMARA ============
 async function cambiarCamara() {
-  if (!localStream || !activeCall || !activeCall.video || !pc) return;
+  if (!localStream) {
+    alert("No hay stream de video activo.");
+    return;
+  }
+  if (!activeCall || !activeCall.video) {
+    alert("Solo se puede cambiar la cámara durante una videollamada.");
+    return;
+  }
 
   try {
+    // 1) Detener pistas de video actuales
+    const pistasViejas = localStream.getVideoTracks();
+    pistasViejas.forEach(t => {
+      try { t.stop(); } catch (e) {}
+      try { localStream.removeTrack(t); } catch (e) {}
+    });
+
+    // 2) Pausa breve
+    await new Promise(r => setTimeout(r, 300));
+
+    // 3) Recargar lista
+    await cargarListaCamaras();
+
+    // 4) Alternar
     currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
 
-    const nuevoStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: currentFacingMode, width: 640, height: 480 }
-    });
+    let nuevoStream = null;
+
+    // Intento 1: deviceId
+    if (listaCamaras.length >= 2) {
+      const idxDeseado = currentFacingMode === "user" ? 0 : (listaCamaras.length - 1);
+      try {
+        nuevoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            deviceId: { exact: listaCamaras[idxDeseado].deviceId },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        });
+        console.log("📷 Cambiada por deviceId");
+      } catch (e1) {
+        console.warn("Falló deviceId:", e1.message);
+      }
+    }
+
+    // Intento 2: facingMode exact
+    if (!nuevoStream) {
+      try {
+        nuevoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { exact: currentFacingMode }, width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        console.log("📷 Cambiada por facingMode exact");
+      } catch (e2) {
+        console.warn("Falló facingMode exact:", e2.message);
+      }
+    }
+
+    // Intento 3: facingMode ideal
+    if (!nuevoStream) {
+      try {
+        nuevoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: currentFacingMode }
+        });
+        console.log("📷 Cambiada por facingMode ideal");
+      } catch (e3) {
+        console.warn("Falló facingMode ideal:", e3.message);
+      }
+    }
+
+    if (!nuevoStream) {
+      alert("No se pudo cambiar la cámara.\nTu celular puede no permitirlo.");
+      return;
+    }
 
     const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
 
-    const senders = pc.getSenders();
-    const senderVideo = senders.find(s => s.track && s.track.kind === "video");
-    if (senderVideo) {
-      await senderVideo.replaceTrack(nuevaPistaVideo);
+    // Reemplazar en WebRTC
+    if (pc) {
+      const senders = pc.getSenders();
+      const senderVideo = senders.find(s => s.track && s.track.kind === "video");
+      if (senderVideo) {
+        await senderVideo.replaceTrack(nuevaPistaVideo);
+        console.log("📷 Pista reemplazada");
+      }
     }
 
-    const pistaVieja = localStream.getVideoTracks()[0];
-    if (pistaVieja) pistaVieja.stop();
-    localStream.removeTrack(pistaVieja);
+    // Actualizar stream local
     localStream.addTrack(nuevaPistaVideo);
 
     if (localVideo) {
+      localVideo.srcObject = null;
       localVideo.srcObject = localStream;
-      localVideo.play().catch(() => {});
+      await localVideo.play().catch(() => {});
     }
 
     if (switchCamBtn) {
       switchCamBtn.textContent = currentFacingMode === "user" ? "🔄 Frontal" : "🔄 Trasera";
     }
+
+    console.log("✅ Cámara cambiada a:", currentFacingMode);
   } catch (e) {
-    console.warn("Error al cambiar cámara:", e);
+    console.error("❌ Error al cambiar cámara:", e);
+    alert("No se pudo cambiar la cámara:\n" + e.message);
     if (switchCamBtn) switchCamBtn.textContent = "🔄 Cám";
   }
 }
@@ -1207,3 +1294,4 @@ updateActiveTab();
 loadHistory();
 iniciarPresencia();
 leerSenales();
+cargarListaCamaras();

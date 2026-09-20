@@ -1,3 +1,10 @@
+// ============================================================
+// ZummChat - App de mensajería con llamadas y videollamadas
+// Creado por: José Yudier Arencibia Ajo
+// GitHub: https://github.com/Ajo81/ZummChat-
+// Año: 2026 - Todos los derechos reservados.
+// ============================================================
+
 // ============ CONEXIÓN SUPABASE (Mi Círculo) ============
 const SUPABASE_URL = "https://biqjwbopvjyovxmmutly.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpcWp3Ym9wdmp5b3Z4bW11dGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg0ODQsImV4cCI6MjEwMzYyNDQ4NH0.q7IdjNy_OPDpPOJNUJ3FkxDm91LjJPmEP0pFu9CD4dA";
@@ -47,6 +54,8 @@ const incomingName    = document.getElementById("incomingName");
 const incomingText    = document.getElementById("incomingText");
 const rejectBtn       = document.getElementById("rejectBtn");
 const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
+const userMeName      = document.getElementById("userMeName");
+const changeNameBtn   = document.getElementById("changeNameBtn");
 
 const MAX_SIZE_MB = 5;
 
@@ -97,6 +106,38 @@ if (!SS.getItem("zummchat_cid")) {
 }
 const myClientId = SS.getItem("zummchat_cid");
 
+// ============ CAMBIAR NOMBRE ============
+function actualizarNombreEnUI() {
+  if (userMeName) userMeName.textContent = "Tú: " + username;
+}
+actualizarNombreEnUI();
+
+if (changeNameBtn) {
+  changeNameBtn.addEventListener("click", async () => {
+    const nuevo = prompt("Escribe tu nuevo nombre:", username);
+    if (!nuevo || !nuevo.trim()) return;
+    const limpio = nuevo.trim().substring(0, 20);
+
+    if (limpio.toLowerCase() === username.toLowerCase()) return;
+
+    const viejo = username;
+    username = limpio;
+    LS.setItem("zummchat_user", username);
+    actualizarNombreEnUI();
+
+    try {
+      await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
+      await supabaseClient.from("zumm_presence").upsert({
+        username: username,
+        room: currentRoom,
+        last_seen: new Date().toISOString()
+      }, { onConflict: "username,room" });
+    } catch (e) { console.warn(e); }
+
+    alert("✅ Nombre cambiado a: " + username + "\n\nRecarga la página para que todos lo vean.");
+  });
+}
+
 let currentRoom = "general";
 
 // ============ SONIDO ============
@@ -111,7 +152,6 @@ function initAudio() {
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
 
-// ✅ Sonido insistente de 3 tonos + vibración
 function reproducirSonidoInsistente() {
   if (!sonidoActivo) return;
   initAudio();
@@ -136,9 +176,7 @@ function reproducirSonidoInsistente() {
     }, idx * 350);
   });
 
-  if (navigator.vibrate) {
-    navigator.vibrate([200, 100, 200, 100, 200]);
-  }
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
 }
 
 document.body.addEventListener("touchstart", initAudio, { once: true });
@@ -159,10 +197,9 @@ if (soundBtn) {
 }
 
 // ================================================================
-// ============ 🔔 NOTIFICACIONES (SISTEMA + TÍTULO) =============
+// ============ NOTIFICACIONES (SISTEMA + TÍTULO) ================
 // ================================================================
 
-// Pedir permiso para notificaciones del sistema
 if ("Notification" in window && Notification.permission === "default") {
   setTimeout(() => {
     Notification.requestPermission().catch(() => {});
@@ -175,7 +212,6 @@ let tituloParpadeando = false;
 const TITULO_BASE = "ZummChat";
 
 function mostrarNotificacion(remitente, texto) {
-  // 🔔 A) Notificación del sistema
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       const n = new Notification("💬 " + remitente, {
@@ -195,7 +231,6 @@ function mostrarNotificacion(remitente, texto) {
     }
   } catch (e) { console.warn("Notif error:", e); }
 
-  // 📢 B) Título parpadeante
   mensajesNoLeidos++;
   document.title = "(" + mensajesNoLeidos + ") 💬 ZummChat";
   if (!tituloParpadeando) {
@@ -207,11 +242,9 @@ function mostrarNotificacion(remitente, texto) {
     }, 1000);
   }
 
-  // 🔊 C) Sonido insistente
   reproducirSonidoInsistente();
 }
 
-// Reset cuando vuelve a la pestaña
 window.addEventListener("focus", () => {
   mensajesNoLeidos = 0;
   document.title = TITULO_BASE;
@@ -222,7 +255,6 @@ window.addEventListener("focus", () => {
   }
 });
 
-// También cuando la pestaña se hace visible
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     mensajesNoLeidos = 0;
@@ -517,7 +549,6 @@ function renderMessage(m, esNuevo) {
   if (!messagesEl) return;
   rendered.add(m.id);
 
-  // ✅ NOTIFICACIÓN cuando es mensaje nuevo y no es mío
   if (esNuevo) {
     const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
     if (!esMio) {
@@ -1301,3 +1332,7 @@ loadHistory();
 iniciarPresencia();
 leerSenales();
 cargarListaCamaras();
+
+// ============================================================
+// © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.
+// ============================================================

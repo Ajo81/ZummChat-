@@ -40,6 +40,7 @@ const remoteVideo     = document.getElementById("remoteVideo");
 const muteBtn         = document.getElementById("muteBtn");
 const acceptCallBtn   = document.getElementById("acceptCallBtn");
 const hangupBtn       = document.getElementById("hangupBtn");
+const switchCamBtn    = document.getElementById("switchCamBtn");
 const incomingModal   = document.getElementById("incomingModal");
 const incomingAvatar  = document.getElementById("incomingAvatar");
 const incomingName    = document.getElementById("incomingName");
@@ -574,7 +575,6 @@ async function sendMessage() {
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
-// Mensajes en tiempo real
 supabaseClient
   .channel("zumm-messages-realtime")
   .on("postgres_changes",
@@ -657,7 +657,6 @@ function iniciarPresencia() {
   presenceRefreshInterval = setInterval(leerPresencia, 5000);
 }
 
-// Escuchar cambios en presencia
 supabaseClient
   .channel("zumm-presence-realtime")
   .on("postgres_changes",
@@ -743,8 +742,8 @@ let ringTimeout = null;
 let muted = false;
 let signalsLastId = 0;
 let signalsCheckInterval = null;
+let currentFacingMode = "user"; // "user" = frontal, "environment" = trasera
 
-// Enviar señal a la tabla
 async function enviarSenal(toUser, signalType, payload) {
   try {
     const { error } = await supabaseClient
@@ -760,7 +759,6 @@ async function enviarSenal(toUser, signalType, payload) {
   } catch (e) { console.warn("Enviar señal excepción:", e); }
 }
 
-// Leer señales nuevas dirigidas a mí
 async function leerSenales() {
   try {
     const { data, error } = await supabaseClient
@@ -777,7 +775,6 @@ async function leerSenales() {
       if (s.from_client === myClientId) continue;
       if (s.id > signalsLastId) signalsLastId = s.id;
 
-      // Ignorar señales viejas (más de 1 minuto)
       const edad = Date.now() - new Date(s.created_at).getTime();
       if (edad > 60000) continue;
 
@@ -891,6 +888,7 @@ async function startCall(targetName, withVideo) {
   }
 
   localStream = stream;
+  currentFacingMode = "user";
   const callId = myClientId + "-" + Date.now();
   activeCall = {
     callId,
@@ -956,6 +954,7 @@ if (incomingAcceptBtn) {
       return;
     }
 
+    currentFacingMode = "user";
     activeCall = {
       callId: call.callId,
       peerName: call.fromName,
@@ -1079,6 +1078,16 @@ function showCallOverlay(texto) {
     }
   }
 
+  // Mostrar/ocultar el botón de cambiar cámara
+  if (switchCamBtn) {
+    if (activeCall && activeCall.video) {
+      switchCamBtn.style.display = "inline-block";
+      switchCamBtn.textContent = "🔄 Frontal";
+    } else {
+      switchCamBtn.style.display = "none";
+    }
+  }
+
   muted = false;
   if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
 }
@@ -1099,8 +1108,10 @@ function endCall(notify) {
   iceQueue = [];
   activeCall = null;
   muted = false;
+  currentFacingMode = "user";
 
   if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
+  if (switchCamBtn) switchCamBtn.style.display = "none";
   if (localVideo) localVideo.srcObject = null;
   if (remoteVideo) remoteVideo.srcObject = null;
   if (callOverlay) callOverlay.classList.remove("show");
@@ -1114,6 +1125,49 @@ if (muteBtn) {
     muteBtn.textContent = muted ? "🔇 Mic" : "🎤 Mic";
     muteBtn.classList.toggle("muted", muted);
   });
+}
+
+// ============ CAMBIAR CÁMARA (frontal/trasera) ============
+async function cambiarCamara() {
+  if (!localStream || !activeCall || !activeCall.video || !pc) return;
+
+  try {
+    currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+
+    const nuevoStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: currentFacingMode, width: 640, height: 480 }
+    });
+
+    const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
+
+    const senders = pc.getSenders();
+    const senderVideo = senders.find(s => s.track && s.track.kind === "video");
+    if (senderVideo) {
+      await senderVideo.replaceTrack(nuevaPistaVideo);
+    }
+
+    const pistaVieja = localStream.getVideoTracks()[0];
+    if (pistaVieja) pistaVieja.stop();
+    localStream.removeTrack(pistaVieja);
+    localStream.addTrack(nuevaPistaVideo);
+
+    if (localVideo) {
+      localVideo.srcObject = localStream;
+      localVideo.play().catch(() => {});
+    }
+
+    if (switchCamBtn) {
+      switchCamBtn.textContent = currentFacingMode === "user" ? "🔄 Frontal" : "🔄 Trasera";
+    }
+  } catch (e) {
+    console.warn("Error al cambiar cámara:", e);
+    if (switchCamBtn) switchCamBtn.textContent = "🔄 Cám";
+  }
+}
+
+if (switchCamBtn) {
+  switchCamBtn.addEventListener("click", cambiarCamara);
 }
 
 if (hangupBtn) {
@@ -1144,7 +1198,6 @@ if (videoBtn) {
   });
 }
 
-// Polling de señales cada 1.5 segundos (más fiable que Realtime)
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 

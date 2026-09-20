@@ -59,7 +59,6 @@
     </div>
   </div>
 
-  <!-- Panel de usuarios en línea -->
   <div id="usersPanel">
     <div id="usersPanelHeader">
       <span>👥 En línea</span>
@@ -69,12 +68,43 @@
     <p id="noUsers">Conectando...</p>
   </div>
 
-  <!-- Panel de DEBUG (temporal, para ver qué pasa) -->
-  <div id="debugPanel">
-    <div id="debugText">Debug: iniciando...</div>
-  </div>
-
-  <!-- Modal de llamada (WebRTC) -->
   <div id="callOverlay">
     <div class="call-box">
-      <p id="callStatus
+      <p id="callStatus">Llamando...</p>
+      <div class="videos">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div id="audioAvatar"></div>
+      </div>
+      <div class="call-actions">
+        <button id="muteBtn" type="button">🎤 Mic</button>
+        <button id="acceptCallBtn" type="button" style="display:none">✅ Contestar</button>
+        <button id="hangupBtn" type="button">❌ Colgar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="incomingModal">
+    <div class="incoming-content">
+      <div class="incoming-avatar" id="incomingAvatar">?</div>
+      <div class="incoming-name" id="incomingName">Alguien</div>
+      <div class="incoming-text" id="incomingText">Llamada entrante...</div>
+      <div class="incoming-actions">
+        <button id="rejectBtn" type="button" title="Rechazar">❌</button>
+        <button id="incomingAcceptBtn" type="button" title="Aceptar">✅</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+  <script src="matrix.js"></script>
+  <script src="app3.js"></script>
+  <script>
+    try {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      }
+    } catch (e) {}
+  </script>
+</body>
+</html>

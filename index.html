@@ -118,8 +118,6 @@
       <button class="config-item" id="pollBtn" type="button"><span class="config-icon">📊</span><span class="config-label">Encuesta</span></button>
       <button class="config-item" id="blockedBtn" type="button"><span class="config-icon">🚫</span><span class="config-label">Bloqueados</span></button>
       <button class="config-item" id="contactsBtn" type="button"><span class="config-icon">📇</span><span class="config-label">Contactos</span></button>
-      <button class="config-item" id="gamesBtn" type="button"><span class="config-icon">🎮</span><span class="config-label">Tres en raya</span></button>
-      <button class="config-item" id="giftsBtn" type="button"><span class="config-icon">🎁</span><span class="config-label">Regalos</span></button>
     </div>
   </div>
 
@@ -133,7 +131,7 @@
   <div id="usersPanel">
     <div id="usersPanelHeader"><span>👥 En línea</span><button id="usersPanelClose" type="button">✕</button></div>
     <div id="userMeSection">
-      <div id="userMeAvatar" title="Ver perfil / mantener: regalos">👤</div>
+      <div id="userMeAvatar" title="Ver/editar perfil">👤</div>
       <span id="userMeName">Tú: ...</span>
       <button id="changeNameBtn" type="button" title="Cambiar nombre">✏️</button>
     </div>
@@ -207,7 +205,7 @@
       <div class="profile-field">
         <label>📝 Bio</label>
         <div id="profileBioDisplay">Sin bio</div>
-        <input type="text" id="profileBioInput" placeholder="Cuéntanos algo..." maxlength="100" style="display:none">
+        <input type="text" id="profileBioInput" placeholder="Cuéntanos..." maxlength="100" style="display:none">
       </div>
       <div class="profile-field">
         <label>💬 Estado</label>
@@ -329,51 +327,6 @@
       <ul id="contactsList"></ul>
       <p id="contactsEmpty" style="display:none">No tienes contactos aún.</p>
       <button id="contactsCloseBtn" type="button">Cerrar</button>
-    </div>
-  </div>
-
-  <div id="newGameModal">
-    <div class="edit-content">
-      <h3>🎮 Nuevo tres en raya</h3>
-      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">¿Contra quién?</label>
-      <input type="text" id="gameOpponent" placeholder="Nombre exacto" maxlength="20" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
-      <p style="color:var(--text-dim);font-size:12px;margin-bottom:10px;">Tú serás ❌, el otro ⭕.</p>
-      <div class="edit-actions">
-        <button id="gameCancelBtn" type="button">Cancelar</button>
-        <button id="gameSaveBtn" type="button">Crear</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="giftModal">
-    <div class="edit-content">
-      <h3>🎁 Enviar regalo</h3>
-      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">¿A quién?</label>
-      <input type="text" id="giftTo" placeholder="Nombre exacto" maxlength="20" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
-      <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:6px;">Elige un regalo:</label>
-      <div id="giftPicker" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;">
-        <button class="gift-opt" data-gift="flower" data-emoji="🌸" type="button">🌸<br><span>Flor</span></button>
-        <button class="gift-opt" data-gift="heart" data-emoji="❤️" type="button">❤️<br><span>Amor</span></button>
-        <button class="gift-opt" data-gift="star" data-emoji="⭐" type="button">⭐<br><span>Estrella</span></button>
-        <button class="gift-opt" data-gift="cake" data-emoji="🎂" type="button">🎂<br><span>Torta</span></button>
-        <button class="gift-opt" data-gift="gift" data-emoji="🎁" type="button">🎁<br><span>Regalo</span></button>
-        <button class="gift-opt" data-gift="beer" data-emoji="🍺" type="button">🍺<br><span>Cerveza</span></button>
-        <button class="gift-opt" data-gift="fire" data-emoji="🔥" type="button">🔥<br><span>Fuego</span></button>
-        <button class="gift-opt" data-gift="crown" data-emoji="👑" type="button">👑<br><span>Corona</span></button>
-      </div>
-      <div class="edit-actions">
-        <button id="giftCancelBtn" type="button">Cancelar</button>
-        <button id="giftSaveBtn" type="button">Enviar</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="myGiftsModal">
-    <div class="fav-content">
-      <h3>🎁 Mis regalos recibidos</h3>
-      <div id="myGiftsGrid" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:10px 0;"></div>
-      <p id="myGiftsEmpty" style="display:none">Aún no has recibido regalos.</p>
-      <button id="myGiftsCloseBtn" type="button">Cerrar</button>
     </div>
   </div>
 

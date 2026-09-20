@@ -4,8 +4,7 @@
   ZummChat - App de mensajería con llamadas y videollamadas
   Creado por: José Yudier Arencibia Ajo
   GitHub: https://github.com/Ajo81/ZummChat-
-  Año: 2026
-  Todos los derechos reservados.
+  Año: 2026 - Todos los derechos reservados.
   ============================================================
 -->
 <html lang="es">
@@ -49,6 +48,7 @@
       <button class="room-btn" data-room="amigos">Amigos</button>
       <button class="room-btn" data-room="familia">Familia</button>
       <button class="room-btn" data-room="trabajo">Trabajo</button>
+      <button id="addRoomBtn" class="room-btn-add" type="button" title="Crear grupo">➕</button>
     </div>
 
     <div id="priv-section">
@@ -65,9 +65,18 @@
     <div id="input-area">
       <button id="emojiBtn" type="button">😀</button>
       <button id="fileBtn" type="button">📎</button>
+      <button id="voiceBtn" type="button" title="Nota de voz">🎤</button>
       <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" style="display:none">
       <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
       <button id="sendBtn" type="button">Enviar</button>
+    </div>
+
+    <div id="recordingPanel">
+      <div id="recordingIndicator">🔴 Grabando... <span id="recordingTime">0:00</span></div>
+      <div id="recordingActions">
+        <button id="cancelRecBtn" type="button">❌ Cancelar</button>
+        <button id="stopRecBtn" type="button">✅ Enviar</button>
+      </div>
     </div>
 
     <div id="footer-credit">

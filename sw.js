@@ -1,4 +1,3 @@
-
 // ============================================================
 // ZummChat - Service Worker
 // Creado por: José Yudier Arencibia Ajo
@@ -6,7 +5,7 @@
 // Año: 2026 - Todos los derechos reservados.
 // ============================================================
 
-const CACHE = "zummchat-v39";
+const CACHE = "zummchat-v40";
 const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
                 "./manifest.json", "./logo.png", "./icon.png"];
 

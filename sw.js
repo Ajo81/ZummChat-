@@ -1,4 +1,11 @@
-const CACHE = "zummchat-v35";
+// ============================================================
+// ZummChat - Service Worker
+// Creado por: José Yudier Arencibia Ajo
+// GitHub: https://github.com/Ajo81/ZummChat-
+// Año: 2026 - Todos los derechos reservados.
+// ============================================================
+
+const CACHE = "zummchat-v36";
 const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
                 "./manifest.json", "./logo.png", "./icon.png", "./icon-192.png"];
 
@@ -31,3 +38,5 @@ self.addEventListener("fetch", e => {
       .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))
   );
 });
+
+// © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

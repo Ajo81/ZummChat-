@@ -40,6 +40,7 @@
         <button id="themeBtn" type="button" title="Modo claro/oscuro">🌙</button>
         <button id="colorBtn" type="button" title="Cambiar color">🎨</button>
         <button id="searchBtn" type="button" title="Buscar">🔍</button>
+        <button id="statsBtn" type="button" title="Estadísticas">📊</button>
         <button id="soundBtn" type="button" title="Sonido">🔔</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
@@ -51,6 +52,11 @@
     <div id="searchBar">
       <input type="text" id="searchInput" placeholder="Buscar en este chat..." autocomplete="off">
       <button id="searchClose" type="button">✕</button>
+    </div>
+
+    <div id="pinnedBar">
+      <span id="pinnedText">📌 Mensaje fijado</span>
+      <button id="unpinBtn" type="button" title="Quitar">✕</button>
     </div>
 
     <div id="room-bar">
@@ -69,6 +75,8 @@
     </div>
 
     <div id="messages"></div>
+
+    <div id="typingIndicator"></div>
 
     <button id="scrollDownBtn" type="button" title="Ir al último mensaje">⬇️</button>
 
@@ -102,7 +110,7 @@
       <button id="usersPanelClose" type="button">✕</button>
     </div>
     <div id="userMeSection">
-      <div id="userMeAvatar" title="Cambiar foto">👤</div>
+      <div id="userMeAvatar" title="Ver/editar mi perfil">👤</div>
       <span id="userMeName">Tú: ...</span>
       <button id="changeNameBtn" type="button" title="Cambiar nombre">✏️</button>
     </div>
@@ -152,6 +160,7 @@
   </div>
 
   <div id="msgMenu">
+    <button id="menuPinBtn" type="button">📌 Fijar</button>
     <button id="menuCopyBtn" type="button">📋 Copiar</button>
     <button id="menuEditBtn" type="button">✏️ Editar</button>
     <button id="menuDeleteBtn" type="button">🗑️ Borrar</button>
@@ -164,6 +173,58 @@
     <button data-emoji="😮">😮</button>
     <button data-emoji="😢">😢</button>
     <button data-emoji="🔥">🔥</button>
+  </div>
+
+  <!-- MODAL DE PERFIL -->
+  <div id="profileModal">
+    <div class="profile-content">
+      <button id="profileCloseBtn" type="button">✕</button>
+      <div id="profileAvatar">?</div>
+      <div id="profileName">Nombre</div>
+      <div class="profile-field">
+        <label>📝 Bio</label>
+        <div id="profileBioDisplay">Sin bio</div>
+        <input type="text" id="profileBioInput" placeholder="Cuéntanos algo sobre ti..." maxlength="100" style="display:none">
+      </div>
+      <div class="profile-field">
+        <label>💬 Estado</label>
+        <div id="profileStatusDisplay">Sin estado</div>
+        <input type="text" id="profileStatusInput" placeholder="¿Qué estás haciendo?" maxlength="60" style="display:none">
+      </div>
+      <div id="profileActions">
+        <button id="profileEditBtn" type="button">✏️ Editar mi perfil</button>
+        <button id="profileSaveBtn" type="button" style="display:none">💾 Guardar</button>
+        <button id="profileCancelBtn" type="button" style="display:none">❌ Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE ESTADÍSTICAS -->
+  <div id="statsModal">
+    <div class="stats-content">
+      <h3>📊 Tus estadísticas</h3>
+      <div class="stat-item">
+        <span class="stat-label">💬 Mensajes totales</span>
+        <span class="stat-value" id="statTotalMsgs">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">📁 Archivos enviados</span>
+        <span class="stat-value" id="statFiles">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">🎤 Notas de voz</span>
+        <span class="stat-value" id="statVoice">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">📅 Días activo</span>
+        <span class="stat-value" id="statDays">...</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">🏆 Primer mensaje</span>
+        <span class="stat-value" id="statFirst">...</span>
+      </div>
+      <button id="statsCloseBtn" type="button">Cerrar</button>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>

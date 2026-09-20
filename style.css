@@ -3,7 +3,6 @@
    Creado por: José Yudier Arencibia Ajo - © 2026
    ============================================================ */
 
-/* ============ VARIABLES DE TEMA ============ */
 :root {
   --accent: #00ff66;
   --accent-dark: #00cc52;
@@ -19,7 +18,6 @@
   --border-light: #222222;
 }
 
-/* Modo claro */
 body.theme-light {
   --bg: #f0f2f5;
   --bg-secondary: #ffffff;
@@ -33,7 +31,6 @@ body.theme-light {
   --border-light: #e0e0e0;
 }
 
-/* Temas de color */
 body.color-blue { --accent: #4fc3f7; --accent-dark: #29b6f6; }
 body.color-red { --accent: #ff5252; --accent-dark: #e53935; }
 body.color-purple { --accent: #ba68c8; --accent-dark: #9c27b0; }
@@ -47,9 +44,11 @@ body {
   font-family: system-ui, Arial, sans-serif;
   color: var(--text);
   transition: background .3s, color .3s;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ============ SPLASH ============ */
 #splash {
   position: fixed; inset: 0;
   background: linear-gradient(#003300, #000);
@@ -81,11 +80,19 @@ body {
   50%      { text-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent); }
 }
 
-#chat-container { padding: 16px; max-width: 720px; margin: 0 auto; }
+#chat-container {
+  padding: 10px 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
 #chat-header {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 6px; margin-bottom: 10px; flex-wrap: wrap;
+  gap: 6px; margin-bottom: 8px; flex-wrap: wrap;
 }
 #chat-title {
   font-size: 18px; font-weight: bold; color: var(--accent);
@@ -113,14 +120,13 @@ body {
   50%      { box-shadow: 0 0 0 8px transparent; }
 }
 
-/* ============ BARRA DE BÚSQUEDA ============ */
 #searchBar {
   display: none;
   background: var(--bg-card);
   border: 1px solid var(--accent);
   border-radius: 10px;
   padding: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   gap: 8px;
   align-items: center;
 }
@@ -136,17 +142,11 @@ body {
 }
 #searchInput:focus { outline: 2px solid var(--accent); }
 #searchClose {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px 8px;
+  background: transparent; border: none; color: var(--text-dim);
+  font-size: 18px; cursor: pointer; padding: 4px 8px;
 }
 
-.msg.highlight {
-  animation: highlight-msg 2s ease;
-}
+.msg.highlight { animation: highlight-msg 2s ease; }
 @keyframes highlight-msg {
   0% { background: rgba(255, 255, 0, 0.4); }
   100% { background: var(--bg-card); }
@@ -154,7 +154,7 @@ body {
 
 #room-bar {
   display: flex; gap: 8px; overflow-x: auto;
-  margin-bottom: 10px; padding-bottom: 4px; scrollbar-width: none;
+  margin-bottom: 8px; padding-bottom: 4px; scrollbar-width: none;
 }
 #room-bar::-webkit-scrollbar { display: none; }
 
@@ -176,7 +176,7 @@ body {
 
 #priv-section {
   border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);
-  padding: 8px 0; margin-bottom: 10px;
+  padding: 6px 0; margin-bottom: 8px;
 }
 #priv-bar { margin-bottom: 6px; }
 
@@ -205,14 +205,21 @@ body {
   display: flex; align-items: center; justify-content: center; font-weight: bold;
 }
 
+/* MENSAJES — altura flexible */
 #messages {
-  height: calc(100vh - 470px); overflow-y: auto;
-  background: var(--bg-secondary); padding: 12px; border-radius: 10px;
-  display: flex; flex-direction: column; gap: 10px;
+  flex: 1;
+  min-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   position: relative;
+  margin-bottom: 8px;
 }
 
-/* ============ BOTÓN IR ABAJO ============ */
 #scrollDownBtn {
   position: fixed;
   bottom: 190px;
@@ -273,7 +280,6 @@ body {
 
 .msg-body { font-size: 15px; line-height: 1.4; word-wrap: break-word; }
 
-/* ============ REACCIONES ============ */
 .reactions-bar {
   display: flex;
   flex-wrap: wrap;
@@ -303,7 +309,6 @@ body {
   font-weight: bold;
 }
 
-/* ============ REPRODUCTOR DE AUDIO ============ */
 .voice-note {
   display: flex; align-items: center; gap: 10px;
   background: var(--bg); border: 1px solid var(--border);
@@ -332,7 +337,7 @@ body {
 #emoji-bar {
   display: none; gap: 6px; overflow-x: auto;
   background: var(--bg-card); border-radius: 10px;
-  padding: 8px; margin-top: 8px; scrollbar-width: none;
+  padding: 8px; margin-bottom: 8px; scrollbar-width: none;
 }
 #emoji-bar.show { display: flex; }
 #emoji-bar::-webkit-scrollbar { display: none; }
@@ -342,7 +347,7 @@ body {
   cursor: pointer; padding: 4px 6px; border-radius: 6px; flex-shrink: 0;
 }
 
-#input-area { margin-top: 8px; display: flex; gap: 6px; }
+#input-area { display: flex; gap: 6px; margin-bottom: 4px; }
 
 #emojiBtn, #fileBtn, #voiceBtn {
   background: var(--bg-card); color: var(--accent);
@@ -370,14 +375,13 @@ body {
   font-weight: bold; border: none; border-radius: 8px; cursor: pointer;
 }
 
-/* ============ PANEL DE GRABACIÓN ============ */
 #recordingPanel {
   display: none;
   background: #2a0d0d;
   border: 2px solid #ff5252;
   border-radius: 12px;
   padding: 12px;
-  margin-top: 8px;
+  margin-bottom: 8px;
   text-align: center;
 }
 #recordingPanel.show { display: block; }
@@ -399,7 +403,7 @@ body {
 
 #footer-credit {
   text-align: center; font-size: 10px; color: var(--text-muted);
-  margin-top: 12px; padding-bottom: 6px;
+  padding: 4px 0 2px 0;
   letter-spacing: 0.3px; font-style: italic;
   user-select: none; opacity: 0.7;
 }
@@ -439,7 +443,6 @@ body {
   font-size: 20px; font-weight: bold; cursor: pointer;
 }
 
-/* ============ PANEL DE USUARIOS ============ */
 #usersPanel {
   position: fixed; top: 0; right: 0;
   width: 280px; max-width: 85vw; height: 100%;
@@ -522,7 +525,6 @@ body {
   font-size: 13px; margin-top: 20px; font-style: italic;
 }
 
-/* ============ LLAMADAS ============ */
 #callOverlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.97); z-index: 10000;
@@ -605,7 +607,6 @@ body {
 #rejectBtn { background: #ff5252; color: #fff; }
 #incomingAcceptBtn { background: var(--accent); color: var(--bg); }
 
-/* ============ MODAL DE EDICIÓN ============ */
 #editModal {
   display: none;
   position: fixed; inset: 0;
@@ -647,7 +648,6 @@ body {
 #editCancelBtn { background: var(--bg-card); color: var(--text); }
 #editSaveBtn { background: var(--accent); color: var(--bg); }
 
-/* ============ MENÚ DE MENSAJE (long press) ============ */
 #msgMenu {
   display: none;
   position: fixed;
@@ -676,7 +676,6 @@ body {
 #msgMenu button:active { background: var(--bg-card); }
 #menuDeleteBtn { color: #ff5252; }
 
-/* ============ SELECTOR DE REACCIONES ============ */
 #reactionPicker {
   display: none;
   position: fixed;

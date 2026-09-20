@@ -37,14 +37,12 @@ const menuLocationBtn = document.getElementById("menuLocationBtn");
 const menuVoiceBtn    = document.getElementById("menuVoiceBtn");
 const fileInput       = document.getElementById("fileInput");
 const cameraInput     = document.getElementById("cameraInput");
-
 const usersBtn        = document.getElementById("usersBtn");
 const callBtn         = document.getElementById("callBtn");
 const videoBtn        = document.getElementById("videoBtn");
 const configBtn       = document.getElementById("configBtn");
 const configPanel     = document.getElementById("configPanel");
 const configPanelClose = document.getElementById("configPanelClose");
-
 const themeBtn        = document.getElementById("themeBtn");
 const colorBtn        = document.getElementById("colorBtn");
 const searchBtn       = document.getElementById("searchBtn");
@@ -59,7 +57,8 @@ const remindersBtn    = document.getElementById("remindersBtn");
 const pollBtn         = document.getElementById("pollBtn");
 const blockedBtn      = document.getElementById("blockedBtn");
 const contactsBtn     = document.getElementById("contactsBtn");
-
+const gamesBtn        = document.getElementById("gamesBtn");
+const giftsBtn        = document.getElementById("giftsBtn");
 const searchBar       = document.getElementById("searchBar");
 const searchInput     = document.getElementById("searchInput");
 const searchClose     = document.getElementById("searchClose");
@@ -143,6 +142,19 @@ const contactsList    = document.getElementById("contactsList");
 const contactsEmpty   = document.getElementById("contactsEmpty");
 const contactsCloseBtn = document.getElementById("contactsCloseBtn");
 const newContactBtn   = document.getElementById("newContactBtn");
+const newGameModal    = document.getElementById("newGameModal");
+const gameOpponent    = document.getElementById("gameOpponent");
+const gameCancelBtn   = document.getElementById("gameCancelBtn");
+const gameSaveBtn     = document.getElementById("gameSaveBtn");
+const giftModal       = document.getElementById("giftModal");
+const giftTo          = document.getElementById("giftTo");
+const giftPicker      = document.getElementById("giftPicker");
+const giftCancelBtn   = document.getElementById("giftCancelBtn");
+const giftSaveBtn     = document.getElementById("giftSaveBtn");
+const myGiftsModal    = document.getElementById("myGiftsModal");
+const myGiftsGrid     = document.getElementById("myGiftsGrid");
+const myGiftsEmpty    = document.getElementById("myGiftsEmpty");
+const myGiftsCloseBtn = document.getElementById("myGiftsCloseBtn");
 const usersPanel      = document.getElementById("usersPanel");
 const usersPanelClose = document.getElementById("usersPanelClose");
 const userList        = document.getElementById("userList");
@@ -213,7 +225,6 @@ if (!username) {
   username = username.trim().substring(0, 20);
   LS.setItem("zummchat_user", username);
 }
-
 if (!SS.getItem("zummchat_cid")) {
   SS.setItem("zummchat_cid",
     (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "c" + Date.now() + Math.random().toString(36).slice(2));
@@ -223,12 +234,10 @@ const myClientId = SS.getItem("zummchat_cid");
 let myAvatarUrl = LS.getItem("zummchat_avatar") || "";
 let myBio = LS.getItem("zummchat_bio") || "";
 let myStatus = LS.getItem("zummchat_status") || "";
-
 let currentRoom = "general";
 
 // ============ BLOQUEADOS ============
 let bloqueados = new Set();
-
 async function cargarBloqueados() {
   try {
     const { data } = await supabaseClient.from("zumm_bloqueados")
@@ -239,39 +248,31 @@ async function cargarBloqueados() {
 
 // ============ CONTACTOS ============
 let misContactos = [];
-
 async function cargarContactos() {
   try {
     const { data } = await supabaseClient.from("zumm_contactos")
-      .select("contacto").eq("owner", username)
-      .order("contacto", { ascending: true });
+      .select("contacto").eq("owner", username).order("contacto", { ascending: true });
     misContactos = (data || []).map(c => c.contacto);
   } catch (e) { misContactos = []; }
 }
-
 async function añadirContacto(nombre) {
   if (!nombre) return;
   const limpio = nombre.trim().substring(0, 20);
   if (!limpio) return;
-  if (limpio.toLowerCase() === username.toLowerCase()) {
-    alert("No puedes añadirte a ti mismo."); return;
-  }
-  if (misContactos.some(c => c.toLowerCase() === limpio.toLowerCase())) {
-    alert("Ya está en tus contactos."); return;
-  }
-
-  const { error } = await supabaseClient.from("zumm_contactos")
-    .insert([{ owner: username, contacto: limpio }]);
+  if (limpio.toLowerCase() === username.toLowerCase()) { alert("No puedes añadirte."); return; }
+  if (misContactos.some(c => c.toLowerCase() === limpio.toLowerCase())) { alert("Ya está en contactos."); return; }
+  const { error } = await supabaseClient.from("zumm_contactos").insert([{ owner: username, contacto: limpio }]);
   if (error) { alert("Error: " + error.message); return; }
   misContactos.push(limpio);
   misContactos.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-  alert("✅ " + limpio + " añadido a contactos");
+  alert("✅ " + limpio + " añadido");
 }
-
 async function eliminarContacto(nombre) {
-  await supabaseClient.from("zumm_contactos")
-    .delete().eq("owner", username).eq("contacto", nombre);
+  await supabaseClient.from("zumm_contactos").delete().eq("owner", username).eq("contacto", nombre);
   misContactos = misContactos.filter(c => c !== nombre);
+}
+function estaEnContactos(nombre) {
+  return misContactos.some(c => c.toLowerCase() === (nombre || "").toLowerCase());
 }
 
 // ============ SILENCIAR ============
@@ -281,10 +282,10 @@ function chatEstaSilenciado(room) { return chatsSilenciados.includes(room); }
 function toggleSilenciar(room) {
   if (chatsSilenciados.includes(room)) {
     chatsSilenciados = chatsSilenciados.filter(r => r !== room);
-    alert("🔔 Notificaciones ACTIVADAS");
+    alert("🔔 ACTIVADAS");
   } else {
     chatsSilenciados.push(room);
-    alert("🔕 Chat SILENCIADO");
+    alert("🔕 SILENCIADO");
   }
   guardarSilenciados();
   actualizarBotonesSilenciados();
@@ -299,7 +300,6 @@ function actualizarBotonesSilenciados() {
 // ============ TEMA Y PACK ============
 let temaActual = LS.getItem("zummchat_tema") || "dark";
 let packActual = LS.getItem("zummchat_pack") || "";
-
 function aplicarTema() {
   document.body.classList.toggle("theme-light", temaActual === "light");
   const icon = themeBtn ? themeBtn.querySelector(".config-icon") : null;
@@ -312,13 +312,11 @@ function aplicarPack() {
 }
 aplicarTema(); aplicarPack();
 
-if (themeBtn) {
-  themeBtn.addEventListener("click", () => {
-    temaActual = temaActual === "dark" ? "light" : "dark";
-    LS.setItem("zummchat_tema", temaActual);
-    aplicarTema();
-  });
-}
+if (themeBtn) themeBtn.addEventListener("click", () => {
+  temaActual = temaActual === "dark" ? "light" : "dark";
+  LS.setItem("zummchat_tema", temaActual);
+  aplicarTema();
+});
 
 const packsDisponibles = [
   { id: "", nombre: "🎨 Verde (original)" },
@@ -331,41 +329,32 @@ const packsDisponibles = [
   { id: "midnight", nombre: "🌌 Medianoche (azul)" },
   { id: "matrix", nombre: "🟢 Matrix (verde puro)" }
 ];
-
-if (colorBtn) {
-  colorBtn.addEventListener("click", () => {
-    const lista = packsDisponibles.map((p, i) => (i + 1) + ". " + p.nombre).join("\n");
-    const eleccion = prompt("Elige un tema:\n\n" + lista + "\n\nEscribe el número (1-9):");
-    const idx = parseInt(eleccion) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= packsDisponibles.length) return;
-    packActual = packsDisponibles[idx].id;
-    LS.setItem("zummchat_pack", packActual);
-    aplicarPack();
-    alert("🎨 Tema aplicado: " + packsDisponibles[idx].nombre);
-  });
-}
+if (colorBtn) colorBtn.addEventListener("click", () => {
+  const lista = packsDisponibles.map((p, i) => (i + 1) + ". " + p.nombre).join("\n");
+  const eleccion = prompt("Elige un tema:\n\n" + lista + "\n\nEscribe el número (1-9):");
+  const idx = parseInt(eleccion) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= packsDisponibles.length) return;
+  packActual = packsDisponibles[idx].id;
+  LS.setItem("zummchat_pack", packActual);
+  aplicarPack();
+  alert("🎨 Tema: " + packsDisponibles[idx].nombre);
+});
 
 // ============ SONIDO ============
 let sonidoActivo = LS.getItem("zummchat_sonido") !== "off";
 let audioCtx = null;
-
 function initAudio() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
-  }
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; } }
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
-
 function reproducirSonidoInsistente() {
   if (!sonidoActivo) return;
-  initAudio();
-  if (!audioCtx) return;
+  initAudio(); if (!audioCtx) return;
   const tonos = [880, 1100, 880];
   tonos.forEach((freq, idx) => {
     setTimeout(() => {
       try {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = "sine"; osc.frequency.value = freq;
         gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
@@ -377,40 +366,32 @@ function reproducirSonidoInsistente() {
   });
   if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
 }
-
 document.body.addEventListener("touchstart", initAudio, { once: true });
 document.body.addEventListener("click", initAudio, { once: true });
-
 function updateSoundBtn() { if (soundIcon) soundIcon.textContent = sonidoActivo ? "🔔" : "🔕"; }
 updateSoundBtn();
-
-if (soundBtn) {
-  soundBtn.addEventListener("click", () => {
-    sonidoActivo = !sonidoActivo;
-    LS.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
-    updateSoundBtn();
-    if (sonidoActivo) reproducirSonidoInsistente();
-  });
-}
+if (soundBtn) soundBtn.addEventListener("click", () => {
+  sonidoActivo = !sonidoActivo;
+  LS.setItem("zummchat_sonido", sonidoActivo ? "on" : "off");
+  updateSoundBtn();
+  if (sonidoActivo) reproducirSonidoInsistente();
+});
 
 // ============ NOTIFICACIONES ============
 if ("Notification" in window && Notification.permission === "default") {
   setTimeout(() => { Notification.requestPermission().catch(() => {}); }, 3000);
 }
-
 let mensajesNoLeidos = 0;
 let tituloParpadeoInterval = null;
 let tituloParpadeando = false;
 const TITULO_BASE = "ZummChat";
-
 function mostrarNotificacion(remitente, texto, room) {
   if (room && chatEstaSilenciado(room)) return;
   if (remitente === BOT_NAME) return;
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       const n = new Notification("💬 " + remitente, {
-        body: texto || "Nuevo mensaje",
-        icon: "icon.png", badge: "icon.png",
+        body: texto || "Nuevo mensaje", icon: "icon.png", badge: "icon.png",
         tag: "zummchat-msg", renotify: true,
         vibrate: [200, 100, 200, 100, 200], silent: false
       });
@@ -428,15 +409,9 @@ function mostrarNotificacion(remitente, texto, room) {
   }
   reproducirSonidoInsistente();
 }
-
 function resetearTitulo() {
-  mensajesNoLeidos = 0;
-  document.title = TITULO_BASE;
-  if (tituloParpadeoInterval) {
-    clearInterval(tituloParpadeoInterval);
-    tituloParpadeoInterval = null;
-    tituloParpadeando = false;
-  }
+  mensajesNoLeidos = 0; document.title = TITULO_BASE;
+  if (tituloParpadeoInterval) { clearInterval(tituloParpadeoInterval); tituloParpadeoInterval = null; tituloParpadeando = false; }
 }
 window.addEventListener("focus", resetearTitulo);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) resetearTitulo(); });
@@ -444,12 +419,10 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) rese
 // ============ RINGTONE ============
 let ringInterval = null;
 function playRingtone() {
-  initAudio();
-  if (!audioCtx) return;
+  initAudio(); if (!audioCtx) return;
   const tocarTono = () => {
     try {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
       osc.type = "sine"; osc.frequency.value = 660;
       gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
@@ -480,8 +453,7 @@ function colorForUser(name) {
 function avatarLetter(name) {
   if (name === BOT_NAME) return "🤖";
   if (!name) return "?";
-  const limpio = name.trim();
-  if (!limpio) return "?";
+  const limpio = name.trim(); if (!limpio) return "?";
   return limpio.charAt(0).toUpperCase();
 }
 function roomLabel(room) {
@@ -496,8 +468,7 @@ function roomLabel(room) {
 function hidePrivados() { if (privRoomBar) privRoomBar.style.display = "none"; }
 function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
 function formatearSegundos(s) {
-  const m = Math.floor(s / 60);
-  const seg = s % 60;
+  const m = Math.floor(s / 60); const seg = s % 60;
   return m + ":" + String(seg).padStart(2, "0");
 }
 
@@ -507,30 +478,22 @@ function cerrarPaneles() {
   if (attachMenu) attachMenu.classList.remove("show");
   if (usersPanel) usersPanel.classList.remove("show");
 }
-
-if (configBtn) {
-  configBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const abierto = configPanel.classList.contains("show");
-    cerrarPaneles();
-    if (!abierto) configPanel.classList.add("show");
-  });
-}
+if (configBtn) configBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const abierto = configPanel.classList.contains("show");
+  cerrarPaneles();
+  if (!abierto) configPanel.classList.add("show");
+});
 if (configPanelClose) configPanelClose.addEventListener("click", cerrarPaneles);
-if (attachBtn) {
-  attachBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const abierto = attachMenu.classList.contains("show");
-    cerrarPaneles();
-    if (!abierto) attachMenu.classList.add("show");
-  });
-}
-
+if (attachBtn) attachBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const abierto = attachMenu.classList.contains("show");
+  cerrarPaneles();
+  if (!abierto) attachMenu.classList.add("show");
+});
 document.addEventListener("touchstart", (e) => {
-  if (configPanel && configPanel.classList.contains("show") &&
-      !configPanel.contains(e.target) && e.target !== configBtn) configPanel.classList.remove("show");
-  if (attachMenu && attachMenu.classList.contains("show") &&
-      !attachMenu.contains(e.target) && e.target !== attachBtn) attachMenu.classList.remove("show");
+  if (configPanel && configPanel.classList.contains("show") && !configPanel.contains(e.target) && e.target !== configBtn) configPanel.classList.remove("show");
+  if (attachMenu && attachMenu.classList.contains("show") && !attachMenu.contains(e.target) && e.target !== attachBtn) attachMenu.classList.remove("show");
 });
 
 // ============ LINKIFY ============
@@ -542,14 +505,10 @@ function linkify(texto) {
   partes.forEach(parte => {
     if (urlRegex.test(parte)) {
       const a = document.createElement("a");
-      a.href = parte; a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.className = "auto-link";
-      a.textContent = parte;
+      a.href = parte; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.className = "auto-link"; a.textContent = parte;
       frag.appendChild(a);
-    } else {
-      frag.appendChild(document.createTextNode(parte));
-    }
+    } else frag.appendChild(document.createTextNode(parte));
     urlRegex.lastIndex = 0;
   });
   return frag;
@@ -557,25 +516,18 @@ function linkify(texto) {
 
 // ============ BOT BIENVENIDA ============
 const mensajesBienvenida = [
-  "¡Hola {nombre}! 👋 Bienvenido a la sala {sala}. Escribe algo cuando quieras.",
+  "¡Hola {nombre}! 👋 Bienvenido a {sala}.",
   "🎉 {nombre} se unió a {sala}. ¡Saluda!",
   "👋 Hey {nombre}, bienvenido a {sala}.",
-  "🌟 Bienvenido {nombre} a {sala}. Aquí tienes amigos esperándote.",
-  "🎊 Llegó {nombre} a {sala}. ¡Que empiece la conversación!"
+  "🌟 Bienvenido {nombre} a {sala}.",
+  "🎊 Llegó {nombre} a {sala}."
 ];
-
 async function enviarMensajeBot(texto) {
-  try {
-    await supabaseClient.from("zumm_messages").insert([{
-      text: texto, username: BOT_NAME, room: currentRoom
-    }]);
-  } catch (e) {}
+  try { await supabaseClient.from("zumm_messages").insert([{ text: texto, username: BOT_NAME, room: currentRoom }]); } catch (e) {}
 }
-
 async function saludarBienvenida() {
   const key = "zummchat_bot_" + currentRoom + "_" + username.toLowerCase();
-  const ultimo = LS.getItem(key);
-  const ahora = Date.now();
+  const ultimo = LS.getItem(key); const ahora = Date.now();
   if (ultimo && (ahora - parseInt(ultimo)) < 6 * 60 * 60 * 1000) return;
   LS.setItem(key, String(ahora));
   const plantilla = mensajesBienvenida[Math.floor(Math.random() * mensajesBienvenida.length)];
@@ -586,100 +538,70 @@ async function saludarBienvenida() {
 // ============ GRUPOS ============
 let gruposPersonalizados = JSON.parse(LS.getItem("zummchat_grupos") || "[]");
 let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
-
 function guardarGrupos() { LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados)); }
 function guardarGruposOcultos() { LS.setItem("zummchat_grupos_ocultos", JSON.stringify(gruposOcultos)); }
-
 function crearBotonGrupo(nombreGrupo) {
   if (!roomBar) return;
   if (gruposOcultos.includes(nombreGrupo)) return;
   const roomId = "grupo:" + nombreGrupo;
   if (roomBar.querySelector('[data-room="' + roomId + '"]')) return;
-
   const btn = document.createElement("button");
-  btn.className = "room-btn";
-  btn.dataset.room = roomId;
+  btn.className = "room-btn"; btn.dataset.room = roomId;
   const label = document.createElement("span");
   label.textContent = "👥 " + nombreGrupo;
   btn.appendChild(label);
-
   const close = document.createElement("button");
-  close.className = "close";
-  close.textContent = "✕";
+  close.className = "close"; close.textContent = "✕";
   close.style.cssText = "background:rgba(0,0,0,0.3);border:none;color:inherit;border-radius:50%;width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;margin-left:6px;padding:0;";
   close.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!confirm("¿SALIR del grupo '" + nombreGrupo + "'?")) return;
-    if (!gruposOcultos.includes(nombreGrupo)) {
-      gruposOcultos.push(nombreGrupo); guardarGruposOcultos();
-    }
+    if (!gruposOcultos.includes(nombreGrupo)) { gruposOcultos.push(nombreGrupo); guardarGruposOcultos(); }
     gruposPersonalizados = gruposPersonalizados.filter(g => g !== nombreGrupo);
-    guardarGrupos();
-    btn.remove();
+    guardarGrupos(); btn.remove();
     if (currentRoom === roomId) switchRoom("general");
   });
   btn.appendChild(close);
-
   let longPress = null;
   btn.addEventListener("touchstart", () => {
     longPress = setTimeout(() => {
-      if (confirm("¿Silenciar notificaciones de '" + nombreGrupo + "'?")) toggleSilenciar(roomId);
+      if (confirm("¿Silenciar '" + nombreGrupo + "'?")) toggleSilenciar(roomId);
     }, 700);
   }, { passive: true });
   btn.addEventListener("touchend", () => clearTimeout(longPress));
   btn.addEventListener("touchmove", () => clearTimeout(longPress));
-
   btn.addEventListener("click", () => switchRoom(roomId));
   roomBar.insertBefore(btn, addRoomBtn);
   if (chatEstaSilenciado(roomId)) btn.classList.add("muted-room");
 }
-
 gruposPersonalizados.forEach(g => crearBotonGrupo(g));
-
-if (addRoomBtn) {
-  addRoomBtn.addEventListener("click", () => {
-    const nombre = prompt("Nombre del nuevo grupo:\n\n(Solo letras, números y guiones)");
-    if (!nombre || !nombre.trim()) return;
-    const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
-    if (!limpio) { alert("Nombre inválido."); return; }
-    if (gruposOcultos.includes(limpio)) {
-      gruposOcultos = gruposOcultos.filter(g => g !== limpio); guardarGruposOcultos();
-    }
-    if (gruposPersonalizados.includes(limpio)) {
-      alert("Ese grupo ya existe."); switchRoom("grupo:" + limpio); return;
-    }
-    gruposPersonalizados.push(limpio);
-    guardarGrupos();
-    crearBotonGrupo(limpio);
-    switchRoom("grupo:" + limpio);
-    setTimeout(() => {
-      alert("✅ Grupo '" + limpio + "' creado.\n\nPara invitar a otros, diles que toquen ➕ y escriban: " + limpio);
-    }, 300);
-  });
-}
+if (addRoomBtn) addRoomBtn.addEventListener("click", () => {
+  const nombre = prompt("Nombre del nuevo grupo:");
+  if (!nombre || !nombre.trim()) return;
+  const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
+  if (!limpio) { alert("Inválido."); return; }
+  if (gruposOcultos.includes(limpio)) { gruposOcultos = gruposOcultos.filter(g => g !== limpio); guardarGruposOcultos(); }
+  if (gruposPersonalizados.includes(limpio)) { alert("Ya existe."); switchRoom("grupo:" + limpio); return; }
+  gruposPersonalizados.push(limpio); guardarGrupos(); crearBotonGrupo(limpio); switchRoom("grupo:" + limpio);
+  setTimeout(() => alert("✅ Grupo '" + limpio + "' creado.\n\nDiles que toquen ➕ y escriban: " + limpio), 300);
+});
 
 // ============ SALAS ============
 function switchRoom(room) {
   currentRoom = room;
-  if (!room.startsWith("priv:")) hidePrivados();
-  else showPrivados();
+  if (!room.startsWith("priv:")) hidePrivados(); else showPrivados();
   if (chatTitle) chatTitle.textContent = "ZummChat · " + roomLabel(room);
-  rendered.clear();
-  lastDateKey = "";
+  rendered.clear(); lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
-  updateActiveTab();
-  loadHistory();
-  cargarMensajeFijado();
+  updateActiveTab(); loadHistory(); cargarMensajeFijado();
   setTimeout(saludarBienvenida, 1500);
 }
-
 function updateActiveTab() {
   document.querySelectorAll(".room-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.room === currentRoom);
   });
   actualizarBotonesSilenciados();
 }
-
 document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
   if (!btn.dataset.room) return;
   btn.addEventListener("click", () => switchRoom(btn.dataset.room));
@@ -693,24 +615,19 @@ document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
   btn.addEventListener("touchend", () => clearTimeout(longPress));
   btn.addEventListener("touchmove", () => clearTimeout(longPress));
 });
-
 let privateRooms = JSON.parse(LS.getItem("zummchat_privrooms") || "[]");
 function savePrivateRooms() { LS.setItem("zummchat_privrooms", JSON.stringify(privateRooms)); }
-
 function createPrivateButton(room) {
   if (!privRoomBar) return;
   const btn = document.createElement("button");
-  btn.className = "room-btn priv";
-  btn.dataset.room = room;
+  btn.className = "room-btn priv"; btn.dataset.room = room;
   const label = document.createElement("span");
-  label.textContent = roomLabel(room);
-  btn.appendChild(label);
+  label.textContent = roomLabel(room); btn.appendChild(label);
   const close = document.createElement("button");
-  close.className = "close";
-  close.textContent = "✕";
+  close.className = "close"; close.textContent = "✕";
   close.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (!confirm("¿Eliminar este chat privado?")) return;
+    if (!confirm("¿Eliminar?")) return;
     privateRooms = privateRooms.filter(r => r !== room);
     savePrivateRooms(); btn.remove();
     if (currentRoom === room) switchRoom("general");
@@ -719,46 +636,33 @@ function createPrivateButton(room) {
   btn.addEventListener("click", () => switchRoom(room));
   privRoomBar.appendChild(btn);
 }
-
 privateRooms.forEach(r => createPrivateButton(r));
 hidePrivados();
-
 function openPrivateWith(otroNombre) {
   const otroLimpio = String(otroNombre || "").trim().substring(0, 20);
   if (!otroLimpio) return;
   if (otroLimpio.toLowerCase() === username.toLowerCase()) return;
   const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   const room = "priv:" + nombres[0] + "|" + nombres[1];
-  if (!privateRooms.includes(room)) {
-    privateRooms.push(room); savePrivateRooms(); createPrivateButton(room);
-  }
+  if (!privateRooms.includes(room)) { privateRooms.push(room); savePrivateRooms(); createPrivateButton(room); }
   switchRoom(room);
   if (usersPanel) usersPanel.classList.remove("show");
 }
-
-if (privateBtn) {
-  privateBtn.addEventListener("click", () => {
-    const otro = prompt("¿Con quién quieres hablar en privado?");
-    if (!otro || !otro.trim()) return;
-    openPrivateWith(otro);
-  });
-}
-
-if (shareBtn) {
-  shareBtn.addEventListener("click", async () => {
-    cerrarPaneles();
-    const url = location.href;
-    const datos = { title: "ZummChat", text: "Únete a mi chat ZummChat 🐦💬", url };
-    if (navigator.share) {
-      try { await navigator.share(datos); } catch (e) {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(url);
-        alert("Enlace copiado: " + url);
-      } catch (e) { prompt("Copia este enlace:", url); }
-    }
-  });
-}
+if (privateBtn) privateBtn.addEventListener("click", () => {
+  const otro = prompt("¿Con quién quieres hablar en privado?");
+  if (!otro || !otro.trim()) return;
+  openPrivateWith(otro);
+});
+if (shareBtn) shareBtn.addEventListener("click", async () => {
+  cerrarPaneles();
+  const url = location.href;
+  const datos = { title: "ZummChat", text: "Únete a ZummChat 🐦💬", url };
+  if (navigator.share) { try { await navigator.share(datos); } catch (e) {} }
+  else {
+    try { await navigator.clipboard.writeText(url); alert("Enlace copiado"); }
+    catch (e) { prompt("Copia:", url); }
+  }
+});
 
 // ============ EMOJIS ============
 const EMOJIS = [
@@ -770,201 +674,138 @@ const EMOJIS = [
   "🐦","🐶","🐱","🌸","🌺","🍀","🍕","🍔","☕","🍺",
   "⚽","🏀","🎮","🎵","🎶","📱","💻","📷","🚀","🏆"
 ];
+if (emojiBar) EMOJIS.forEach(e => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = e;
+  b.addEventListener("click", () => { if (inputEl) { inputEl.value += e; inputEl.focus(); } });
+  emojiBar.appendChild(b);
+});
+if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (emojiBar) emojiBar.classList.toggle("show");
+});
 
-if (emojiBar) {
-  EMOJIS.forEach(e => {
-    const b = document.createElement("button");
-    b.type = "button"; b.textContent = e;
-    b.addEventListener("click", () => {
-      if (inputEl) { inputEl.value += e; inputEl.focus(); }
-    });
-    emojiBar.appendChild(b);
-  });
-}
-if (emojiBtn) {
-  emojiBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (emojiBar) emojiBar.classList.toggle("show");
-  });
-}
-
-// ============ SUBIR ARCHIVOS ============
+// ============ ARCHIVOS ============
 async function subirYEnviarArchivo(file, tipo) {
   if (!file) return;
-  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-    alert("El archivo pesa más de " + MAX_SIZE_MB + " MB."); return;
-  }
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert("Máx " + MAX_SIZE_MB + " MB"); return; }
   const ext = file.name.split(".").pop() || "bin";
   const nombreArchivo = Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "." + ext;
-
   const { error: upErr } = await supabaseClient.storage.from("archivos")
     .upload(nombreArchivo, file, { contentType: file.type || "application/octet-stream" });
-  if (upErr) { alert("No se pudo subir: " + upErr.message); return; }
-
+  if (upErr) { alert("Error: " + upErr.message); return; }
   const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
   const publicUrl = urlData.publicUrl;
   const texto = inputEl ? inputEl.value.trim() : "";
   if (inputEl) inputEl.value = "";
-
   const { data, error } = await supabaseClient.from("zumm_messages")
-    .insert([{
-      text: texto || "", username: username, room: currentRoom,
+    .insert([{ text: texto || "", username: username, room: currentRoom,
       file_url: publicUrl, file_name: file.name,
-      file_type: tipo || file.type || "application/octet-stream"
-    }])
+      file_type: tipo || file.type || "application/octet-stream" }])
     .select().single();
-
-  if (error) { alert("No se pudo enviar: " + error.message); return; }
+  if (error) { alert("Error: " + error.message); return; }
   renderMessage(data, false);
 }
-
 if (menuFileBtn) menuFileBtn.addEventListener("click", () => { cerrarPaneles(); fileInput.click(); });
-if (fileInput) {
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    await subirYEnviarArchivo(file);
-    fileInput.value = "";
-  });
-}
-
+if (fileInput) fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0]; if (!file) return;
+  await subirYEnviarArchivo(file); fileInput.value = "";
+});
 if (menuCameraBtn) menuCameraBtn.addEventListener("click", () => { cerrarPaneles(); cameraInput.click(); });
-if (cameraInput) {
-  cameraInput.addEventListener("change", async () => {
-    const file = cameraInput.files[0];
-    if (!file) return;
-    await subirYEnviarArchivo(file, file.type || "image/jpeg");
-    cameraInput.value = "";
-  });
-}
-
-if (menuLocationBtn) {
-  menuLocationBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    if (!navigator.geolocation) { alert("Tu navegador no soporta ubicación."); return; }
-    if (!confirm("¿Compartir tu ubicación actual?")) return;
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lon = pos.coords.longitude.toFixed(6);
-        const url = "https://www.google.com/maps?q=" + lat + "," + lon;
-        const texto = "📍 Mi ubicación: " + url;
-        const { data, error } = await supabaseClient.from("zumm_messages")
-          .insert([{
-            text: texto, username: username, room: currentRoom,
-            file_url: url, file_name: "Ubicación", file_type: "location/maps"
-          }])
-          .select().single();
-        if (error) alert("No se pudo enviar: " + error.message);
-        else renderMessage(data, false);
-      },
-      (err) => alert("No se pudo obtener ubicación:\n" + err.message),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-    );
-  });
-}
-
+if (cameraInput) cameraInput.addEventListener("change", async () => {
+  const file = cameraInput.files[0]; if (!file) return;
+  await subirYEnviarArchivo(file, file.type || "image/jpeg"); cameraInput.value = "";
+});
+if (menuLocationBtn) menuLocationBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (!navigator.geolocation) { alert("No soporta ubicación."); return; }
+  if (!confirm("¿Compartir ubicación?")) return;
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude.toFixed(6);
+    const lon = pos.coords.longitude.toFixed(6);
+    const url = "https://www.google.com/maps?q=" + lat + "," + lon;
+    const texto = "📍 Mi ubicación: " + url;
+    const { data, error } = await supabaseClient.from("zumm_messages")
+      .insert([{ text: texto, username: username, room: currentRoom,
+        file_url: url, file_name: "Ubicación", file_type: "location/maps" }])
+      .select().single();
+    if (error) alert("Error: " + error.message); else renderMessage(data, false);
+  }, (err) => alert("Error: " + err.message),
+  { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+});
 if (menuVoiceBtn) menuVoiceBtn.addEventListener("click", () => { cerrarPaneles(); iniciarGrabacion(); });
 
 // ============ NOTAS DE VOZ ============
 let mediaRecorder = null, audioChunks = [], grabando = false;
 let recTimerInterval = null, recSegundos = 0, audioStreamRec = null;
-
 function iniciarGrabacion() {
   if (grabando) return;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert("Tu navegador no soporta grabación."); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert("No soporta grabación."); return; }
   if (!window.MediaRecorder) { alert("No soporta MediaRecorder."); return; }
-
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    audioStreamRec = stream;
-    audioChunks = [];
+    audioStreamRec = stream; audioChunks = [];
     let mimeType = "audio/webm";
     if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
     else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
     else if (MediaRecorder.isTypeSupported("audio/ogg")) mimeType = "audio/ogg";
-
     try { mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType }); }
     catch (e) { mediaRecorder = new MediaRecorder(stream); }
-
     mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
     mediaRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); audioStreamRec = null; };
-
-    mediaRecorder.start();
-    grabando = true; recSegundos = 0;
+    mediaRecorder.start(); grabando = true; recSegundos = 0;
     if (recordingPanel) recordingPanel.classList.add("show");
     if (recordingTime) recordingTime.textContent = "0:00";
-
     clearInterval(recTimerInterval);
     recTimerInterval = setInterval(() => {
       recSegundos++;
       if (recordingTime) recordingTime.textContent = formatearSegundos(recSegundos);
       if (recSegundos >= 120) detenerGrabacion(true);
     }, 1000);
-  }).catch(e => alert("No se pudo acceder al micrófono:\n" + e.message));
+  }).catch(e => alert("Error mic: " + e.message));
 }
-
 function cancelarGrabacion() {
   if (!grabando) return;
-  grabando = false;
-  clearInterval(recTimerInterval); recTimerInterval = null;
+  grabando = false; clearInterval(recTimerInterval); recTimerInterval = null;
   try {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.onstop = () => {
-        if (audioStreamRec) { audioStreamRec.getTracks().forEach(t => t.stop()); audioStreamRec = null; }
-      };
+      mediaRecorder.onstop = () => { if (audioStreamRec) { audioStreamRec.getTracks().forEach(t => t.stop()); audioStreamRec = null; } };
       mediaRecorder.stop();
     }
   } catch (e) {}
   audioChunks = [];
   if (recordingPanel) recordingPanel.classList.remove("show");
 }
-
 async function detenerGrabacion(enviar) {
   if (!grabando) return;
-  grabando = false;
-  clearInterval(recTimerInterval); recTimerInterval = null;
+  grabando = false; clearInterval(recTimerInterval); recTimerInterval = null;
   const duracionFinal = recSegundos;
-
   const promesa = new Promise(resolve => {
     if (!mediaRecorder || mediaRecorder.state === "inactive") { resolve(); return; }
-    mediaRecorder.onstop = () => {
-      if (audioStreamRec) { audioStreamRec.getTracks().forEach(t => t.stop()); audioStreamRec = null; }
-      resolve();
-    };
+    mediaRecorder.onstop = () => { if (audioStreamRec) { audioStreamRec.getTracks().forEach(t => t.stop()); audioStreamRec = null; } resolve(); };
     try { mediaRecorder.stop(); } catch (e) { resolve(); }
   });
   await promesa;
-
   if (recordingPanel) recordingPanel.classList.remove("show");
   if (!enviar) { audioChunks = []; return; }
   if (audioChunks.length === 0) { alert("No se grabó nada."); return; }
-
   const blob = new Blob(audioChunks, { type: audioChunks[0].type || "audio/webm" });
   audioChunks = [];
-  if (blob.size > MAX_SIZE_MB * 1024 * 1024) { alert("Nota muy larga."); return; }
-
+  if (blob.size > MAX_SIZE_MB * 1024 * 1024) { alert("Muy larga."); return; }
   try {
     const ext = blob.type.includes("mp4") ? "m4a" : (blob.type.includes("ogg") ? "ogg" : "webm");
     const nombreArchivo = "audio_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "." + ext;
-    const { error: upErr } = await supabaseClient.storage.from("archivos")
-      .upload(nombreArchivo, blob, { contentType: blob.type });
-    if (upErr) { alert("No se pudo subir: " + upErr.message); return; }
-
+    const { error: upErr } = await supabaseClient.storage.from("archivos").upload(nombreArchivo, blob, { contentType: blob.type });
+    if (upErr) { alert("Error: " + upErr.message); return; }
     const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
     const publicUrl = urlData.publicUrl;
     const { data, error } = await supabaseClient.from("zumm_messages")
-      .insert([{
-        text: "", username: username, room: currentRoom,
-        file_url: publicUrl, file_name: "audio-" + formatearSegundos(duracionFinal),
-        file_type: blob.type
-      }])
+      .insert([{ text: "", username: username, room: currentRoom,
+        file_url: publicUrl, file_name: "audio-" + formatearSegundos(duracionFinal), file_type: blob.type }])
       .select().single();
-    if (error) { alert("No se pudo enviar: " + error.message); return; }
+    if (error) { alert("Error: " + error.message); return; }
     renderMessage(data, false);
   } catch (e) { alert("Error: " + e.message); }
 }
-
 if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
 if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
 
@@ -982,34 +823,37 @@ function dateLabel(d) {
 }
 function maybeAddDateSeparator(iso) {
   if (!iso || !messagesEl) return;
-  const d = new Date(iso);
-  const key = dateKey(d);
+  const d = new Date(iso); const key = dateKey(d);
   if (key === lastDateKey) return;
   lastDateKey = key;
   const sep = document.createElement("div");
-  sep.className = "date-sep";
-  sep.textContent = dateLabel(d);
+  sep.className = "date-sep"; sep.textContent = dateLabel(d);
   messagesEl.appendChild(sep);
 }
 
-// ============ POLL HELPER ============
+// ============ PARSE HELPERS ============
 function parsePoll(m) {
   if (!m.file_type || !m.file_type.startsWith("poll/")) return null;
+  try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
+}
+function parseGame(m) {
+  if (!m.file_type || m.file_type !== "game/tictactoe") return null;
+  try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
+}
+function parseGift(m) {
+  if (!m.file_type || !m.file_type.startsWith("gift/")) return null;
   try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
 }
 
 // ============ MENSAJES ============
 const rendered = new Set();
 let favoritosIds = new Set();
-
 function scrollToBottom() { if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight; }
-
 function formatTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
-
 function avatarUrlDe(nombre) {
   if (nombre.toLowerCase() === username.toLowerCase()) return myAvatarUrl;
   return avataresPorUsuario[(nombre || "").toLowerCase()] || "";
@@ -1020,10 +864,8 @@ function renderMessage(m, esNuevo) {
   if (m.room !== currentRoom) return;
   if (!messagesEl) return;
   if (m.username && bloqueados.has(m.username.toLowerCase())) return;
-
   rendered.add(m.id);
   const esBot = (m.username === BOT_NAME);
-
   if (esNuevo) {
     const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
     if (!esMio && !esBot) {
@@ -1032,138 +874,112 @@ function renderMessage(m, esNuevo) {
       if (tipo.startsWith("audio/")) textoNotif = "🎤 Nota de voz";
       else if (tipo.startsWith("location/")) textoNotif = "📍 Ubicación";
       else if (tipo.startsWith("poll/")) textoNotif = "📊 Encuesta";
+      else if (tipo === "game/tictactoe") textoNotif = "🎮 Tres en raya";
+      else if (tipo.startsWith("gift/")) textoNotif = "🎁 Te enviaron un regalo";
       else if (m.file_url) textoNotif = "📎 Archivo";
       else textoNotif = m.text || "Nuevo mensaje";
       mostrarNotificacion(m.username || "Alguien", textoNotif, m.room);
     }
   }
-
   maybeAddDateSeparator(m.created_at);
-
   const div = document.createElement("div");
   div.className = "msg";
   if (esBot) div.classList.add("bot-msg");
   div.dataset.msgId = m.id;
   if (m.pinned) div.classList.add("pinned");
   if (favoritosIds.has(m.id)) div.classList.add("favorite");
-
   const reacciones = (m.reactions || "").split(",").filter(x => x.trim());
   if (reacciones.length >= 3) div.classList.add("hot");
-
   const avatar = document.createElement("div");
   avatar.className = "avatar";
   const url = esBot ? "" : avatarUrlDe(m.username || "");
-  if (url) {
-    avatar.style.backgroundImage = "url(" + url + ")";
-    avatar.textContent = "";
-  } else if (esBot) {
-    avatar.style.background = "var(--accent)";
-    avatar.textContent = "🤖";
-  } else {
-    avatar.style.background = colorForUser(m.username);
-    avatar.textContent = avatarLetter(m.username);
-  }
+  if (url) { avatar.style.backgroundImage = "url(" + url + ")"; avatar.textContent = ""; }
+  else if (esBot) { avatar.style.background = "var(--accent)"; avatar.textContent = "🤖"; }
+  else { avatar.style.background = colorForUser(m.username); avatar.textContent = avatarLetter(m.username); }
   div.appendChild(avatar);
-
   const content = document.createElement("div");
   content.className = "msg-content";
-
   const header = document.createElement("div");
   header.className = "msg-header";
-
   const nameEl = document.createElement("span");
   nameEl.className = "msg-name";
   nameEl.textContent = (esBot ? BOT_NAME : (m.username || "Anónimo")) + (m.pinned ? " 📌" : "");
   nameEl.style.color = colorForUser(m.username);
-  if (!esBot) {
-    nameEl.addEventListener("click", (e) => { e.stopPropagation(); abrirPerfil(m.username, false); });
-  }
-
+  if (!esBot) nameEl.addEventListener("click", (e) => { e.stopPropagation(); abrirPerfil(m.username, false); });
   const rightSide = document.createElement("span");
   rightSide.className = "msg-right";
-
   const timeEl = document.createElement("span");
-  timeEl.className = "msg-time";
-  timeEl.textContent = formatTime(m.created_at);
+  timeEl.className = "msg-time"; timeEl.textContent = formatTime(m.created_at);
   rightSide.appendChild(timeEl);
-
   if (m.edited_at) {
     const ed = document.createElement("span");
-    ed.className = "msg-edited";
-    ed.textContent = "(editado)";
+    ed.className = "msg-edited"; ed.textContent = "(editado)";
     rightSide.appendChild(ed);
   }
-
-  header.appendChild(nameEl);
-  header.appendChild(rightSide);
-
+  header.appendChild(nameEl); header.appendChild(rightSide);
   const body = document.createElement("div");
   body.className = "msg-body";
-
   const pollData = parsePoll(m);
-
+  const gameData = parseGame(m);
+  const giftData = parseGift(m);
   if (pollData) {
     const box = document.createElement("div");
     box.className = "poll-box";
-
     const q = document.createElement("div");
-    q.className = "poll-question";
-    q.textContent = "📊 " + pollData.question;
+    q.className = "poll-question"; q.textContent = "📊 " + pollData.question;
     box.appendChild(q);
-
     const votos = pollData.votes || {};
     const opciones = pollData.options || [];
     let totalVotos = 0;
     opciones.forEach((_, idx) => { totalVotos += (votos[idx] || []).length; });
-
     opciones.forEach((op, idx) => {
       const votosOpt = votos[idx] || [];
       const porcentaje = totalVotos > 0 ? Math.round((votosOpt.length / totalVotos) * 100) : 0;
       const yoVote = votosOpt.includes(username.toLowerCase());
-
       const optDiv = document.createElement("div");
       optDiv.className = "poll-option";
       if (yoVote) optDiv.classList.add("mine");
-
       const bar = document.createElement("div");
-      bar.className = "poll-bar";
-      bar.style.width = porcentaje + "%";
+      bar.className = "poll-bar"; bar.style.width = porcentaje + "%";
       optDiv.appendChild(bar);
-
       const txt = document.createElement("span");
-      txt.className = "poll-text";
-      txt.textContent = (yoVote ? "✅ " : "") + op;
+      txt.className = "poll-text"; txt.textContent = (yoVote ? "✅ " : "") + op;
       optDiv.appendChild(txt);
-
       const cnt = document.createElement("span");
-      cnt.className = "poll-count";
-      cnt.textContent = porcentaje + "%";
+      cnt.className = "poll-count"; cnt.textContent = porcentaje + "%";
       optDiv.appendChild(cnt);
-
       optDiv.addEventListener("click", (e) => { e.stopPropagation(); votarEncuesta(m.id, idx); });
       box.appendChild(optDiv);
     });
-
     const info = document.createElement("div");
     info.style.cssText = "text-align:center;color:var(--text-dim);font-size:11px;margin-top:6px;";
     info.textContent = totalVotos + " voto" + (totalVotos === 1 ? "" : "s");
     box.appendChild(info);
     body.appendChild(box);
-
+  } else if (gameData) {
+    body.appendChild(crearTableroTresEnRaya(m, gameData));
+  } else if (giftData) {
+    const g = document.createElement("div");
+    g.className = "gift-msg";
+    const emoji = document.createElement("span");
+    emoji.className = "gift-emoji"; emoji.textContent = giftData.emoji;
+    const txt = document.createElement("div");
+    txt.className = "gift-text";
+    txt.innerHTML = "<strong>" + (giftData.from || "?") + "</strong> le envió <strong>" + giftData.emoji + " " + giftData.label + "</strong> a <strong>" + (giftData.to || "?") + "</strong>";
+    g.appendChild(emoji); g.appendChild(txt);
+    body.appendChild(g);
   } else if (m.text) {
     const txt = document.createElement("div");
     txt.appendChild(linkify(m.text));
     body.appendChild(txt);
   }
-
-  if (m.file_url && !pollData) {
+  if (m.file_url && !pollData && !gameData && !giftData) {
     const tipo = m.file_type || "";
     if (tipo.startsWith("audio/")) {
       const voiceDiv = document.createElement("div");
       voiceDiv.className = "voice-note";
       const playBtn = document.createElement("button");
-      playBtn.className = "voice-play-btn";
-      playBtn.textContent = "▶";
+      playBtn.className = "voice-play-btn"; playBtn.textContent = "▶";
       const audio = document.createElement("audio");
       audio.src = m.file_url; audio.preload = "metadata";
       const wave = document.createElement("div");
@@ -1174,8 +990,7 @@ function renderMessage(m, esNuevo) {
         wave.appendChild(span);
       }
       const duracion = document.createElement("span");
-      duracion.className = "voice-duration";
-      duracion.textContent = "0:00";
+      duracion.className = "voice-duration"; duracion.textContent = "0:00";
       audio.addEventListener("loadedmetadata", () => {
         if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
       });
@@ -1207,8 +1022,7 @@ function renderMessage(m, esNuevo) {
       const icon = document.createElement("span");
       icon.className = "loc-icon"; icon.textContent = "📍";
       const txt = document.createElement("span");
-      txt.className = "loc-text";
-      txt.textContent = "Ver ubicación en el mapa";
+      txt.className = "loc-text"; txt.textContent = "Ver ubicación";
       a.appendChild(icon); a.appendChild(txt);
       a.addEventListener("click", (e) => e.stopPropagation());
       body.appendChild(a);
@@ -1222,20 +1036,16 @@ function renderMessage(m, esNuevo) {
       a.href = m.file_url; a.target = "_blank"; a.rel = "noopener";
       a.className = "msg-file-link";
       const icon = document.createElement("span");
-      icon.className = "icon";
-      icon.textContent = tipo.includes("pdf") ? "📄" : "📎";
+      icon.className = "icon"; icon.textContent = tipo.includes("pdf") ? "📄" : "📎";
       const name = document.createElement("span");
-      name.className = "name";
-      name.textContent = m.file_name || "archivo";
+      name.className = "name"; name.textContent = m.file_name || "archivo";
       a.appendChild(icon); a.appendChild(name);
       body.appendChild(a);
     }
   }
-
   content.appendChild(header);
   content.appendChild(body);
-
-  if (reacciones.length > 0 && !pollData) {
+  if (reacciones.length > 0 && !pollData && !gameData) {
     const bar = document.createElement("div");
     bar.className = "reactions-bar";
     const conteo = {};
@@ -1257,9 +1067,7 @@ function renderMessage(m, esNuevo) {
     });
     content.appendChild(bar);
   }
-
   div.appendChild(content);
-
   if (!esBot) {
     let longPressTimer = null;
     div.addEventListener("touchstart", (e) => {
@@ -1275,7 +1083,6 @@ function renderMessage(m, esNuevo) {
       mostrarMenuMensaje(m, e.clientX, e.clientY);
     });
   }
-
   messagesEl.appendChild(div);
   scrollToBottom();
 }
@@ -1292,7 +1099,7 @@ async function loadHistory() {
     .eq("room", currentRoom)
     .order("created_at", { ascending: true })
     .limit(200);
-  if (error) { console.error("ERROR historial:", error); return; }
+  if (error) { console.error("ERROR:", error); return; }
   data.forEach(m => renderMessage(m, false));
 }
 
@@ -1300,21 +1107,13 @@ async function sendMessage() {
   if (!inputEl) return;
   const text = inputEl.value.trim();
   if (!text) return;
-  inputEl.value = "";
-  enviarTypingStop();
-
+  inputEl.value = ""; enviarTypingStop();
   const { data, error } = await supabaseClient.from("zumm_messages")
     .insert([{ text: text, username: username, room: currentRoom }])
     .select().single();
-
-  if (error) {
-    inputEl.value = text;
-    alert("No se pudo enviar: " + error.message);
-    return;
-  }
+  if (error) { inputEl.value = text; alert("Error: " + error.message); return; }
   renderMessage(data, false);
 }
-
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
@@ -1327,10 +1126,7 @@ supabaseClient
         const m = payload.new;
         if (!m || !m.id || m.room !== currentRoom) return;
         const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
-        if (el) {
-          rendered.delete(m.id); el.remove();
-          renderMessage(m, false);
-        }
+        if (el) { rendered.delete(m.id); el.remove(); renderMessage(m, false); }
         if (m.pinned) cargarMensajeFijado();
       })
   .on("postgres_changes", { event: "DELETE", schema: "public", table: "zumm_messages" },
@@ -1339,59 +1135,237 @@ supabaseClient
 
 // ============ VOTAR ENCUESTA ============
 async function votarEncuesta(msgId, idx) {
-  const { data: msg } = await supabaseClient.from("zumm_messages")
-    .select("file_url").eq("id", msgId).single();
+  const { data: msg } = await supabaseClient.from("zumm_messages").select("file_url").eq("id", msgId).single();
   if (!msg) return;
-  let poll;
-  try { poll = JSON.parse(msg.file_url || "{}"); } catch (e) { return; }
+  let poll; try { poll = JSON.parse(msg.file_url || "{}"); } catch (e) { return; }
   if (!poll.options) return;
-
   const miUser = username.toLowerCase();
   const votes = poll.votes || {};
-  Object.keys(votes).forEach(k => {
-    votes[k] = (votes[k] || []).filter(u => u !== miUser);
-  });
+  Object.keys(votes).forEach(k => { votes[k] = (votes[k] || []).filter(u => u !== miUser); });
   if (!votes[idx]) votes[idx] = [];
   votes[idx].push(miUser);
   poll.votes = votes;
-
-  await supabaseClient.from("zumm_messages")
-    .update({ file_url: JSON.stringify(poll) })
-    .eq("id", msgId);
+  await supabaseClient.from("zumm_messages").update({ file_url: JSON.stringify(poll) }).eq("id", msgId);
 }
 
-// ============ ESCRIBIENDO ============
-let typingTimeout = null;
-let ultimoTypingEnviado = 0;
+// ============ TRES EN RAYA ============
+function crearTableroTresEnRaya(m, game) {
+  const box = document.createElement("div");
+  box.className = "ttt-box";
+  const titulo = document.createElement("div");
+  titulo.className = "ttt-title";
+  titulo.textContent = "🎮 " + game.pX + " (❌) vs " + game.pO + " (⭕)";
+  box.appendChild(titulo);
+  const status = document.createElement("div");
+  status.className = "ttt-status";
+  const soy = (username.toLowerCase() === game.pX.toLowerCase()) ? "X" :
+              (username.toLowerCase() === game.pO.toLowerCase()) ? "O" : null;
+  const soyJugador = soy !== null;
+  if (game.winner) {
+    if (game.winner === "empate") status.textContent = "🤝 ¡Empate!";
+    else {
+      const ganador = game.winner === "X" ? game.pX : game.pO;
+      status.textContent = "🏆 Ganó " + ganador + " (" + game.winner + ")";
+    }
+  } else if (soyJugador) {
+    if (game.turn === soy) {
+      status.textContent = "✋ Es tu turno";
+      status.classList.add("my-turn");
+    } else {
+      status.textContent = "⏳ Esperando a " + (game.turn === "X" ? game.pX : game.pO) + "...";
+    }
+  } else {
+    status.textContent = "👀 Turno de " + (game.turn === "X" ? game.pX : game.pO);
+  }
+  box.appendChild(status);
+  const tablero = document.createElement("div");
+  tablero.className = "ttt-board";
+  const lineasGanadoras = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  const ganadoras = [];
+  if (game.winner && game.winner !== "empate") {
+    lineasGanadoras.forEach(l => {
+      if (game.board[l[0]] === game.winner && game.board[l[1]] === game.winner && game.board[l[2]] === game.winner) {
+        ganadoras.push(...l);
+      }
+    });
+  }
+  game.board.forEach((val, idx) => {
+    const cell = document.createElement("div");
+    cell.className = "ttt-cell";
+    if (val) {
+      cell.classList.add("filled", val.toLowerCase());
+      cell.textContent = val === "X" ? "❌" : "⭕";
+    }
+    if (ganadoras.includes(idx)) cell.classList.add("win");
+    if (!val && !game.winner && soyJugador && game.turn === soy) {
+      cell.addEventListener("click", (e) => {
+        e.stopPropagation();
+        hacerMovimiento(m.id, idx, soy);
+      });
+    } else {
+      cell.style.cursor = "default";
+    }
+    tablero.appendChild(cell);
+  });
+  box.appendChild(tablero);
+  return box;
+}
 
+async function hacerMovimiento(msgId, idx, simbolo) {
+  const { data: msg } = await supabaseClient.from("zumm_messages").select("file_url").eq("id", msgId).single();
+  if (!msg) return;
+  let game; try { game = JSON.parse(msg.file_url || "{}"); } catch (e) { return; }
+  if (!game.board || game.winner) return;
+  if (game.turn !== simbolo) return;
+  if (game.board[idx]) return;
+  game.board[idx] = simbolo;
+  const lineasGanadoras = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  let ganador = null;
+  for (const l of lineasGanadoras) {
+    if (game.board[l[0]] && game.board[l[0]] === game.board[l[1]] && game.board[l[1]] === game.board[l[2]]) {
+      ganador = game.board[l[0]];
+      break;
+    }
+  }
+  if (ganador) game.winner = ganador;
+  else if (game.board.every(c => c)) game.winner = "empate";
+  else game.turn = (game.turn === "X" ? "O" : "X");
+  await supabaseClient.from("zumm_messages").update({ file_url: JSON.stringify(game) }).eq("id", msgId);
+}
+
+if (gamesBtn) gamesBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  gameOpponent.value = "";
+  newGameModal.classList.add("show");
+});
+if (gameCancelBtn) gameCancelBtn.addEventListener("click", () => newGameModal.classList.remove("show"));
+if (gameSaveBtn) gameSaveBtn.addEventListener("click", async () => {
+  const oponente = gameOpponent.value.trim();
+  if (!oponente) { alert("Escribe el nombre del oponente."); return; }
+  if (oponente.toLowerCase() === username.toLowerCase()) { alert("No puedes jugar contra ti."); return; }
+  const gameData = {
+    board: [null,null,null,null,null,null,null,null,null],
+    turn: "X",
+    pX: username,
+    pO: oponente,
+    winner: null
+  };
+  const { data, error } = await supabaseClient.from("zumm_messages")
+    .insert([{ text: "", username: username, room: currentRoom,
+      file_url: JSON.stringify(gameData), file_name: "Tres en raya", file_type: "game/tictactoe" }])
+    .select().single();
+  if (error) { alert("Error: " + error.message); return; }
+  newGameModal.classList.remove("show");
+  renderMessage(data, false);
+});
+
+// ============ REGALOS ============
+let regaloSeleccionado = null;
+if (giftsBtn) giftsBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  giftTo.value = "";
+  regaloSeleccionado = null;
+  document.querySelectorAll(".gift-opt").forEach(b => b.classList.remove("selected"));
+  giftModal.classList.add("show");
+});
+document.querySelectorAll(".gift-opt").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".gift-opt").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    regaloSeleccionado = {
+      type: btn.dataset.gift,
+      emoji: btn.dataset.emoji,
+      label: btn.querySelector("span").textContent
+    };
+  });
+});
+if (giftCancelBtn) giftCancelBtn.addEventListener("click", () => giftModal.classList.remove("show"));
+if (giftSaveBtn) giftSaveBtn.addEventListener("click", async () => {
+  const paraQuien = giftTo.value.trim();
+  if (!paraQuien) { alert("Escribe a quién."); return; }
+  if (paraQuien.toLowerCase() === username.toLowerCase()) { alert("No puedes regalarte a ti mismo."); return; }
+  if (!regaloSeleccionado) { alert("Elige un regalo."); return; }
+  const giftData = {
+    from: username, to: paraQuien,
+    type: regaloSeleccionado.type,
+    emoji: regaloSeleccionado.emoji,
+    label: regaloSeleccionado.label
+  };
+  const { error: regErr } = await supabaseClient.from("zumm_regalos").insert([{
+    owner: paraQuien,
+    gift_type: regaloSeleccionado.type,
+    gift_emoji: regaloSeleccionado.emoji,
+    from_user: username
+  }]);
+  if (regErr) { alert("Error: " + regErr.message); return; }
+  const { data, error } = await supabaseClient.from("zumm_messages")
+    .insert([{ text: "", username: username, room: currentRoom,
+      file_url: JSON.stringify(giftData), file_name: "Regalo",
+      file_type: "gift/" + regaloSeleccionado.type }])
+    .select().single();
+  if (error) { alert("Error: " + error.message); return; }
+  giftModal.classList.remove("show");
+  renderMessage(data, false);
+  reproducirSonidoInsistente();
+});
+
+async function mostrarMisRegalos() {
+  if (!myGiftsModal) return;
+  myGiftsModal.classList.add("show");
+  myGiftsGrid.innerHTML = "";
+  myGiftsEmpty.style.display = "none";
+  const { data } = await supabaseClient.from("zumm_regalos").select("*").eq("owner", username);
+  if (!data || data.length === 0) { myGiftsEmpty.style.display = "block"; return; }
+  const conteo = {};
+  data.forEach(r => {
+    if (!conteo[r.gift_type]) conteo[r.gift_type] = { emoji: r.gift_emoji, count: 0 };
+    conteo[r.gift_type].count++;
+  });
+  Object.values(conteo).forEach(g => {
+    const card = document.createElement("div");
+    card.className = "gift-card";
+    const emoji = document.createElement("div");
+    emoji.className = "gift-card-emoji"; emoji.textContent = g.emoji;
+    const count = document.createElement("div");
+    count.className = "gift-card-count"; count.textContent = "x" + g.count;
+    const label = document.createElement("div");
+    label.className = "gift-card-label"; label.textContent = "recibidos";
+    card.appendChild(emoji); card.appendChild(count); card.appendChild(label);
+    myGiftsGrid.appendChild(card);
+  });
+}
+if (myGiftsCloseBtn) myGiftsCloseBtn.addEventListener("click", () => myGiftsModal.classList.remove("show"));
+
+// ============ ESCRIBIENDO ============
+let typingTimeout = null, ultimoTypingEnviado = 0;
 function enviarTyping() {
   const ahora = Date.now();
   if (ahora - ultimoTypingEnviado < 2000) return;
   ultimoTypingEnviado = ahora;
   supabaseClient.from("zumm_presence").upsert({
-    username: username, room: currentRoom,
-    last_seen: new Date().toISOString(),
-    avatar_url: myAvatarUrl || null,
-    typing_at: new Date().toISOString()
+    username: username, room: currentRoom, last_seen: new Date().toISOString(),
+    avatar_url: myAvatarUrl || null, typing_at: new Date().toISOString()
   }, { onConflict: "username,room" }).then(() => {}).catch(() => {});
 }
 function enviarTypingStop() {
   supabaseClient.from("zumm_presence").upsert({
-    username: username, room: currentRoom,
-    last_seen: new Date().toISOString(),
-    avatar_url: myAvatarUrl || null,
-    typing_at: null
+    username: username, room: currentRoom, last_seen: new Date().toISOString(),
+    avatar_url: myAvatarUrl || null, typing_at: null
   }, { onConflict: "username,room" }).then(() => {}).catch(() => {});
 }
-if (inputEl) {
-  inputEl.addEventListener("input", () => {
-    if (!inputEl.value.trim()) { enviarTypingStop(); clearTimeout(typingTimeout); return; }
-    enviarTyping();
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => { enviarTypingStop(); }, 3500);
-  });
-}
-
+if (inputEl) inputEl.addEventListener("input", () => {
+  if (!inputEl.value.trim()) { enviarTypingStop(); clearTimeout(typingTimeout); return; }
+  enviarTyping(); clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => { enviarTypingStop(); }, 3500);
+});
 function actualizarIndicadorTyping(usuariosTyping) {
   if (!typingIndicator) return;
   if (usuariosTyping.length === 0) { typingIndicator.classList.remove("show"); return; }
@@ -1410,40 +1384,34 @@ async function cargarMensajeFijado() {
     .select("text, username, file_type")
     .eq("room", currentRoom).eq("pinned", true)
     .order("created_at", { ascending: false }).limit(1);
-
   if (!data || data.length === 0) { pinnedBar.classList.remove("show"); return; }
   const m = data[0];
   let preview = (m.username || "?") + ": ";
   if (m.file_type && m.file_type.startsWith("audio/")) preview += "🎤 Nota de voz";
   else if (m.file_type && m.file_type.startsWith("location/")) preview += "📍 Ubicación";
   else if (m.file_type && m.file_type.startsWith("poll/")) preview += "📊 Encuesta";
+  else if (m.file_type && m.file_type.startsWith("game/")) preview += "🎮 Tres en raya";
+  else if (m.file_type && m.file_type.startsWith("gift/")) preview += "🎁 Regalo";
   else if (m.text) preview += m.text;
   else preview += "📎 Archivo";
   if (preview.length > 60) preview = preview.substring(0, 60) + "...";
   pinnedText.textContent = "📌 " + preview;
   pinnedBar.classList.add("show");
 }
-
-if (unpinBtn) {
-  unpinBtn.addEventListener("click", async () => {
-    if (!confirm("¿Quitar el mensaje fijado?")) return;
-    await supabaseClient.from("zumm_messages")
-      .update({ pinned: false })
-      .eq("room", currentRoom).eq("pinned", true);
-    pinnedBar.classList.remove("show");
-  });
-}
+if (unpinBtn) unpinBtn.addEventListener("click", async () => {
+  if (!confirm("¿Quitar fijado?")) return;
+  await supabaseClient.from("zumm_messages").update({ pinned: false })
+    .eq("room", currentRoom).eq("pinned", true);
+  pinnedBar.classList.remove("show");
+});
 
 // ============ EDITAR ============
 let mensajeEditando = null;
-
 function abrirEditorMensaje(m) {
   if (!editModal || !editInput) return;
-  if ((m.username || "").toLowerCase() !== username.toLowerCase()) {
-    alert("Solo puedes editar tus propios mensajes."); return;
-  }
-  if (m.file_type && m.file_type.startsWith("poll/")) {
-    alert("No puedes editar una encuesta."); return;
+  if ((m.username || "").toLowerCase() !== username.toLowerCase()) { alert("Solo los tuyos."); return; }
+  if (m.file_type && (m.file_type.startsWith("poll/") || m.file_type.startsWith("game/") || m.file_type.startsWith("gift/"))) {
+    alert("No puedes editar este tipo."); return;
   }
   mensajeEditando = m;
   editInput.value = m.text || "";
@@ -1453,37 +1421,33 @@ function abrirEditorMensaje(m) {
 if (editCancelBtn) editCancelBtn.addEventListener("click", () => {
   editModal.classList.remove("show"); mensajeEditando = null;
 });
-if (editSaveBtn) {
-  editSaveBtn.addEventListener("click", async () => {
-    if (!mensajeEditando || !editInput) return;
-    const nuevoTexto = editInput.value.trim();
-    if (!nuevoTexto) { alert("El mensaje no puede estar vacío."); return; }
-    if (nuevoTexto === mensajeEditando.text) {
-      editModal.classList.remove("show"); mensajeEditando = null; return;
-    }
-    const { error } = await supabaseClient.from("zumm_messages")
-      .update({ text: nuevoTexto, edited_at: new Date().toISOString() })
-      .eq("id", mensajeEditando.id);
-    if (error) { alert("No se pudo editar: " + error.message); return; }
-    editModal.classList.remove("show"); mensajeEditando = null;
-  });
-}
+if (editSaveBtn) editSaveBtn.addEventListener("click", async () => {
+  if (!mensajeEditando || !editInput) return;
+  const nuevoTexto = editInput.value.trim();
+  if (!nuevoTexto) { alert("Vacío."); return; }
+  if (nuevoTexto === mensajeEditando.text) {
+    editModal.classList.remove("show"); mensajeEditando = null; return;
+  }
+  const { error } = await supabaseClient.from("zumm_messages")
+    .update({ text: nuevoTexto, edited_at: new Date().toISOString() })
+    .eq("id", mensajeEditando.id);
+  if (error) { alert("Error: " + error.message); return; }
+  editModal.classList.remove("show"); mensajeEditando = null;
+});
 
 // ============ MENÚ MENSAJE ============
 let mensajeMenuActual = null;
-
 function mostrarMenuMensaje(m, x, y) {
   if (!msgMenu) return;
   mensajeMenuActual = m;
   const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
-  const esPoll = m.file_type && m.file_type.startsWith("poll/");
-  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esPoll ? "block" : "none";
+  const esEspecial = m.file_type && (m.file_type.startsWith("poll/") || m.file_type.startsWith("game/") || m.file_type.startsWith("gift/"));
+  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esEspecial ? "block" : "none";
   if (menuDeleteBtn) menuDeleteBtn.style.display = esMio ? "block" : "none";
   if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
   if (menuFavBtn) menuFavBtn.textContent = favoritosIds.has(m.id) ? "⭐ Quitar fav" : "⭐ Favorito";
-
   msgMenu.classList.add("show");
-  const ancho = 180; const alto = 260;
+  const ancho = 180, alto = 260;
   const xFinal = Math.min(x, window.innerWidth - ancho - 10);
   const yFinal = Math.min(y, window.innerHeight - alto - 10);
   msgMenu.style.left = Math.max(10, xFinal) + "px";
@@ -1495,220 +1459,165 @@ function cerrarMenu() {
 }
 document.addEventListener("touchstart", (e) => {
   if (msgMenu && msgMenu.classList.contains("show") && !msgMenu.contains(e.target)) cerrarMenu();
-  if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) {
-    reactionPicker.classList.remove("show");
-  }
+  if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) reactionPicker.classList.remove("show");
 });
-
-if (menuPinBtn) {
-  menuPinBtn.addEventListener("click", async () => {
-    if (!mensajeMenuActual) return;
-    const m = mensajeMenuActual;
-    const nuevo = !m.pinned;
-    cerrarMenu();
-    if (nuevo) {
-      await supabaseClient.from("zumm_messages").update({ pinned: false })
-        .eq("room", currentRoom).eq("pinned", true);
-    }
-    await supabaseClient.from("zumm_messages").update({ pinned: nuevo }).eq("id", m.id);
-    cargarMensajeFijado();
-  });
-}
-if (menuCopyBtn) {
-  menuCopyBtn.addEventListener("click", async () => {
-    if (!mensajeMenuActual) return;
-    try { await navigator.clipboard.writeText(mensajeMenuActual.text || ""); alert("📋 Copiado"); }
-    catch (e) { alert("No se pudo copiar."); }
-    cerrarMenu();
-  });
-}
-if (menuEditBtn) {
-  menuEditBtn.addEventListener("click", () => {
-    if (!mensajeMenuActual) return;
-    const m = mensajeMenuActual;
-    cerrarMenu();
-    setTimeout(() => abrirEditorMensaje(m), 150);
-  });
-}
-if (menuDeleteBtn) {
-  menuDeleteBtn.addEventListener("click", async () => {
-    if (!mensajeMenuActual) return;
-    const m = mensajeMenuActual;
-    cerrarMenu();
-    if (!confirm("¿Borrar este mensaje?")) return;
-    const { error } = await supabaseClient.from("zumm_messages").delete().eq("id", m.id);
-    if (error) { alert("No se pudo borrar: " + error.message); return; }
-    removeMessageFromDOM(m.id);
-  });
-}
+if (menuPinBtn) menuPinBtn.addEventListener("click", async () => {
+  if (!mensajeMenuActual) return;
+  const m = mensajeMenuActual; const nuevo = !m.pinned;
+  cerrarMenu();
+  if (nuevo) await supabaseClient.from("zumm_messages").update({ pinned: false }).eq("room", currentRoom).eq("pinned", true);
+  await supabaseClient.from("zumm_messages").update({ pinned: nuevo }).eq("id", m.id);
+  cargarMensajeFijado();
+});
+if (menuCopyBtn) menuCopyBtn.addEventListener("click", async () => {
+  if (!mensajeMenuActual) return;
+  try { await navigator.clipboard.writeText(mensajeMenuActual.text || ""); alert("📋 Copiado"); }
+  catch (e) { alert("No se pudo copiar."); }
+  cerrarMenu();
+});
+if (menuEditBtn) menuEditBtn.addEventListener("click", () => {
+  if (!mensajeMenuActual) return;
+  const m = mensajeMenuActual; cerrarMenu();
+  setTimeout(() => abrirEditorMensaje(m), 150);
+});
+if (menuDeleteBtn) menuDeleteBtn.addEventListener("click", async () => {
+  if (!mensajeMenuActual) return;
+  const m = mensajeMenuActual; cerrarMenu();
+  if (!confirm("¿Borrar?")) return;
+  const { error } = await supabaseClient.from("zumm_messages").delete().eq("id", m.id);
+  if (error) { alert("Error: " + error.message); return; }
+  removeMessageFromDOM(m.id);
+});
 
 // ============ FAVORITOS ============
 async function cargarFavoritos() {
   try {
-    const { data } = await supabaseClient.from("zumm_favoritos")
-      .select("mensaje_id").eq("username", username);
+    const { data } = await supabaseClient.from("zumm_favoritos").select("mensaje_id").eq("username", username);
     favoritosIds = new Set((data || []).map(f => f.mensaje_id));
   } catch (e) {}
 }
-if (menuFavBtn) {
-  menuFavBtn.addEventListener("click", async () => {
-    if (!mensajeMenuActual) return;
-    const m = mensajeMenuActual;
-    cerrarMenu();
-    if (favoritosIds.has(m.id)) {
-      await supabaseClient.from("zumm_favoritos").delete()
-        .eq("username", username).eq("mensaje_id", m.id);
-      favoritosIds.delete(m.id);
-      alert("⭐ Quitado");
-    } else {
-      let preview = m.text || "📎 Archivo";
-      if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
-      if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
-      if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
-      if (preview.length > 60) preview = preview.substring(0, 60) + "...";
-      await supabaseClient.from("zumm_favoritos").insert([{
-        username: username, mensaje_id: m.id, room: currentRoom,
-        preview: (m.username || "?") + ": " + preview
-      }]);
-      favoritosIds.add(m.id);
-      alert("⭐ Guardado");
-    }
-    const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
-    if (el) el.classList.toggle("favorite", favoritosIds.has(m.id));
-  });
-}
-if (favBtn) {
-  favBtn.addEventListener("click", async () => {
-    cerrarPaneles();
-    if (!favModal) return;
-    favModal.classList.add("show");
-    favList.innerHTML = "";
-    favEmpty.style.display = "none";
-    const { data } = await supabaseClient.from("zumm_favoritos")
-      .select("*").eq("username", username).order("created_at", { ascending: false });
-    if (!data || data.length === 0) { favEmpty.style.display = "block"; return; }
-    data.forEach(f => {
-      const li = document.createElement("li");
-      const meta = document.createElement("div");
-      meta.className = "list-meta";
-      meta.textContent = new Date(f.created_at).toLocaleDateString() + " · " + (f.room || "general");
-      li.appendChild(meta);
-      const texto = document.createElement("div");
-      texto.textContent = f.preview || "(sin texto)";
-      li.appendChild(texto);
-      const del = document.createElement("button");
-      del.className = "list-del";
-      del.textContent = "✕";
-      del.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!confirm("¿Quitar?")) return;
-        await supabaseClient.from("zumm_favoritos").delete()
-          .eq("username", username).eq("mensaje_id", f.mensaje_id);
-        favoritosIds.delete(f.mensaje_id);
-        li.remove();
-        if (favList.children.length === 0) favEmpty.style.display = "block";
-      });
-      li.appendChild(del);
-      li.addEventListener("click", (e) => {
-        if (e.target === del) return;
-        favModal.classList.remove("show");
-        if (f.room === currentRoom) {
-          const el = messagesEl.querySelector('[data-msg-id="' + f.mensaje_id + '"]');
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            el.classList.add("highlight");
-            setTimeout(() => el.classList.remove("highlight"), 2000);
-          }
-        } else if (f.room) {
-          if (confirm("¿Ir a la sala '" + f.room + "'?")) {
-            switchRoom(f.room);
-            setTimeout(() => {
-              const el = messagesEl.querySelector('[data-msg-id="' + f.mensaje_id + '"]');
-              if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
-                el.classList.add("highlight");
-                setTimeout(() => el.classList.remove("highlight"), 2000);
-              }
-            }, 600);
-          }
-        }
-      });
-      favList.appendChild(li);
+if (menuFavBtn) menuFavBtn.addEventListener("click", async () => {
+  if (!mensajeMenuActual) return;
+  const m = mensajeMenuActual; cerrarMenu();
+  if (favoritosIds.has(m.id)) {
+    await supabaseClient.from("zumm_favoritos").delete().eq("username", username).eq("mensaje_id", m.id);
+    favoritosIds.delete(m.id); alert("⭐ Quitado");
+  } else {
+    let preview = m.text || "📎";
+    if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
+    if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
+    if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+    if (m.file_type && m.file_type.startsWith("game/")) preview = "🎮 Tres en raya";
+    if (m.file_type && m.file_type.startsWith("gift/")) preview = "🎁 Regalo";
+    if (preview.length > 60) preview = preview.substring(0, 60) + "...";
+    await supabaseClient.from("zumm_favoritos").insert([{
+      username: username, mensaje_id: m.id, room: currentRoom,
+      preview: (m.username || "?") + ": " + preview
+    }]);
+    favoritosIds.add(m.id); alert("⭐ Guardado");
+  }
+  const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
+  if (el) el.classList.toggle("favorite", favoritosIds.has(m.id));
+});
+if (favBtn) favBtn.addEventListener("click", async () => {
+  cerrarPaneles();
+  if (!favModal) return;
+  favModal.classList.add("show");
+  favList.innerHTML = ""; favEmpty.style.display = "none";
+  const { data } = await supabaseClient.from("zumm_favoritos").select("*")
+    .eq("username", username).order("created_at", { ascending: false });
+  if (!data || data.length === 0) { favEmpty.style.display = "block"; return; }
+  data.forEach(f => {
+    const li = document.createElement("li");
+    const meta = document.createElement("div");
+    meta.className = "list-meta";
+    meta.textContent = new Date(f.created_at).toLocaleDateString() + " · " + (f.room || "general");
+    li.appendChild(meta);
+    const texto = document.createElement("div");
+    texto.textContent = f.preview || "(sin texto)";
+    li.appendChild(texto);
+    const del = document.createElement("button");
+    del.className = "list-del"; del.textContent = "✕";
+    del.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("¿Quitar?")) return;
+      await supabaseClient.from("zumm_favoritos").delete().eq("username", username).eq("mensaje_id", f.mensaje_id);
+      favoritosIds.delete(f.mensaje_id); li.remove();
+      if (favList.children.length === 0) favEmpty.style.display = "block";
     });
+    li.appendChild(del);
+    li.addEventListener("click", (e) => {
+      if (e.target === del) return;
+      favModal.classList.remove("show");
+      if (f.room === currentRoom) {
+        const el = messagesEl.querySelector('[data-msg-id="' + f.mensaje_id + '"]');
+        if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("highlight"); setTimeout(() => el.classList.remove("highlight"), 2000); }
+      } else if (f.room) {
+        if (confirm("¿Ir a '" + f.room + "'?")) {
+          switchRoom(f.room);
+          setTimeout(() => {
+            const el = messagesEl.querySelector('[data-msg-id="' + f.mensaje_id + '"]');
+            if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("highlight"); setTimeout(() => el.classList.remove("highlight"), 2000); }
+          }, 600);
+        }
+      }
+    });
+    favList.appendChild(li);
   });
-}
+});
 if (favCloseBtn) favCloseBtn.addEventListener("click", () => favModal.classList.remove("show"));
 
 // ============ DESTACADOS ============
-if (highlightBtn) {
-  highlightBtn.addEventListener("click", async () => {
-    cerrarPaneles();
-    if (!highlightModal) return;
-    highlightModal.classList.add("show");
-    highlightList.innerHTML = "";
-    highlightEmpty.style.display = "none";
-    const { data } = await supabaseClient.from("zumm_messages")
-      .select("*").eq("room", currentRoom)
-      .not("reactions", "is", null)
-      .order("created_at", { ascending: false }).limit(100);
-
-    const conReacciones = (data || [])
-      .map(m => ({ ...m, numReacc: (m.reactions || "").split(",").filter(x => x.trim()).length }))
-      .filter(m => m.numReacc >= 2)
-      .sort((a, b) => b.numReacc - a.numReacc)
-      .slice(0, 20);
-
-    if (conReacciones.length === 0) {
-      highlightEmpty.textContent = "Aún no hay mensajes destacados (necesitan 2+ reacciones).";
-      highlightEmpty.style.display = "block"; return;
-    }
-    conReacciones.forEach(m => {
-      const li = document.createElement("li");
-      const meta = document.createElement("div");
-      meta.className = "list-meta";
-      meta.textContent = (m.username || "?") + " · " + formatTime(m.created_at) + " · " + m.numReacc + " 🔥";
-      li.appendChild(meta);
-      const texto = document.createElement("div");
-      let preview = m.text || "📎 Archivo";
-      if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
-      if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
-      if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
-      if (preview.length > 100) preview = preview.substring(0, 100) + "...";
-      texto.textContent = preview;
-      li.appendChild(texto);
-      li.addEventListener("click", () => {
-        highlightModal.classList.remove("show");
-        const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          el.classList.add("highlight");
-          setTimeout(() => el.classList.remove("highlight"), 2000);
-        }
-      });
-      highlightList.appendChild(li);
+if (highlightBtn) highlightBtn.addEventListener("click", async () => {
+  cerrarPaneles();
+  if (!highlightModal) return;
+  highlightModal.classList.add("show");
+  highlightList.innerHTML = ""; highlightEmpty.style.display = "none";
+  const { data } = await supabaseClient.from("zumm_messages").select("*")
+    .eq("room", currentRoom).not("reactions", "is", null)
+    .order("created_at", { ascending: false }).limit(100);
+  const conReacciones = (data || [])
+    .map(m => ({ ...m, numReacc: (m.reactions || "").split(",").filter(x => x.trim()).length }))
+    .filter(m => m.numReacc >= 2).sort((a, b) => b.numReacc - a.numReacc).slice(0, 20);
+  if (conReacciones.length === 0) {
+    highlightEmpty.textContent = "Aún no hay mensajes destacados.";
+    highlightEmpty.style.display = "block"; return;
+  }
+  conReacciones.forEach(m => {
+    const li = document.createElement("li");
+    const meta = document.createElement("div");
+    meta.className = "list-meta";
+    meta.textContent = (m.username || "?") + " · " + formatTime(m.created_at) + " · " + m.numReacc + " 🔥";
+    li.appendChild(meta);
+    const texto = document.createElement("div");
+    let preview = m.text || "📎";
+    if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
+    if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+    if (m.file_type && m.file_type.startsWith("game/")) preview = "🎮 Tres en raya";
+    if (m.file_type && m.file_type.startsWith("gift/")) preview = "🎁 Regalo";
+    if (preview.length > 100) preview = preview.substring(0, 100) + "...";
+    texto.textContent = preview;
+    li.appendChild(texto);
+    li.addEventListener("click", () => {
+      highlightModal.classList.remove("show");
+      const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("highlight"); setTimeout(() => el.classList.remove("highlight"), 2000); }
     });
+    highlightList.appendChild(li);
   });
-}
+});
 if (highlightCloseBtn) highlightCloseBtn.addEventListener("click", () => highlightModal.classList.remove("show"));
 
 // ============ RECORDATORIOS ============
 function formatearFechaRecordatorio(iso) {
   const d = new Date(iso);
-  const dia = String(d.getDate()).padStart(2, "0");
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-  const anio = d.getFullYear();
-  const h = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return dia + "/" + mes + "/" + anio + " " + h + ":" + min;
+  return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
-
 async function cargarRecordatorios() {
   if (!remindersList) return;
-  remindersList.innerHTML = "";
-  remindersEmpty.style.display = "none";
-  const { data } = await supabaseClient.from("zumm_recordatorios")
-    .select("*").eq("owner", username).order("fecha", { ascending: true });
-
+  remindersList.innerHTML = ""; remindersEmpty.style.display = "none";
+  const { data } = await supabaseClient.from("zumm_recordatorios").select("*")
+    .eq("owner", username).order("fecha", { ascending: true });
   if (!data || data.length === 0) { remindersEmpty.style.display = "block"; return; }
   const ahora = Date.now();
   data.forEach(r => {
@@ -1723,8 +1632,7 @@ async function cargarRecordatorios() {
     texto.textContent = r.texto;
     li.appendChild(texto);
     const del = document.createElement("button");
-    del.className = "list-del";
-    del.textContent = "✕";
+    del.className = "list-del"; del.textContent = "✕";
     del.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!confirm("¿Eliminar?")) return;
@@ -1736,39 +1644,30 @@ async function cargarRecordatorios() {
     remindersList.appendChild(li);
   });
 }
-
-if (remindersBtn) {
-  remindersBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    if (!remindersModal) return;
-    remindersModal.classList.add("show");
-    cargarRecordatorios();
-  });
-}
+if (remindersBtn) remindersBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (!remindersModal) return;
+  remindersModal.classList.add("show");
+  cargarRecordatorios();
+});
 if (remindersCloseBtn) remindersCloseBtn.addEventListener("click", () => remindersModal.classList.remove("show"));
-if (newReminderBtn) {
-  newReminderBtn.addEventListener("click", () => {
-    reminderText.value = ""; reminderDate.value = "";
-    newReminderModal.classList.add("show");
-  });
-}
+if (newReminderBtn) newReminderBtn.addEventListener("click", () => {
+  reminderText.value = ""; reminderDate.value = "";
+  newReminderModal.classList.add("show");
+});
 if (reminderCancelBtn) reminderCancelBtn.addEventListener("click", () => newReminderModal.classList.remove("show"));
-if (reminderSaveBtn) {
-  reminderSaveBtn.addEventListener("click", async () => {
-    const texto = reminderText.value.trim();
-    const fecha = reminderDate.value;
-    if (!texto) { alert("Escribe el texto."); return; }
-    if (!fecha) { alert("Elige fecha y hora."); return; }
-    const fechaISO = new Date(fecha).toISOString();
-    if (new Date(fechaISO).getTime() < Date.now()) { alert("Fecha debe ser futura."); return; }
-    const { error } = await supabaseClient.from("zumm_recordatorios")
-      .insert([{ owner: username, room: currentRoom, texto: texto, fecha: fechaISO }]);
-    if (error) { alert("Error: " + error.message); return; }
-    newReminderModal.classList.remove("show");
-    cargarRecordatorios();
-  });
-}
-
+if (reminderSaveBtn) reminderSaveBtn.addEventListener("click", async () => {
+  const texto = reminderText.value.trim(); const fecha = reminderDate.value;
+  if (!texto) { alert("Escribe el texto."); return; }
+  if (!fecha) { alert("Elige fecha."); return; }
+  const fechaISO = new Date(fecha).toISOString();
+  if (new Date(fechaISO).getTime() < Date.now()) { alert("Fecha futura."); return; }
+  const { error } = await supabaseClient.from("zumm_recordatorios")
+    .insert([{ owner: username, room: currentRoom, texto: texto, fecha: fechaISO }]);
+  if (error) { alert("Error: " + error.message); return; }
+  newReminderModal.classList.remove("show");
+  cargarRecordatorios();
+});
 setInterval(async () => {
   try {
     const ahora = new Date().toISOString();
@@ -1785,35 +1684,25 @@ setInterval(async () => {
 }, 30000);
 
 // ============ ENCUESTA ============
-if (pollBtn) {
-  pollBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    pollQuestion.value = ""; pollOpt1.value = ""; pollOpt2.value = ""; pollOpt3.value = "";
-    pollModal.classList.add("show");
-  });
-}
+if (pollBtn) pollBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  pollQuestion.value = ""; pollOpt1.value = ""; pollOpt2.value = ""; pollOpt3.value = "";
+  pollModal.classList.add("show");
+});
 if (pollCancelBtn) pollCancelBtn.addEventListener("click", () => pollModal.classList.remove("show"));
-if (pollSaveBtn) {
-  pollSaveBtn.addEventListener("click", async () => {
-    const q = pollQuestion.value.trim();
-    const o1 = pollOpt1.value.trim();
-    const o2 = pollOpt2.value.trim();
-    const o3 = pollOpt3.value.trim();
-    if (!q || !o1 || !o2) { alert("Pregunta y 2 opciones mínimo."); return; }
-    const opciones = [o1, o2];
-    if (o3) opciones.push(o3);
-    const pollData = { question: q, options: opciones, votes: {} };
-    const { data, error } = await supabaseClient.from("zumm_messages")
-      .insert([{
-        text: "", username: username, room: currentRoom,
-        file_url: JSON.stringify(pollData), file_name: "Encuesta", file_type: "poll/1"
-      }])
-      .select().single();
-    if (error) { alert("Error: " + error.message); return; }
-    pollModal.classList.remove("show");
-    renderMessage(data, false);
-  });
-}
+if (pollSaveBtn) pollSaveBtn.addEventListener("click", async () => {
+  const q = pollQuestion.value.trim(); const o1 = pollOpt1.value.trim();
+  const o2 = pollOpt2.value.trim(); const o3 = pollOpt3.value.trim();
+  if (!q || !o1 || !o2) { alert("Pregunta y 2 opciones mínimo."); return; }
+  const opciones = [o1, o2]; if (o3) opciones.push(o3);
+  const pollData = { question: q, options: opciones, votes: {} };
+  const { data, error } = await supabaseClient.from("zumm_messages")
+    .insert([{ text: "", username: username, room: currentRoom,
+      file_url: JSON.stringify(pollData), file_name: "Encuesta", file_type: "poll/1" }])
+    .select().single();
+  if (error) { alert("Error: " + error.message); return; }
+  pollModal.classList.remove("show"); renderMessage(data, false);
+});
 
 // ============ BLOQUEADOS ============
 async function bloquearUsuario(nombre) {
@@ -1821,178 +1710,117 @@ async function bloquearUsuario(nombre) {
   if (nombre.toLowerCase() === username.toLowerCase()) { alert("No puedes bloquearte."); return; }
   await supabaseClient.from("zumm_bloqueados").insert([{ owner: username, bloqueado: nombre }]);
   bloqueados.add(nombre.toLowerCase());
-  rendered.clear();
-  if (messagesEl) messagesEl.innerHTML = "";
-  loadHistory();
-  alert("🚫 " + nombre + " bloqueado.");
+  rendered.clear(); if (messagesEl) messagesEl.innerHTML = "";
+  loadHistory(); alert("🚫 " + nombre + " bloqueado.");
 }
 async function desbloquearUsuario(nombre) {
-  await supabaseClient.from("zumm_bloqueados")
-    .delete().eq("owner", username).eq("bloqueado", nombre);
+  await supabaseClient.from("zumm_bloqueados").delete().eq("owner", username).eq("bloqueado", nombre);
   bloqueados.delete(nombre.toLowerCase());
-  rendered.clear();
-  if (messagesEl) messagesEl.innerHTML = "";
-  loadHistory();
-  alert("✅ " + nombre + " desbloqueado.");
+  rendered.clear(); if (messagesEl) messagesEl.innerHTML = "";
+  loadHistory(); alert("✅ " + nombre + " desbloqueado.");
 }
-
-if (profileBlockBtn) {
-  profileBlockBtn.addEventListener("click", async () => {
-    if (!perfilActual) return;
-    if (!confirm("¿Bloquear a " + perfilActual + "?")) return;
-    await bloquearUsuario(perfilActual);
-    profileModal.classList.remove("show");
-  });
-}
-if (profileUnblockBtn) {
-  profileUnblockBtn.addEventListener("click", async () => {
-    if (!perfilActual) return;
-    if (!confirm("¿Desbloquear a " + perfilActual + "?")) return;
-    await desbloquearUsuario(perfilActual);
-    profileModal.classList.remove("show");
-  });
-}
-
-if (blockedBtn) {
-  blockedBtn.addEventListener("click", async () => {
-    cerrarPaneles();
-    if (!blockedModal) return;
-    blockedModal.classList.add("show");
-    blockedList.innerHTML = "";
-    blockedEmpty.style.display = "none";
-    const { data } = await supabaseClient.from("zumm_bloqueados")
-      .select("bloqueado").eq("owner", username);
-    if (!data || data.length === 0) { blockedEmpty.style.display = "block"; return; }
-    data.forEach(b => {
-      const li = document.createElement("li");
-      const texto = document.createElement("div");
-      texto.textContent = b.bloqueado;
-      li.appendChild(texto);
-      const del = document.createElement("button");
-      del.className = "list-del";
-      del.textContent = "✕";
-      del.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await desbloquearUsuario(b.bloqueado);
-        li.remove();
-        if (blockedList.children.length === 0) blockedEmpty.style.display = "block";
-      });
-      li.appendChild(del);
-      blockedList.appendChild(li);
+if (profileBlockBtn) profileBlockBtn.addEventListener("click", async () => {
+  if (!perfilActual) return;
+  if (!confirm("¿Bloquear a " + perfilActual + "?")) return;
+  await bloquearUsuario(perfilActual);
+  profileModal.classList.remove("show");
+});
+if (profileUnblockBtn) profileUnblockBtn.addEventListener("click", async () => {
+  if (!perfilActual) return;
+  if (!confirm("¿Desbloquear?")) return;
+  await desbloquearUsuario(perfilActual);
+  profileModal.classList.remove("show");
+});
+if (blockedBtn) blockedBtn.addEventListener("click", async () => {
+  cerrarPaneles();
+  if (!blockedModal) return;
+  blockedModal.classList.add("show");
+  blockedList.innerHTML = ""; blockedEmpty.style.display = "none";
+  const { data } = await supabaseClient.from("zumm_bloqueados").select("bloqueado").eq("owner", username);
+  if (!data || data.length === 0) { blockedEmpty.style.display = "block"; return; }
+  data.forEach(b => {
+    const li = document.createElement("li");
+    const texto = document.createElement("div"); texto.textContent = b.bloqueado; li.appendChild(texto);
+    const del = document.createElement("button"); del.className = "list-del"; del.textContent = "✕";
+    del.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await desbloquearUsuario(b.bloqueado);
+      li.remove();
+      if (blockedList.children.length === 0) blockedEmpty.style.display = "block";
     });
+    li.appendChild(del); blockedList.appendChild(li);
   });
-}
+});
 if (blockedCloseBtn) blockedCloseBtn.addEventListener("click", () => blockedModal.classList.remove("show"));
 
 // ============ CONTACTOS ============
-function estaEnContactos(nombre) {
-  return misContactos.some(c => c.toLowerCase() === (nombre || "").toLowerCase());
-}
-
 async function mostrarContactos() {
   if (!contactsList) return;
-  contactsList.innerHTML = "";
-  contactsEmpty.style.display = "none";
+  contactsList.innerHTML = ""; contactsEmpty.style.display = "none";
   await cargarContactos();
-
-  if (misContactos.length === 0) {
-    contactsEmpty.style.display = "block";
-    return;
-  }
-
+  if (misContactos.length === 0) { contactsEmpty.style.display = "block"; return; }
   misContactos.forEach(c => {
     const li = document.createElement("li");
-
     const meta = document.createElement("div");
     meta.className = "list-meta";
     const estaOnline = usersOnline.some(u => u.toLowerCase() === c.toLowerCase());
     meta.innerHTML = '<span class="' + (estaOnline ? "contact-online" : "contact-offline") + '">● ' + (estaOnline ? "En línea" : "Desconectado") + '</span>';
     li.appendChild(meta);
-
     const nombreDiv = document.createElement("div");
-    nombreDiv.style.fontWeight = "bold";
-    nombreDiv.style.fontSize = "15px";
+    nombreDiv.style.fontWeight = "bold"; nombreDiv.style.fontSize = "15px";
     nombreDiv.textContent = c;
     li.appendChild(nombreDiv);
-
     const actions = document.createElement("div");
     actions.className = "contact-actions";
-
     const btnChat = document.createElement("button");
     btnChat.textContent = "💬 Chat";
-    btnChat.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openPrivateWith(c);
-      contactsModal.classList.remove("show");
-    });
+    btnChat.addEventListener("click", (e) => { e.stopPropagation(); openPrivateWith(c); contactsModal.classList.remove("show"); });
     actions.appendChild(btnChat);
-
     if (estaOnline) {
       const btnLlamar = document.createElement("button");
       btnLlamar.textContent = "📞 Llamar";
-      btnLlamar.addEventListener("click", (e) => {
-        e.stopPropagation();
-        contactsModal.classList.remove("show");
-        startCall(c, false);
-      });
+      btnLlamar.addEventListener("click", (e) => { e.stopPropagation(); contactsModal.classList.remove("show"); startCall(c, false); });
       actions.appendChild(btnLlamar);
     }
-
     const btnDel = document.createElement("button");
     btnDel.textContent = "🗑️";
-    btnDel.style.flex = "0 0 auto";
-    btnDel.style.padding = "6px 10px";
-    btnDel.style.color = "#ff5252";
-    btnDel.style.borderColor = "#ff5252";
+    btnDel.style.flex = "0 0 auto"; btnDel.style.padding = "6px 10px";
+    btnDel.style.color = "#ff5252"; btnDel.style.borderColor = "#ff5252";
     btnDel.addEventListener("click", async (e) => {
       e.stopPropagation();
-      if (!confirm("¿Quitar a " + c + " de contactos?")) return;
+      if (!confirm("¿Quitar?")) return;
       await eliminarContacto(c);
       li.remove();
       if (contactsList.children.length === 0) contactsEmpty.style.display = "block";
     });
     actions.appendChild(btnDel);
-
     li.appendChild(actions);
     contactsList.appendChild(li);
   });
 }
-
-if (contactsBtn) {
-  contactsBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    if (!contactsModal) return;
-    contactsModal.classList.add("show");
-    mostrarContactos();
-  });
-}
+if (contactsBtn) contactsBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (!contactsModal) return;
+  contactsModal.classList.add("show");
+  mostrarContactos();
+});
 if (contactsCloseBtn) contactsCloseBtn.addEventListener("click", () => contactsModal.classList.remove("show"));
-
-if (newContactBtn) {
-  newContactBtn.addEventListener("click", async () => {
-    const nombre = prompt("Nombre del contacto:");
-    if (!nombre || !nombre.trim()) return;
-    await añadirContacto(nombre);
-    mostrarContactos();
-  });
-}
-
-if (profileAddContactBtn) {
-  profileAddContactBtn.addEventListener("click", async () => {
-    if (!perfilActual) return;
-    if (estaEnContactos(perfilActual)) {
-      alert("Ya está en tus contactos.");
-      return;
-    }
-    await añadirContacto(perfilActual);
-    abrirPerfil(perfilActual, false);
-  });
-}
+if (newContactBtn) newContactBtn.addEventListener("click", async () => {
+  const nombre = prompt("Nombre del contacto:");
+  if (!nombre || !nombre.trim()) return;
+  await añadirContacto(nombre);
+  mostrarContactos();
+});
+if (profileAddContactBtn) profileAddContactBtn.addEventListener("click", async () => {
+  if (!perfilActual) return;
+  if (estaEnContactos(perfilActual)) { alert("Ya está."); return; }
+  await añadirContacto(perfilActual);
+  abrirPerfil(perfilActual, false);
+});
 
 // ============ REACCIONES ============
 async function toggleReaccion(msgId, emoji) {
-  const { data: msg } = await supabaseClient.from("zumm_messages")
-    .select("reactions").eq("id", msgId).single();
+  const { data: msg } = await supabaseClient.from("zumm_messages").select("reactions").eq("id", msgId).single();
   if (!msg) return;
   const actuales = (msg.reactions || "").split(",").filter(x => x.trim());
   const miTag = emoji + ":" + username;
@@ -2002,43 +1830,36 @@ async function toggleReaccion(msgId, emoji) {
     nuevas = actuales.filter(x => !x.endsWith(":" + username));
     nuevas.push(miTag);
   }
-  await supabaseClient.from("zumm_messages")
-    .update({ reactions: nuevas.join(",") }).eq("id", msgId);
+  await supabaseClient.from("zumm_messages").update({ reactions: nuevas.join(",") }).eq("id", msgId);
 }
 
 // ============ BÚSQUEDA ============
-if (searchBtn) {
-  searchBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    if (!searchBar) return;
-    searchBar.classList.add("show");
-    if (searchInput) setTimeout(() => searchInput.focus(), 100);
-  });
-}
-if (searchClose) {
-  searchClose.addEventListener("click", () => {
-    if (searchBar) searchBar.classList.remove("show");
-    limpiarBusqueda();
-  });
-}
+if (searchBtn) searchBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (!searchBar) return;
+  searchBar.classList.add("show");
+  if (searchInput) setTimeout(() => searchInput.focus(), 100);
+});
+if (searchClose) searchClose.addEventListener("click", () => {
+  if (searchBar) searchBar.classList.remove("show");
+  limpiarBusqueda();
+});
 function limpiarBusqueda() {
   if (searchInput) searchInput.value = "";
   document.querySelectorAll(".msg.highlight").forEach(el => el.classList.remove("highlight"));
   document.querySelectorAll(".msg").forEach(el => { el.style.display = "flex"; });
 }
-if (searchInput) {
-  searchInput.addEventListener("input", () => {
-    const q = searchInput.value.toLowerCase().trim();
-    const mensajes = document.querySelectorAll(".msg");
-    if (!q) { mensajes.forEach(el => { el.style.display = "flex"; el.classList.remove("highlight"); }); return; }
-    mensajes.forEach(el => {
-      const texto = (el.textContent || "").toLowerCase();
-      const coincide = texto.includes(q);
-      el.style.display = coincide ? "flex" : "none";
-      el.classList.toggle("highlight", coincide);
-    });
+if (searchInput) searchInput.addEventListener("input", () => {
+  const q = searchInput.value.toLowerCase().trim();
+  const mensajes = document.querySelectorAll(".msg");
+  if (!q) { mensajes.forEach(el => { el.style.display = "flex"; el.classList.remove("highlight"); }); return; }
+  mensajes.forEach(el => {
+    const texto = (el.textContent || "").toLowerCase();
+    const coincide = texto.includes(q);
+    el.style.display = coincide ? "flex" : "none";
+    el.classList.toggle("highlight", coincide);
   });
-}
+});
 
 // ============ SCROLL BTN ============
 function actualizarBotonAbajo() {
@@ -2047,12 +1868,10 @@ function actualizarBotonAbajo() {
   scrollDownBtn.classList.toggle("show", distanciaAbajo > 150);
 }
 if (messagesEl) messagesEl.addEventListener("scroll", actualizarBotonAbajo);
-if (scrollDownBtn) {
-  scrollDownBtn.addEventListener("click", () => {
-    if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
-    scrollDownBtn.classList.remove("show");
-  });
-}
+if (scrollDownBtn) scrollDownBtn.addEventListener("click", () => {
+  if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+  scrollDownBtn.classList.remove("show");
+});
 
 // ============ MODAL IMG ============
 function openImageModal(url) {
@@ -2062,8 +1881,7 @@ function openImageModal(url) {
     modal.id = "imgModal";
     const img = document.createElement("img");
     const close = document.createElement("button");
-    close.className = "close-modal";
-    close.textContent = "✕";
+    close.className = "close-modal"; close.textContent = "✕";
     close.addEventListener("click", () => modal.classList.remove("show"));
     modal.appendChild(img); modal.appendChild(close);
     modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
@@ -2075,19 +1893,15 @@ function openImageModal(url) {
 
 // ============ PRESENCIA ============
 let usersOnline = [];
-let presenceInterval = null;
-let presenceRefreshInterval = null;
+let presenceInterval = null, presenceRefreshInterval = null;
 let avataresPorUsuario = {};
-
 async function registrarPresencia() {
-  await supabaseClient.from("zumm_presence")
-    .upsert({
-      username: username, room: currentRoom,
-      last_seen: new Date().toISOString(),
-      avatar_url: myAvatarUrl || null
-    }, { onConflict: "username,room" }).catch(() => {});
+  await supabaseClient.from("zumm_presence").upsert({
+    username: username, room: currentRoom,
+    last_seen: new Date().toISOString(),
+    avatar_url: myAvatarUrl || null
+  }, { onConflict: "username,room" }).catch(() => {});
 }
-
 async function leerPresencia() {
   try {
     const hace30s = new Date(Date.now() - 30000).toISOString();
@@ -2095,35 +1909,27 @@ async function leerPresencia() {
       .select("username, last_seen, avatar_url, typing_at")
       .eq("room", currentRoom).gte("last_seen", hace30s);
     if (error) return;
-
     usersOnline = (data || [])
       .map(u => u.username)
       .filter(u => u.toLowerCase() !== username.toLowerCase());
-
     avataresPorUsuario = {};
     (data || []).forEach(u => {
       if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
     });
-
     const ahora = Date.now();
     const escribiendo = (data || [])
       .filter(u => u.username.toLowerCase() !== username.toLowerCase())
       .filter(u => u.typing_at && (ahora - new Date(u.typing_at).getTime() < 5000))
       .map(u => u.username);
-
     actualizarIndicadorTyping(escribiendo);
     renderUserList();
   } catch (e) {}
 }
-
 function iniciarPresencia() {
   registrarPresencia(); leerPresencia();
-  clearInterval(presenceInterval);
-  presenceInterval = setInterval(registrarPresencia, 8000);
-  clearInterval(presenceRefreshInterval);
-  presenceRefreshInterval = setInterval(leerPresencia, 3000);
+  clearInterval(presenceInterval); presenceInterval = setInterval(registrarPresencia, 8000);
+  clearInterval(presenceRefreshInterval); presenceRefreshInterval = setInterval(leerPresencia, 3000);
 }
-
 supabaseClient
   .channel("zumm-presence-realtime")
   .on("postgres_changes", { event: "*", schema: "public", table: "zumm_presence" },
@@ -2137,7 +1943,6 @@ function updateUsersBtn() {
     usersBtn.classList.toggle("has-users", hay);
   }
 }
-
 function renderUserList() {
   if (!userList) return;
   userList.innerHTML = "";
@@ -2146,50 +1951,39 @@ function renderUserList() {
     updateUsersBtn(); return;
   }
   if (noUsers) noUsers.style.display = "none";
-
   usersOnline.forEach(name => {
     const li = document.createElement("li");
     const span = document.createElement("span");
     span.textContent = name;
     span.addEventListener("click", (e) => { e.stopPropagation(); abrirPerfil(name, false); });
     li.appendChild(span);
-
     const actions = document.createElement("div");
     actions.className = "user-actions";
-
     const mkBtn = (texto, titulo, fn) => {
       const b = document.createElement("button");
       b.type = "button"; b.title = titulo; b.textContent = texto;
       b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
       return b;
     };
-
     actions.appendChild(mkBtn("💬", "Chat privado", () => openPrivateWith(name)));
     actions.appendChild(mkBtn("📞", "Llamar", () => startCall(name, false)));
     actions.appendChild(mkBtn("📹", "Videollamada", () => startCall(name, true)));
-
     li.appendChild(actions);
     userList.appendChild(li);
   });
   updateUsersBtn();
 }
-
-if (usersBtn) {
-  usersBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    if (usersPanel) usersPanel.classList.add("show");
-    leerPresencia();
-  });
-}
-if (usersPanelClose) {
-  usersPanelClose.addEventListener("click", () => {
-    if (usersPanel) usersPanel.classList.remove("show");
-  });
-}
+if (usersBtn) usersBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (usersPanel) usersPanel.classList.add("show");
+  leerPresencia();
+});
+if (usersPanelClose) usersPanelClose.addEventListener("click", () => {
+  if (usersPanel) usersPanel.classList.remove("show");
+});
 
 // ============ PERFIL ============
 let perfilActual = null;
-
 function mostrarAvatarPropio() {
   if (!userMeAvatar) return;
   if (myAvatarUrl) {
@@ -2207,7 +2001,6 @@ function abrirPerfil(nombre, editable) {
   if (nombre === BOT_NAME) return;
   perfilActual = nombre;
   const esMio = nombre.toLowerCase() === username.toLowerCase();
-
   const url = esMio ? myAvatarUrl : (avataresPorUsuario[nombre.toLowerCase()] || "");
   if (url) {
     profileAvatar.style.backgroundImage = "url(" + url + ")";
@@ -2218,7 +2011,6 @@ function abrirPerfil(nombre, editable) {
     profileAvatar.style.background = colorForUser(nombre);
   }
   profileName.textContent = nombre;
-
   if (esMio) {
     profileBioDisplay.textContent = myBio || "Sin bio";
     profileStatusDisplay.textContent = myStatus || "Sin estado";
@@ -2233,7 +2025,6 @@ function abrirPerfil(nombre, editable) {
         }
       });
   }
-
   profileBioInput.style.display = "none";
   profileStatusInput.style.display = "none";
   profileBioDisplay.style.display = "block";
@@ -2241,195 +2032,189 @@ function abrirPerfil(nombre, editable) {
   profileEditBtn.style.display = esMio ? "block" : "none";
   profileSaveBtn.style.display = "none";
   profileCancelBtn.style.display = "none";
-
   if (!esMio) {
     const estaBloqueado = bloqueados.has(nombre.toLowerCase());
     profileBlockBtn.style.display = estaBloqueado ? "none" : "block";
     profileUnblockBtn.style.display = estaBloqueado ? "block" : "none";
-    const estaEnCon = estaEnContactos(nombre);
-    profileAddContactBtn.style.display = estaEnCon ? "none" : "block";
+    profileAddContactBtn.style.display = estaEnContactos(nombre) ? "none" : "block";
   } else {
     profileBlockBtn.style.display = "none";
     profileUnblockBtn.style.display = "none";
     profileAddContactBtn.style.display = "none";
   }
-
   profileModal.classList.add("show");
 }
 
-if (userMeAvatar) userMeAvatar.addEventListener("click", () => abrirPerfil(username, true));
+// Avatar propio: toque corto = perfil, mantener = regalos
+if (userMeAvatar) {
+  let timerAvatar = null;
+  let longPressAvatar = false;
+  userMeAvatar.addEventListener("touchstart", () => {
+    longPressAvatar = false;
+    timerAvatar = setTimeout(() => {
+      longPressAvatar = true;
+      mostrarMisRegalos();
+    }, 700);
+  }, { passive: true });
+  userMeAvatar.addEventListener("touchend", () => {
+    clearTimeout(timerAvatar);
+    if (!longPressAvatar) abrirPerfil(username, true);
+  });
+  userMeAvatar.addEventListener("click", () => {
+    if (!longPressAvatar) abrirPerfil(username, true);
+  });
+}
+
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", () => profileModal.classList.remove("show"));
-
-if (profileEditBtn) {
-  profileEditBtn.addEventListener("click", () => {
-    if (!perfilActual || perfilActual.toLowerCase() !== username.toLowerCase()) return;
-    profileBioInput.value = myBio;
-    profileStatusInput.value = myStatus;
-    profileBioDisplay.style.display = "none";
-    profileStatusDisplay.style.display = "none";
-    profileBioInput.style.display = "block";
-    profileStatusInput.style.display = "block";
-    profileEditBtn.style.display = "none";
-    profileSaveBtn.style.display = "block";
-    profileCancelBtn.style.display = "block";
-  });
-}
+if (profileEditBtn) profileEditBtn.addEventListener("click", () => {
+  if (!perfilActual || perfilActual.toLowerCase() !== username.toLowerCase()) return;
+  profileBioInput.value = myBio;
+  profileStatusInput.value = myStatus;
+  profileBioDisplay.style.display = "none";
+  profileStatusDisplay.style.display = "none";
+  profileBioInput.style.display = "block";
+  profileStatusInput.style.display = "block";
+  profileEditBtn.style.display = "none";
+  profileSaveBtn.style.display = "block";
+  profileCancelBtn.style.display = "block";
+});
 if (profileCancelBtn) profileCancelBtn.addEventListener("click", () => abrirPerfil(username, true));
-if (profileSaveBtn) {
-  profileSaveBtn.addEventListener("click", async () => {
-    myBio = (profileBioInput.value || "").trim().substring(0, 100);
-    myStatus = (profileStatusInput.value || "").trim().substring(0, 60);
-    LS.setItem("zummchat_bio", myBio);
-    LS.setItem("zummchat_status", myStatus);
-    await supabaseClient.from("zumm_presence").upsert({
-      username: username, room: currentRoom,
-      last_seen: new Date().toISOString(),
-      avatar_url: myAvatarUrl || null,
-      bio: myBio, status_text: myStatus
-    }, { onConflict: "username,room" });
-    abrirPerfil(username, true);
-    alert("✅ Perfil actualizado");
-  });
-}
-
-if (avatarInput) {
-  avatarInput.addEventListener("change", async () => {
-    const file = avatarInput.files[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert("Máx 2 MB."); avatarInput.value = ""; return; }
-    userMeAvatar.textContent = "⏳";
-    try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const nombreArchivo = "avatar_" + username.toLowerCase().replace(/\s/g, "") + "_" + Date.now() + "." + ext;
-      const { error: upErr } = await supabaseClient.storage.from("archivos")
-        .upload(nombreArchivo, file, { contentType: file.type, upsert: true });
-      if (upErr) { alert("Error: " + upErr.message); mostrarAvatarPropio(); return; }
-      const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
-      myAvatarUrl = urlData.publicUrl;
-      LS.setItem("zummchat_avatar", myAvatarUrl);
-      mostrarAvatarPropio();
-      await supabaseClient.from("zumm_presence").upsert({
-        username: username, room: currentRoom,
-        last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
-        bio: myBio, status_text: myStatus
-      }, { onConflict: "username,room" });
-      alert("✅ Foto actualizada");
-    } catch (e) { alert("Error: " + e.message); mostrarAvatarPropio(); }
-    finally { avatarInput.value = ""; }
-  });
-}
-
-function actualizarNombreEnUI() { if (userMeName) userMeName.textContent = "Tú: " + username; }
-actualizarNombreEnUI();
-
-if (changeNameBtn) {
-  changeNameBtn.addEventListener("click", async () => {
-    const nuevo = prompt("Escribe tu nuevo nombre:", username);
-    if (!nuevo || !nuevo.trim()) return;
-    const limpio = nuevo.trim().substring(0, 20);
-    if (limpio.toLowerCase() === username.toLowerCase()) return;
-    const viejo = username;
-    username = limpio;
-    LS.setItem("zummchat_user", username);
-    actualizarNombreEnUI();
-    await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
+if (profileSaveBtn) profileSaveBtn.addEventListener("click", async () => {
+  myBio = (profileBioInput.value || "").trim().substring(0, 100);
+  myStatus = (profileStatusInput.value || "").trim().substring(0, 60);
+  LS.setItem("zummchat_bio", myBio);
+  LS.setItem("zummchat_status", myStatus);
+  await supabaseClient.from("zumm_presence").upsert({
+    username: username, room: currentRoom,
+    last_seen: new Date().toISOString(), avatar_url: myAvatarUrl || null,
+    bio: myBio, status_text: myStatus
+  }, { onConflict: "username,room" });
+  abrirPerfil(username, true);
+  alert("✅ Perfil actualizado");
+});
+if (avatarInput) avatarInput.addEventListener("change", async () => {
+  const file = avatarInput.files[0]; if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert("Máx 2 MB."); avatarInput.value = ""; return; }
+  userMeAvatar.textContent = "⏳";
+  try {
+    const ext = file.name.split(".").pop() || "jpg";
+    const nombreArchivo = "avatar_" + username.toLowerCase().replace(/\s/g, "") + "_" + Date.now() + "." + ext;
+    const { error: upErr } = await supabaseClient.storage.from("archivos")
+      .upload(nombreArchivo, file, { contentType: file.type, upsert: true });
+    if (upErr) { alert("Error: " + upErr.message); mostrarAvatarPropio(); return; }
+    const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
+    myAvatarUrl = urlData.publicUrl;
+    LS.setItem("zummchat_avatar", myAvatarUrl);
+    mostrarAvatarPropio();
     await supabaseClient.from("zumm_presence").upsert({
       username: username, room: currentRoom,
       last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
       bio: myBio, status_text: myStatus
     }, { onConflict: "username,room" });
-    alert("✅ Nombre cambiado a: " + username);
-  });
-}
+    alert("✅ Foto actualizada");
+  } catch (e) { alert("Error: " + e.message); mostrarAvatarPropio(); }
+  finally { avatarInput.value = ""; }
+});
+function actualizarNombreEnUI() { if (userMeName) userMeName.textContent = "Tú: " + username; }
+actualizarNombreEnUI();
+if (changeNameBtn) changeNameBtn.addEventListener("click", async () => {
+  const nuevo = prompt("Nuevo nombre:", username);
+  if (!nuevo || !nuevo.trim()) return;
+  const limpio = nuevo.trim().substring(0, 20);
+  if (limpio.toLowerCase() === username.toLowerCase()) return;
+  const viejo = username;
+  username = limpio;
+  LS.setItem("zummchat_user", username);
+  actualizarNombreEnUI();
+  await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
+  await supabaseClient.from("zumm_presence").upsert({
+    username: username, room: currentRoom,
+    last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
+    bio: myBio, status_text: myStatus
+  }, { onConflict: "username,room" });
+  alert("✅ Nombre: " + username);
+});
 
 // ============ ESTADÍSTICAS PERSONALES ============
-if (statsBtn) {
-  statsBtn.addEventListener("click", async () => {
-    cerrarPaneles();
-    if (!statsModal) return;
-    statsModal.classList.add("show");
-    statTotalMsgs.textContent = "..."; statFiles.textContent = "...";
-    statVoice.textContent = "..."; statDays.textContent = "..."; statFirst.textContent = "...";
-    const { data } = await supabaseClient.from("zumm_messages")
-      .select("created_at, file_type").eq("username", username);
-    if (!data || data.length === 0) {
-      statTotalMsgs.textContent = "0"; statFiles.textContent = "0";
-      statVoice.textContent = "0"; statDays.textContent = "0"; statFirst.textContent = "—";
-      return;
-    }
-    const total = data.length;
-    const conArchivo = data.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/")).length;
-    const conVoz = data.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
-    const fechas = new Set(data.map(m => m.created_at.substring(0, 10)));
-    const primera = new Date(data[data.length - 1].created_at);
-    const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
-    statTotalMsgs.textContent = total;
-    statFiles.textContent = conArchivo;
-    statVoice.textContent = conVoz;
-    statDays.textContent = fechas.size;
-    statFirst.textContent = primeraStr;
-  });
-}
+if (statsBtn) statsBtn.addEventListener("click", async () => {
+  cerrarPaneles();
+  if (!statsModal) return;
+  statsModal.classList.add("show");
+  statTotalMsgs.textContent = "..."; statFiles.textContent = "...";
+  statVoice.textContent = "..."; statDays.textContent = "..."; statFirst.textContent = "...";
+  const { data } = await supabaseClient.from("zumm_messages").select("created_at, file_type").eq("username", username);
+  if (!data || data.length === 0) {
+    statTotalMsgs.textContent = "0"; statFiles.textContent = "0";
+    statVoice.textContent = "0"; statDays.textContent = "0"; statFirst.textContent = "—";
+    return;
+  }
+  const total = data.length;
+  const conArchivo = data.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/") && !m.file_type.startsWith("game/") && !m.file_type.startsWith("gift/")).length;
+  const conVoz = data.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
+  const fechas = new Set(data.map(m => m.created_at.substring(0, 10)));
+  const primera = new Date(data[data.length - 1].created_at);
+  const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
+  statTotalMsgs.textContent = total;
+  statFiles.textContent = conArchivo;
+  statVoice.textContent = conVoz;
+  statDays.textContent = fechas.size;
+  statFirst.textContent = primeraStr;
+});
 if (statsCloseBtn) statsCloseBtn.addEventListener("click", () => statsModal.classList.remove("show"));
 
 // ============ ESTADÍSTICAS GRUPO ============
-if (groupStatsBtn) {
-  groupStatsBtn.addEventListener("click", async () => {
-    cerrarPaneles();
-    if (!groupStatsModal) return;
-    groupStatsModal.classList.add("show");
-    gStatTotal.textContent = "..."; gStatUsers.textContent = "...";
-    gStatTop.textContent = "..."; gStatFiles.textContent = "...";
-    gStatVoice.textContent = "..."; gStatFirst.textContent = "...";
-    gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-dim);font-size:13px;'>Cargando...</p>";
-    const { data } = await supabaseClient.from("zumm_messages")
-      .select("username, created_at, file_type").eq("room", currentRoom);
-    if (!data || data.length === 0) {
-      gStatTotal.textContent = "0"; gStatUsers.textContent = "0";
-      gStatTop.textContent = "—"; gStatFiles.textContent = "0";
-      gStatVoice.textContent = "0"; gStatFirst.textContent = "—";
-      gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-muted);font-size:13px;'>Sin mensajes aún</p>";
-      return;
-    }
-    const total = data.length;
-    const usuarios = {};
-    const sinBot = data.filter(m => m.username !== BOT_NAME);
-    sinBot.forEach(m => {
-      const u = m.username || "Anónimo";
-      usuarios[u] = (usuarios[u] || 0) + 1;
-    });
-    const lista = Object.entries(usuarios).sort((a, b) => b[1] - a[1]);
-    const numUsuarios = lista.length;
-    const top = lista[0] ? lista[0][0] + " (" + lista[0][1] + ")" : "—";
-    const conArchivo = sinBot.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/")).length;
-    const conVoz = sinBot.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
-    const primera = new Date(data[0].created_at);
-    const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
-    gStatTotal.textContent = total;
-    gStatUsers.textContent = numUsuarios;
-    gStatTop.textContent = top;
-    gStatFiles.textContent = conArchivo;
-    gStatVoice.textContent = conVoz;
-    gStatFirst.textContent = primeraStr;
-    gStatRanking.innerHTML = "<div style='color:var(--accent);font-weight:bold;margin:14px 0 8px 0;font-size:14px;text-align:center;'>🏆 Ranking</div>";
-    const medallas = ["🥇", "🥈", "🥉"];
-    lista.forEach((entry, idx) => {
-      const row = document.createElement("div");
-      row.className = "rank-row";
-      const pos = document.createElement("span");
-      pos.className = "rank-pos";
-      pos.textContent = medallas[idx] || ("#" + (idx + 1));
-      const nombre = document.createElement("span");
-      nombre.className = "rank-name";
-      nombre.textContent = entry[0];
-      const count = document.createElement("span");
-      count.className = "rank-count";
-      count.textContent = entry[1] + " 💬";
-      row.appendChild(pos); row.appendChild(nombre); row.appendChild(count);
-      gStatRanking.appendChild(row);
-    });
+if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
+  cerrarPaneles();
+  if (!groupStatsModal) return;
+  groupStatsModal.classList.add("show");
+  gStatTotal.textContent = "..."; gStatUsers.textContent = "...";
+  gStatTop.textContent = "..."; gStatFiles.textContent = "...";
+  gStatVoice.textContent = "..."; gStatFirst.textContent = "...";
+  gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-dim);font-size:13px;'>Cargando...</p>";
+  const { data } = await supabaseClient.from("zumm_messages").select("username, created_at, file_type").eq("room", currentRoom);
+  if (!data || data.length === 0) {
+    gStatTotal.textContent = "0"; gStatUsers.textContent = "0";
+    gStatTop.textContent = "—"; gStatFiles.textContent = "0";
+    gStatVoice.textContent = "0"; gStatFirst.textContent = "—";
+    gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-muted);font-size:13px;'>Sin mensajes</p>";
+    return;
+  }
+  const total = data.length;
+  const usuarios = {};
+  const sinBot = data.filter(m => m.username !== BOT_NAME);
+  sinBot.forEach(m => {
+    const u = m.username || "Anónimo";
+    usuarios[u] = (usuarios[u] || 0) + 1;
   });
-}
+  const lista = Object.entries(usuarios).sort((a, b) => b[1] - a[1]);
+  const numUsuarios = lista.length;
+  const top = lista[0] ? lista[0][0] + " (" + lista[0][1] + ")" : "—";
+  const conArchivo = sinBot.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/") && !m.file_type.startsWith("game/") && !m.file_type.startsWith("gift/")).length;
+  const conVoz = sinBot.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
+  const primera = new Date(data[0].created_at);
+  const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
+  gStatTotal.textContent = total;
+  gStatUsers.textContent = numUsuarios;
+  gStatTop.textContent = top;
+  gStatFiles.textContent = conArchivo;
+  gStatVoice.textContent = conVoz;
+  gStatFirst.textContent = primeraStr;
+  gStatRanking.innerHTML = "<div style='color:var(--accent);font-weight:bold;margin:14px 0 8px 0;font-size:14px;text-align:center;'>🏆 Ranking</div>";
+  const medallas = ["🥇", "🥈", "🥉"];
+  lista.forEach((entry, idx) => {
+    const row = document.createElement("div");
+    row.className = "rank-row";
+    const pos = document.createElement("span");
+    pos.className = "rank-pos";
+    pos.textContent = medallas[idx] || ("#" + (idx + 1));
+    const nombre = document.createElement("span");
+    nombre.className = "rank-name"; nombre.textContent = entry[0];
+    const count = document.createElement("span");
+    count.className = "rank-count"; count.textContent = entry[1] + " 💬";
+    row.appendChild(pos); row.appendChild(nombre); row.appendChild(count);
+    gStatRanking.appendChild(row);
+  });
+});
 if (groupStatsCloseBtn) groupStatsCloseBtn.addEventListener("click", () => groupStatsModal.classList.remove("show"));
 
 // ============ LLAMADAS ============
@@ -2444,19 +2229,16 @@ async function cargarListaCamaras() {
     listaCamaras = devices.filter(d => d.kind === "videoinput");
   } catch (e) {}
 }
-
 async function enviarSenal(toUser, signalType, payload) {
-  await supabaseClient.from("zumm_signals")
-    .insert([{
-      from_user: username, to_user: toUser, from_client: myClientId,
-      signal_type: signalType, payload: JSON.stringify(payload || {})
-    }]);
+  await supabaseClient.from("zumm_signals").insert([{
+    from_user: username, to_user: toUser, from_client: myClientId,
+    signal_type: signalType, payload: JSON.stringify(payload || {})
+  }]);
 }
-
 async function leerSenales() {
   const { data } = await supabaseClient.from("zumm_signals")
-    .select("*").eq("to_user", username)
-    .gt("id", signalsLastId).order("id", { ascending: true }).limit(50);
+    .select("*").eq("to_user", username).gt("id", signalsLastId)
+    .order("id", { ascending: true }).limit(50);
   for (const s of (data || [])) {
     if (s.from_client === myClientId) continue;
     if (s.id > signalsLastId) signalsLastId = s.id;
@@ -2465,13 +2247,11 @@ async function leerSenales() {
     procesarSenal(s);
   }
 }
-
 function procesarSenal(s) {
   let payload = {};
   try { payload = JSON.parse(s.payload || "{}"); } catch (e) {}
   const fromName = s.from_user;
   const callId = payload.callId;
-
   switch (s.signal_type) {
     case "invite":
       if (payload.targetName && payload.targetName.toLowerCase() !== username.toLowerCase()) return;
@@ -2519,19 +2299,16 @@ function procesarSenal(s) {
       break;
   }
 }
-
 function supportsCalls() {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return true;
   alert("Tu navegador no soporta llamadas."); return false;
 }
-
 async function startCall(targetName, withVideo) {
   if (activeCall || incomingCall) { alert("Ya tienes una llamada activa."); return; }
   if (!supportsCalls()) return;
   const match = usersOnline.find(u => u.toLowerCase() === targetName.toLowerCase());
   if (!match) { alert(targetName + " no está en línea."); return; }
   targetName = match;
-
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -2539,16 +2316,13 @@ async function startCall(targetName, withVideo) {
       video: withVideo ? { width: 640, height: 480, facingMode: "user" } : false
     });
   } catch (e) { alert("No se pudo acceder al micrófono/cámara:\n" + e.message); return; }
-
   localStream = stream;
   currentFacingMode = "user";
   await cargarListaCamaras();
-
   const callId = myClientId + "-" + Date.now();
   activeCall = { callId, peerName: targetName, peerId: null, role: "caller", video: !!withVideo };
   showCallOverlay("Llamando a " + targetName + "...");
   await enviarSenal(targetName, "invite", { targetName, callId, video: !!withVideo });
-
   clearTimeout(inviteTimer);
   inviteTimer = setTimeout(() => {
     if (activeCall && activeCall.role === "caller" && !pc) {
@@ -2558,7 +2332,6 @@ async function startCall(targetName, withVideo) {
     }
   }, 35000);
 }
-
 function dismissIncoming(notify) {
   if (!incomingCall) return;
   if (notify) enviarSenal(incomingCall.fromName, "reject", { callId: incomingCall.callId });
@@ -2567,35 +2340,30 @@ function dismissIncoming(notify) {
   clearTimeout(ringTimeout);
   if (incomingModal) incomingModal.classList.remove("show");
 }
-
 if (rejectBtn) rejectBtn.addEventListener("click", () => dismissIncoming(true));
-
-if (incomingAcceptBtn) {
-  incomingAcceptBtn.addEventListener("click", async () => {
-    if (!incomingCall) return;
-    const call = incomingCall;
-    incomingCall = null;
-    stopRingtone(); clearTimeout(ringTimeout);
-    if (incomingModal) incomingModal.classList.remove("show");
-    if (!supportsCalls()) { enviarSenal(call.fromName, "reject", { callId: call.callId }); return; }
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: call.video ? { width: 640, height: 480, facingMode: "user" } : false
-      });
-    } catch (e) {
-      alert("Error mic/cámara:\n" + e.message);
-      enviarSenal(call.fromName, "reject", { callId: call.callId }); return;
-    }
-    currentFacingMode = "user";
-    await cargarListaCamaras();
-    activeCall = { callId: call.callId, peerName: call.fromName, peerId: call.fromId, role: "callee", video: call.video };
-    showCallOverlay("Conectando con " + call.fromName + "...");
-    attachLocalPreview();
-    await enviarSenal(call.fromName, "accept", { callId: call.callId });
-  });
-}
-
+if (incomingAcceptBtn) incomingAcceptBtn.addEventListener("click", async () => {
+  if (!incomingCall) return;
+  const call = incomingCall;
+  incomingCall = null;
+  stopRingtone(); clearTimeout(ringTimeout);
+  if (incomingModal) incomingModal.classList.remove("show");
+  if (!supportsCalls()) { enviarSenal(call.fromName, "reject", { callId: call.callId }); return; }
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: call.video ? { width: 640, height: 480, facingMode: "user" } : false
+    });
+  } catch (e) {
+    alert("Error mic/cámara:\n" + e.message);
+    enviarSenal(call.fromName, "reject", { callId: call.callId }); return;
+  }
+  currentFacingMode = "user";
+  await cargarListaCamaras();
+  activeCall = { callId: call.callId, peerName: call.fromName, peerId: call.fromId, role: "callee", video: call.video };
+  showCallOverlay("Conectando con " + call.fromName + "...");
+  attachLocalPreview();
+  await enviarSenal(call.fromName, "accept", { callId: call.callId });
+});
 function createPeer() {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   pc.onicecandidate = (e) => {
@@ -2616,7 +2384,6 @@ function createPeer() {
     } else if (pc.connectionState === "failed") { alert("Se perdió la conexión."); endCall(true); }
   };
 }
-
 async function crearOferta() {
   try {
     createPeer();
@@ -2627,7 +2394,6 @@ async function crearOferta() {
     await enviarSenal(activeCall.peerName, "offer", { callId: activeCall.callId, sdp: pc.localDescription });
   } catch (e) { alert("Error: " + e.message); endCall(true); }
 }
-
 async function recibirOferta(sdp) {
   try {
     if (!pc) createPeer();
@@ -2640,37 +2406,31 @@ async function recibirOferta(sdp) {
     flushIce();
   } catch (e) { alert("Error: " + e.message); endCall(true); }
 }
-
 async function recibirRespuesta(sdp) {
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     flushIce();
   } catch (e) { endCall(true); }
 }
-
 function flushIce() {
   while (iceQueue.length && pc && pc.remoteDescription) {
     const c = iceQueue.shift();
     pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
   }
 }
-
 function attachLocalPreview() {
   if (localVideo && localStream) {
     localVideo.srcObject = localStream;
     localVideo.play().catch(() => {});
   }
 }
-
 function showCallOverlay(texto) {
   if (callOverlay) callOverlay.classList.add("show");
   if (callStatus) callStatus.textContent = texto;
   if (acceptCallBtn) acceptCallBtn.style.display = "none";
-
   const videos = document.querySelector(".videos");
   const soloAudio = !(activeCall && activeCall.video);
   if (videos) videos.classList.toggle("audio-only", soloAudio);
-
   const audioAvatar = document.getElementById("audioAvatar");
   if (audioAvatar) {
     if (soloAudio && activeCall) {
@@ -2687,7 +2447,6 @@ function showCallOverlay(texto) {
   muted = false;
   if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
 }
-
 function endCall(notify) {
   if (notify && activeCall) enviarSenal(activeCall.peerName, "hangup", { callId: activeCall.callId });
   clearTimeout(inviteTimer); inviteTimer = null;
@@ -2701,17 +2460,13 @@ function endCall(notify) {
   if (remoteVideo) remoteVideo.srcObject = null;
   if (callOverlay) callOverlay.classList.remove("show");
 }
-
-if (muteBtn) {
-  muteBtn.addEventListener("click", () => {
-    if (!localStream) return;
-    muted = !muted;
-    localStream.getAudioTracks().forEach(t => t.enabled = !muted);
-    muteBtn.textContent = muted ? "🔇 Mic" : "🎤 Mic";
-    muteBtn.classList.toggle("muted", muted);
-  });
-}
-
+if (muteBtn) muteBtn.addEventListener("click", () => {
+  if (!localStream) return;
+  muted = !muted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+  muteBtn.textContent = muted ? "🔇 Mic" : "🎤 Mic";
+  muteBtn.classList.toggle("muted", muted);
+});
 async function cambiarCamara() {
   if (!localStream || !activeCall || !activeCall.video) return;
   try {
@@ -2722,7 +2477,6 @@ async function cambiarCamara() {
     await new Promise(r => setTimeout(r, 300));
     await cargarListaCamaras();
     currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
-
     let nuevoStream = null;
     if (listaCamaras.length >= 2) {
       const idxDeseado = currentFacingMode === "user" ? 0 : (listaCamaras.length - 1);
@@ -2742,7 +2496,6 @@ async function cambiarCamara() {
       } catch (e2) {}
     }
     if (!nuevoStream) return;
-
     const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
     if (pc) {
       const senderVideo = pc.getSenders().find(s => s.track && s.track.kind === "video");
@@ -2759,28 +2512,20 @@ async function cambiarCamara() {
     }
   } catch (e) {}
 }
-
 if (switchCamBtn) switchCamBtn.addEventListener("click", cambiarCamara);
 if (hangupBtn) hangupBtn.addEventListener("click", () => endCall(true));
-
-if (callBtn) {
-  callBtn.addEventListener("click", () => {
-    if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
-    const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
-    if (!target || !target.trim()) return;
-    startCall(target.trim(), false);
-  });
-}
-
-if (videoBtn) {
-  videoBtn.addEventListener("click", () => {
-    if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
-    const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
-    if (!target || !target.trim()) return;
-    startCall(target.trim(), true);
-  });
-}
-
+if (callBtn) callBtn.addEventListener("click", () => {
+  if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
+  const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
+  if (!target || !target.trim()) return;
+  startCall(target.trim(), false);
+});
+if (videoBtn) videoBtn.addEventListener("click", () => {
+  if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
+  const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
+  if (!target || !target.trim()) return;
+  startCall(target.trim(), true);
+});
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 

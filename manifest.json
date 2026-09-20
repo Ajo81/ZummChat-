@@ -1,15 +1,35 @@
 {
-  "id": "zummchat-app-v2",
+  "id": "zummchat-app-v3",
   "name": "ZummChat",
   "short_name": "ZummChat",
+  "description": "Chat con llamadas, videollamadas y notas de voz. Creado por José Yudier Arencibia Ajo.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#00ff66",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["social", "communication"],
   "icons": [
-    { "src": "icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

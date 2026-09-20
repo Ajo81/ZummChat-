@@ -101,14 +101,14 @@ body {
 }
 #header-buttons { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
 
-#soundBtn, #callBtn, #videoBtn, #shareBtn, #usersBtn, #themeBtn, #colorBtn, #searchBtn {
+#soundBtn, #callBtn, #videoBtn, #shareBtn, #usersBtn, #themeBtn, #colorBtn, #searchBtn, #statsBtn {
   background: var(--bg-header); color: var(--accent);
   border: 1px solid var(--accent); border-radius: 8px;
   padding: 6px 8px; font-size: 14px; cursor: pointer; font-weight: bold;
   transition: all .2s;
 }
 #soundBtn:active, #callBtn:active, #videoBtn:active, #shareBtn:active,
-#usersBtn:active, #themeBtn:active, #colorBtn:active, #searchBtn:active {
+#usersBtn:active, #themeBtn:active, #colorBtn:active, #searchBtn:active, #statsBtn:active {
   transform: scale(.94); background: var(--accent); color: var(--bg);
 }
 #usersBtn.has-users {
@@ -150,6 +150,36 @@ body {
 @keyframes highlight-msg {
   0% { background: rgba(255, 255, 0, 0.4); }
   100% { background: var(--bg-card); }
+}
+
+/* ============ BARRA DE MENSAJE FIJADO ============ */
+#pinnedBar {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text);
+  align-items: center;
+  gap: 8px;
+}
+#pinnedBar.show { display: flex; }
+#pinnedText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#unpinBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
 }
 
 #room-bar {
@@ -205,7 +235,6 @@ body {
   display: flex; align-items: center; justify-content: center; font-weight: bold;
 }
 
-/* MENSAJES — altura flexible */
 #messages {
   flex: 1;
   min-height: 200px;
@@ -217,7 +246,23 @@ body {
   flex-direction: column;
   gap: 10px;
   position: relative;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+/* ============ INDICADOR DE "ESCRIBIENDO..." ============ */
+#typingIndicator {
+  display: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+  animation: fade-in-typing 0.3s ease;
+}
+#typingIndicator.show { display: block; }
+@keyframes fade-in-typing {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 #scrollDownBtn {
@@ -252,6 +297,17 @@ body {
 }
 .msg:active { background: var(--border-light); }
 
+.msg.pinned {
+  border-left: 3px solid #ffb74d;
+  box-shadow: 0 0 0 1px #ffb74d inset;
+}
+
+.msg-pin-badge {
+  color: #ffb74d;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
 .avatar {
   width: 38px; height: 38px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -268,7 +324,8 @@ body {
   display: flex; justify-content: space-between;
   align-items: baseline; margin-bottom: 4px; font-size: 12px;
 }
-.msg-name { font-weight: bold; }
+.msg-name { font-weight: bold; cursor: pointer; }
+.msg-name:active { text-decoration: underline; }
 .msg-right { display: flex; align-items: center; gap: 6px; }
 .msg-time { color: var(--text-dim); font-size: 11px; }
 .msg-edited { color: var(--text-muted); font-size: 10px; font-style: italic; }
@@ -698,3 +755,158 @@ body {
   transition: transform .15s;
 }
 #reactionPicker button:active { transform: scale(1.3); }
+
+/* ============ MODAL DE PERFIL ============ */
+#profileModal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 10005;
+  justify-content: center; align-items: center;
+  padding: 20px;
+}
+#profileModal.show { display: flex; }
+.profile-content {
+  background: var(--bg-secondary);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%; max-width: 360px;
+  text-align: center;
+  position: relative;
+}
+#profileCloseBtn {
+  position: absolute;
+  top: 10px; right: 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 22px;
+  cursor: pointer;
+}
+#profileAvatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 44px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  text-transform: uppercase;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  border: 3px solid var(--accent);
+}
+#profileName {
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+.profile-field {
+  text-align: left;
+  margin-bottom: 14px;
+}
+.profile-field label {
+  display: block;
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-bottom: 4px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.profile-field div {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  min-height: 40px;
+}
+.profile-field input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 14px;
+}
+.profile-field input:focus { outline: 2px solid var(--accent); }
+#profileActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+#profileActions button {
+  padding: 10px 18px;
+  border-radius: 24px;
+  border: none;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+}
+#profileEditBtn { background: var(--bg-card); color: var(--accent); border: 1px solid var(--accent); }
+#profileSaveBtn { background: var(--accent); color: var(--bg); }
+#profileCancelBtn { background: var(--bg-card); color: var(--text); }
+
+/* ============ MODAL DE ESTADÍSTICAS ============ */
+#statsModal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 10006;
+  justify-content: center; align-items: center;
+  padding: 20px;
+}
+#statsModal.show { display: flex; }
+.stats-content {
+  background: var(--bg-secondary);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 22px;
+  width: 100%; max-width: 380px;
+}
+.stats-content h3 {
+  color: var(--accent);
+  font-size: 20px;
+  margin: 0 0 18px 0;
+  text-align: center;
+}
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.stat-label { color: var(--text); }
+.stat-value {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 16px;
+}
+#statsCloseBtn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+}

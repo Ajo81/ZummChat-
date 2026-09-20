@@ -49,16 +49,14 @@ const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
 
 const MAX_SIZE_MB = 5;
 
-// ✅ SERVIDORES ICE CON TURN GRATUITO (más opciones para Cuba)
+// Servidores ICE (STUN + TURN gratuitos)
 const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
-  { urls: "stun:stun2.l.google.com:19302" },
   {
     urls: [
       "turn:turn.evan-brass.net:3478",
-      "turn:turn.evan-brass.net:3478?transport=tcp",
-      "turns:turn.evan-brass.net:5349?transport=tcp"
+      "turn:turn.evan-brass.net:3478?transport=tcp"
     ],
     username: "user",
     credential: "password"
@@ -234,7 +232,6 @@ function switchRoom(room) {
   if (messagesEl) messagesEl.innerHTML = "";
   updateActiveTab();
   loadHistory();
-  resuscribirPresence();
 }
 
 function updateActiveTab() {
@@ -577,6 +574,7 @@ async function sendMessage() {
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
+// Mensajes en tiempo real
 supabaseClient
   .channel("zumm-messages-realtime")
   .on("postgres_changes",
@@ -609,85 +607,63 @@ function openImageModal(url) {
 }
 
 // ================================================================
-// ============ PRESENCE NATIVO (como Mi Círculo) ================
+// ============ PRESENCIA VIA TABLA (postgres_changes) ============
 // ================================================================
 
-let presenceChannel = null;
-let presenceReady = false;
 let usersOnline = [];
+let presenceInterval = null;
+let presenceRefreshInterval = null;
 
-function presenceChannelName() {
-  return "zumm-presence-" + currentRoom.replace(/[^a-zA-Z0-9]/g, "_");
+async function registrarPresencia() {
+  try {
+    const { error } = await supabaseClient
+      .from("zumm_presence")
+      .upsert({
+        username: username,
+        room: currentRoom,
+        last_seen: new Date().toISOString()
+      }, { onConflict: "username,room" });
+    if (error) console.warn("Presencia error:", error.message);
+  } catch (e) { console.warn("Presencia excepción:", e); }
 }
 
-function resuscribirPresence() {
-  if (presenceChannel) {
-    try { presenceChannel.unsubscribe(); } catch (e) {}
-    try { supabaseClient.removeChannel(presenceChannel); } catch (e) {}
-    presenceChannel = null;
-  }
-  presenceReady = false;
-  usersOnline = [];
-  renderUserList();
+async function leerPresencia() {
+  try {
+    const hace30s = new Date(Date.now() - 30000).toISOString();
+    const { data, error } = await supabaseClient
+      .from("zumm_presence")
+      .select("username, last_seen")
+      .eq("room", currentRoom)
+      .gte("last_seen", hace30s);
 
-  presenceChannel = supabaseClient.channel(presenceChannelName(), {
-    config: {
-      presence: { key: username },
-      broadcast: { self: false }
-    }
-  });
+    if (error) { console.warn("Leer presencia error:", error.message); return; }
 
-  presenceChannel
-    .on("presence", { event: "sync" }, () => {
-      try {
-        const state = presenceChannel.presenceState();
-        const nuevos = Object.keys(state).filter(u => u.toLowerCase() !== username.toLowerCase());
-        console.log("👥 Presencia sync:", nuevos);
-        usersOnline = nuevos;
-        renderUserList();
-      } catch (e) { console.error("Error presence sync:", e); }
-    })
-    .on("presence", { event: "join" }, ({ key }) => {
-      console.log("➕ Se unió:", key);
-    })
-    .on("presence", { event: "leave" }, ({ key }) => {
-      console.log("➖ Se fue:", key);
-    })
-    .on("broadcast", { event: "signal" }, msg => {
-      handleSignal(msg.payload);
-    })
-    .subscribe(async (status, err) => {
-      console.log("📡 Presence channel:", status, err || "");
-      if (status === "SUBSCRIBED") {
-        try {
-          await presenceChannel.track({
-            username: username,
-            online_at: new Date().toISOString()
-          });
-          presenceReady = true;
-          console.log("✅ Presencia registrada:", username);
-          renderUserList();
-        } catch (e) {
-          console.error("Error al trackear presencia:", e);
-        }
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        presenceReady = false;
-        renderUserList();
-      }
-    });
+    usersOnline = (data || [])
+      .map(u => u.username)
+      .filter(u => u.toLowerCase() !== username.toLowerCase());
+
+    renderUserList();
+  } catch (e) { console.warn("Leer presencia excepción:", e); }
 }
 
-function sendSignal(payload) {
-  if (!presenceChannel || !presenceReady) {
-    console.warn("Señal no enviada, presence no listo");
-    return;
-  }
-  presenceChannel.send({
-    type: "broadcast",
-    event: "signal",
-    payload: Object.assign({ from: myClientId, fromName: username }, payload)
-  });
+function iniciarPresencia() {
+  registrarPresencia();
+  leerPresencia();
+
+  clearInterval(presenceInterval);
+  presenceInterval = setInterval(registrarPresencia, 8000);
+
+  clearInterval(presenceRefreshInterval);
+  presenceRefreshInterval = setInterval(leerPresencia, 5000);
 }
+
+// Escuchar cambios en presencia
+supabaseClient
+  .channel("zumm-presence-realtime")
+  .on("postgres_changes",
+      { event: "*", schema: "public", table: "zumm_presence" },
+      () => { leerPresencia(); })
+  .subscribe(status => console.log("Realtime presencia:", status));
 
 // ================================================================
 // ============ LISTA DE USUARIOS ================================
@@ -695,7 +671,7 @@ function sendSignal(payload) {
 
 function updateUsersBtn() {
   if (usersBtn) {
-    const hay = presenceReady && usersOnline.length > 0;
+    const hay = usersOnline.length > 0;
     usersBtn.classList.toggle("has-users", hay);
   }
 }
@@ -703,12 +679,6 @@ function updateUsersBtn() {
 function renderUserList() {
   if (!userList) return;
   userList.innerHTML = "";
-
-  if (!presenceReady) {
-    if (noUsers) { noUsers.style.display = "block"; noUsers.textContent = "Conectando..."; }
-    updateUsersBtn();
-    return;
-  }
 
   if (usersOnline.length === 0) {
     if (noUsers) { noUsers.style.display = "block"; noUsers.textContent = "Nadie más conectado"; }
@@ -720,7 +690,6 @@ function renderUserList() {
 
   usersOnline.forEach(name => {
     const li = document.createElement("li");
-
     const span = document.createElement("span");
     span.textContent = name;
     li.appendChild(span);
@@ -751,6 +720,7 @@ function renderUserList() {
 if (usersBtn) {
   usersBtn.addEventListener("click", () => {
     if (usersPanel) usersPanel.classList.toggle("show");
+    leerPresencia();
   });
 }
 if (usersPanelClose) {
@@ -760,7 +730,7 @@ if (usersPanelClose) {
 }
 
 // ================================================================
-// ============ LLAMADAS WEBRTC ==================================
+// ============ LLAMADAS WEBRTC VIA TABLA ========================
 // ================================================================
 
 let pc = null;
@@ -771,34 +741,138 @@ let iceQueue = [];
 let inviteTimer = null;
 let ringTimeout = null;
 let muted = false;
+let signalsLastId = 0;
+let signalsCheckInterval = null;
 
-function handleSignal(p) {
-  if (!p || p.from === myClientId) return;
-  if (p.to !== myClientId) return;
+// Enviar señal a la tabla
+async function enviarSenal(toUser, signalType, payload) {
+  try {
+    const { error } = await supabaseClient
+      .from("zumm_signals")
+      .insert([{
+        from_user: username,
+        to_user: toUser,
+        from_client: myClientId,
+        signal_type: signalType,
+        payload: JSON.stringify(payload || {})
+      }]);
+    if (error) console.warn("Enviar señal error:", error.message);
+  } catch (e) { console.warn("Enviar señal excepción:", e); }
+}
 
-  console.log("📨 Señal recibida:", p.type);
+// Leer señales nuevas dirigidas a mí
+async function leerSenales() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("zumm_signals")
+      .select("*")
+      .eq("to_user", username)
+      .gt("id", signalsLastId)
+      .order("id", { ascending: true })
+      .limit(50);
 
-  switch (p.type) {
-    case "invite":  onInvite(p);          break;
-    case "cancel":  onCallerCanceled(p); break;
-    case "accept":  onAccept(p);          break;
-    case "reject":  onRejected(p);        break;
-    case "offer":   onOffer(p);           break;
-    case "answer":  onAnswer(p);          break;
-    case "ice":     onRemoteIce(p);       break;
-    case "hangup":  onHangup(p);          break;
+    if (error) { console.warn("Leer señales error:", error.message); return; }
+
+    for (const s of (data || [])) {
+      if (s.from_client === myClientId) continue;
+      if (s.id > signalsLastId) signalsLastId = s.id;
+
+      // Ignorar señales viejas (más de 1 minuto)
+      const edad = Date.now() - new Date(s.created_at).getTime();
+      if (edad > 60000) continue;
+
+      procesarSenal(s);
+    }
+  } catch (e) { console.warn("Leer señales excepción:", e); }
+}
+
+function procesarSenal(s) {
+  let payload = {};
+  try { payload = JSON.parse(s.payload || "{}"); } catch (e) {}
+
+  const fromName = s.from_user;
+  const callId = payload.callId;
+
+  console.log("📨 Señal:", s.signal_type, "de", fromName);
+
+  switch (s.signal_type) {
+    case "invite":
+      if (payload.targetName && payload.targetName.toLowerCase() !== username.toLowerCase()) return;
+      if (activeCall || incomingCall) {
+        enviarSenal(fromName, "reject", { callId, reason: "busy" });
+        return;
+      }
+      incomingCall = { callId, fromName, fromId: s.from_client, video: !!payload.video };
+      if (incomingAvatar) {
+        incomingAvatar.textContent = avatarLetter(fromName);
+        incomingAvatar.style.background = colorForUser(fromName);
+      }
+      if (incomingName) incomingName.textContent = fromName;
+      if (incomingText) incomingText.textContent = payload.video ? "Videollamada entrante..." : "Llamada entrante...";
+      if (incomingModal) incomingModal.classList.add("show");
+      playRingtone();
+      clearTimeout(ringTimeout);
+      ringTimeout = setTimeout(() => {
+        if (incomingCall && incomingCall.callId === callId) dismissIncoming(false);
+      }, 35000);
+      break;
+
+    case "accept":
+      if (!activeCall || activeCall.role !== "caller" || activeCall.callId !== callId) return;
+      activeCall.peerId = s.from_client;
+      clearTimeout(inviteTimer);
+      inviteTimer = null;
+      if (callStatus) callStatus.textContent = "Conectando...";
+      crearOferta();
+      break;
+
+    case "offer":
+      if (!activeCall || activeCall.role !== "callee" || activeCall.callId !== callId) return;
+      if (!localStream) return;
+      recibirOferta(payload.sdp);
+      break;
+
+    case "answer":
+      if (!activeCall || activeCall.role !== "caller" || activeCall.callId !== callId || !pc) return;
+      recibirRespuesta(payload.sdp);
+      break;
+
+    case "ice":
+      if (!payload.candidate) return;
+      if (pc && pc.remoteDescription) {
+        pc.addIceCandidate(new RTCIceCandidate(payload.candidate)).catch(() => {});
+      } else {
+        iceQueue.push(payload.candidate);
+      }
+      break;
+
+    case "hangup":
+      const enActiva = activeCall && activeCall.callId === callId;
+      const enEntrante = incomingCall && incomingCall.callId === callId;
+      if (enEntrante) dismissIncoming(false);
+      if (enActiva) {
+        endCall(false);
+        alert(fromName + " colgó.");
+      }
+      break;
+
+    case "reject":
+      if (!activeCall || activeCall.callId !== callId) return;
+      const razon = (payload.reason === "busy") ? fromName + " está en otra llamada." : fromName + " rechazó la llamada.";
+      endCall(false);
+      alert(razon);
+      break;
   }
 }
 
 function supportsCalls() {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return true;
-  alert("Tu navegador no soporta llamadas.\nUsa Chrome actualizado y una conexión HTTPS.");
+  alert("Tu navegador no soporta llamadas.\nUsa Chrome actualizado y HTTPS.");
   return false;
 }
 
 async function startCall(targetName, withVideo) {
   if (activeCall || incomingCall) { alert("Ya tienes una llamada activa."); return; }
-  if (!presenceReady) { alert("Conectando...\nEspera unos segundos."); return; }
   if (!supportsCalls()) return;
 
   const match = usersOnline.find(u => u.toLowerCase() === targetName.toLowerCase());
@@ -812,13 +886,14 @@ async function startCall(targetName, withVideo) {
       video: withVideo ? { width: 640, height: 480, facingMode: "user" } : false
     });
   } catch (e) {
-    alert("No se pudo acceder a tu micrófono/cámara:\n" + e.message);
+    alert("No se pudo acceder al micrófono/cámara:\n" + e.message);
     return;
   }
 
   localStream = stream;
+  const callId = myClientId + "-" + Date.now();
   activeCall = {
-    callId: myClientId + "-" + Date.now(),
+    callId,
     peerName: targetName,
     peerId: null,
     role: "caller",
@@ -827,58 +902,25 @@ async function startCall(targetName, withVideo) {
 
   showCallOverlay("Llamando a " + targetName + "...");
 
-  sendSignal({
-    type: "invite",
-    to: null,
-    targetName: targetName,
-    callId: activeCall.callId,
+  await enviarSenal(targetName, "invite", {
+    targetName,
+    callId,
     video: !!withVideo
   });
 
   clearTimeout(inviteTimer);
   inviteTimer = setTimeout(() => {
     if (activeCall && activeCall.role === "caller" && !pc) {
-      sendSignal({ type: "cancel", targetName: targetName, callId: activeCall.callId });
+      enviarSenal(targetName, "cancel", { callId });
       endCall(false);
       alert(targetName + " no respondió.");
     }
   }, 35000);
 }
 
-function onInvite(p) {
-  if (p.targetName && p.targetName.toLowerCase() !== username.toLowerCase()) return;
-
-  if (activeCall || incomingCall) {
-    sendSignal({ type: "reject", to: p.from, callId: p.callId, reason: "busy" });
-    return;
-  }
-
-  incomingCall = {
-    callId: p.callId,
-    fromName: p.fromName,
-    fromId: p.from,
-    video: !!p.video
-  };
-
-  if (incomingAvatar) {
-    incomingAvatar.textContent = avatarLetter(p.fromName);
-    incomingAvatar.style.background = colorForUser(p.fromName);
-  }
-  if (incomingName) incomingName.textContent = p.fromName || "Alguien";
-  if (incomingText) incomingText.textContent = p.video ? "Videollamada entrante..." : "Llamada entrante...";
-
-  if (incomingModal) incomingModal.classList.add("show");
-  playRingtone();
-
-  clearTimeout(ringTimeout);
-  ringTimeout = setTimeout(() => {
-    if (incomingCall && incomingCall.callId === p.callId) dismissIncoming(false);
-  }, 35000);
-}
-
 function dismissIncoming(notify) {
   if (!incomingCall) return;
-  if (notify) sendSignal({ type: "reject", to: incomingCall.fromId, callId: incomingCall.callId });
+  if (notify) enviarSenal(incomingCall.fromName, "reject", { callId: incomingCall.callId });
   incomingCall = null;
   stopRingtone();
   clearTimeout(ringTimeout);
@@ -899,7 +941,7 @@ if (incomingAcceptBtn) {
     if (incomingModal) incomingModal.classList.remove("show");
 
     if (!supportsCalls()) {
-      sendSignal({ type: "reject", to: call.fromId, callId: call.callId });
+      enviarSenal(call.fromName, "reject", { callId: call.callId });
       return;
     }
 
@@ -909,8 +951,8 @@ if (incomingAcceptBtn) {
         video: call.video ? { width: 640, height: 480, facingMode: "user" } : false
       });
     } catch (e) {
-      alert("No se pudo acceder a tu micrófono/cámara:\n" + e.message);
-      sendSignal({ type: "reject", to: call.fromId, callId: call.callId });
+      alert("No se pudo acceder al micrófono/cámara:\n" + e.message);
+      enviarSenal(call.fromName, "reject", { callId: call.callId });
       return;
     }
 
@@ -923,107 +965,20 @@ if (incomingAcceptBtn) {
     };
 
     showCallOverlay("Conectando con " + call.fromName + "...");
-    sendSignal({ type: "accept", to: call.fromId, callId: call.callId });
     attachLocalPreview();
+    await enviarSenal(call.fromName, "accept", { callId: call.callId });
   });
-}
-
-function onCallerCanceled(p) {
-  if (incomingCall && incomingCall.callId === p.callId) dismissIncoming(false);
-}
-
-function onAccept(p) {
-  if (!activeCall || activeCall.role !== "caller" || p.callId !== activeCall.callId) return;
-  activeCall.peerId = p.from;
-  clearTimeout(inviteTimer);
-  inviteTimer = null;
-  if (callStatus) callStatus.textContent = "Conectando...";
-  (async () => {
-    try {
-      createPeer();
-      attachLocalPreview();
-      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      sendSignal({ type: "offer", to: activeCall.peerId, callId: activeCall.callId, sdp: pc.localDescription });
-    } catch (e) {
-      alert("Error al iniciar la llamada: " + e.message);
-      endCall(true);
-    }
-  })();
-}
-
-function onOffer(p) {
-  if (!activeCall || activeCall.role !== "callee" || p.callId !== activeCall.callId) return;
-  if (!localStream) return;
-  (async () => {
-    try {
-      if (!pc) createPeer();
-      attachLocalPreview();
-      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-      await pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      sendSignal({ type: "answer", to: activeCall.peerId, callId: activeCall.callId, sdp: pc.localDescription });
-      flushIce();
-    } catch (e) {
-      alert("Error al conectar: " + e.message);
-      endCall(true);
-    }
-  })();
-}
-
-function onAnswer(p) {
-  if (!activeCall || activeCall.role !== "caller" || p.callId !== activeCall.callId || !pc) return;
-  (async () => {
-    try {
-      await pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
-      flushIce();
-    } catch (e) {
-      console.error("Error answer:", e);
-      endCall(true);
-    }
-  })();
-}
-
-function onRejected(p) {
-  if (!activeCall || p.callId !== activeCall.callId) return;
-  const razon = (p.reason === "busy") ? activeCall.peerName + " está en otra llamada." : activeCall.peerName + " rechazó la llamada.";
-  endCall(false);
-  alert(razon);
-}
-
-function onHangup(p) {
-  const enActiva = activeCall && activeCall.callId === p.callId;
-  const enEntrante = incomingCall && incomingCall.callId === p.callId;
-  if (!enActiva && !enEntrante) return;
-  if (enEntrante) dismissIncoming(false);
-  endCall(false);
-  alert((p.fromName || "Tu contacto") + " colgó.");
-}
-
-function onRemoteIce(p) {
-  if (!p.candidate) return;
-  if (pc && pc.remoteDescription) {
-    pc.addIceCandidate(new RTCIceCandidate(p.candidate)).catch(() => {});
-  } else {
-    iceQueue.push(p.candidate);
-  }
-}
-
-function flushIce() {
-  while (iceQueue.length && pc && pc.remoteDescription) {
-    const c = iceQueue.shift();
-    pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
-  }
 }
 
 function createPeer() {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
   pc.onicecandidate = (e) => {
-    if (e.candidate && activeCall && activeCall.peerId) {
-      sendSignal({ type: "ice", to: activeCall.peerId, callId: activeCall.callId, candidate: e.candidate });
+    if (e.candidate && activeCall) {
+      enviarSenal(activeCall.peerName, "ice", {
+        callId: activeCall.callId,
+        candidate: e.candidate
+      });
     }
   };
 
@@ -1043,6 +998,59 @@ function createPeer() {
       endCall(true);
     }
   };
+}
+
+async function crearOferta() {
+  try {
+    createPeer();
+    attachLocalPreview();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await enviarSenal(activeCall.peerName, "offer", {
+      callId: activeCall.callId,
+      sdp: pc.localDescription
+    });
+  } catch (e) {
+    alert("Error al iniciar la llamada: " + e.message);
+    endCall(true);
+  }
+}
+
+async function recibirOferta(sdp) {
+  try {
+    if (!pc) createPeer();
+    attachLocalPreview();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await enviarSenal(activeCall.peerName, "answer", {
+      callId: activeCall.callId,
+      sdp: pc.localDescription
+    });
+    flushIce();
+  } catch (e) {
+    alert("Error al conectar: " + e.message);
+    endCall(true);
+  }
+}
+
+async function recibirRespuesta(sdp) {
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    flushIce();
+  } catch (e) {
+    console.error("Error respuesta:", e);
+    endCall(true);
+  }
+}
+
+function flushIce() {
+  while (iceQueue.length && pc && pc.remoteDescription) {
+    const c = iceQueue.shift();
+    pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+  }
 }
 
 function attachLocalPreview() {
@@ -1076,8 +1084,8 @@ function showCallOverlay(texto) {
 }
 
 function endCall(notify) {
-  if (notify && activeCall && activeCall.peerId) {
-    sendSignal({ type: "hangup", to: activeCall.peerId, callId: activeCall.callId });
+  if (notify && activeCall) {
+    enviarSenal(activeCall.peerName, "hangup", { callId: activeCall.callId });
   }
   clearTimeout(inviteTimer);
   inviteTimer = null;
@@ -1115,7 +1123,7 @@ if (hangupBtn) {
 if (callBtn) {
   callBtn.addEventListener("click", () => {
     if (usersOnline.length === 0) {
-      alert(presenceReady ? "No hay otros usuarios en línea." : "Conectando... espera unos segundos.");
+      alert("No hay otros usuarios en línea.");
       return;
     }
     const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
@@ -1127,7 +1135,7 @@ if (callBtn) {
 if (videoBtn) {
   videoBtn.addEventListener("click", () => {
     if (usersOnline.length === 0) {
-      alert(presenceReady ? "No hay otros usuarios en línea." : "Conectando... espera unos segundos.");
+      alert("No hay otros usuarios en línea.");
       return;
     }
     const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
@@ -1136,15 +1144,13 @@ if (videoBtn) {
   });
 }
 
-function avisarSalida() {
-  if (activeCall && activeCall.peerId) sendSignal({ type: "hangup", to: activeCall.peerId, callId: activeCall.callId });
-}
-
-window.addEventListener("beforeunload", avisarSalida);
-window.addEventListener("pagehide", avisarSalida);
+// Polling de señales cada 1.5 segundos (más fiable que Realtime)
+clearInterval(signalsCheckInterval);
+signalsCheckInterval = setInterval(leerSenales, 1500);
 
 // ============ ARRANCAR ============
 if (chatTitle) chatTitle.textContent = "ZummChat · General";
 updateActiveTab();
 loadHistory();
-resuscribirPresence();
+iniciarPresencia();
+leerSenales();

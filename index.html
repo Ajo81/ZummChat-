@@ -38,9 +38,10 @@
       <span id="chat-title">ZummChat · General</span>
       <div id="header-buttons">
         <button id="themeBtn" type="button" title="Modo claro/oscuro">🌙</button>
-        <button id="colorBtn" type="button" title="Cambiar color">🎨</button>
+        <button id="colorBtn" type="button" title="Packs de temas">🎨</button>
         <button id="searchBtn" type="button" title="Buscar">🔍</button>
         <button id="statsBtn" type="button" title="Estadísticas">📊</button>
+        <button id="favBtn" type="button" title="Favoritos">⭐</button>
         <button id="soundBtn" type="button" title="Sonido">🔔</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
@@ -85,8 +86,11 @@
     <div id="input-area">
       <button id="emojiBtn" type="button">😀</button>
       <button id="fileBtn" type="button">📎</button>
+      <button id="cameraBtn" type="button" title="Cámara">📷</button>
+      <button id="locationBtn" type="button" title="Ubicación">📍</button>
       <button id="voiceBtn" type="button" title="Nota de voz">🎤</button>
       <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" style="display:none">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
       <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
       <button id="sendBtn" type="button">Enviar</button>
     </div>
@@ -160,6 +164,7 @@
   </div>
 
   <div id="msgMenu">
+    <button id="menuFavBtn" type="button">⭐ Favorito</button>
     <button id="menuPinBtn" type="button">📌 Fijar</button>
     <button id="menuCopyBtn" type="button">📋 Copiar</button>
     <button id="menuEditBtn" type="button">✏️ Editar</button>
@@ -175,7 +180,6 @@
     <button data-emoji="🔥">🔥</button>
   </div>
 
-  <!-- MODAL DE PERFIL -->
   <div id="profileModal">
     <div class="profile-content">
       <button id="profileCloseBtn" type="button">✕</button>
@@ -199,7 +203,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE ESTADÍSTICAS -->
   <div id="statsModal">
     <div class="stats-content">
       <h3>📊 Tus estadísticas</h3>
@@ -224,6 +227,16 @@
         <span class="stat-value" id="statFirst">...</span>
       </div>
       <button id="statsCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- FAVORITOS -->
+  <div id="favModal">
+    <div class="fav-content">
+      <h3>⭐ Mis favoritos</h3>
+      <ul id="favList"></ul>
+      <p id="favEmpty" style="display:none">Aún no tienes favoritos.</p>
+      <button id="favCloseBtn" type="button">Cerrar</button>
     </div>
   </div>
 

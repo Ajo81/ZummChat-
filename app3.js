@@ -1457,4 +1457,1345 @@ if (editSaveBtn) {
   editSaveBtn.addEventListener("click", async () => {
     if (!mensajeEditando || !editInput) return;
     const nuevoTexto = editInput.value.trim();
-    if (!nuevoTexto) { alert("El mensaje no puede estar vacío
+    if (!nuevoTexto) { alert("El mensaje no puede estar vacío."); return; }
+    if (nuevoTexto === mensajeEditando.text) {
+      editModal.classList.remove("show"); mensajeEditando = null; return;
+    }
+    const { error } = await supabaseClient.from("zumm_messages")
+      .update({ text: nuevoTexto, edited_at: new Date().toISOString() })
+      .eq("id", mensajeEditando.id);
+    if (error) { alert("No se pudo editar: " + error.message); return; }
+    editModal.classList.remove("show"); mensajeEditando = null;
+  });
+}
+
+// ============ MENÚ MENSAJE ============
+let mensajeMenuActual = null;
+
+function mostrarMenuMensaje(m, x, y) {
+  if (!msgMenu) return;
+  mensajeMenuActual = m;
+  const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
+  const esPoll = m.file_type && m.file_type.startsWith("poll/");
+  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esPoll ? "block" : "none";
+  if (menuDeleteBtn) menuDeleteBtn.style.display = esMio ? "block" : "none";
+  if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
+  if (menuFavBtn) menuFavBtn.textContent = favoritosIds.has(m.id) ? "⭐ Quitar fav" : "⭐ Favorito";
+
+  msgMenu.classList.add("show");
+  const ancho = 180; const alto = 260;
+  const xFinal = Math.min(x, window.innerWidth - ancho - 10);
+  const yFinal = Math.min(y, window.innerHeight - alto - 10);
+  msgMenu.style.left = Math.max(10, xFinal) + "px";
+  msgMenu.style.top = Math.max(10, yFinal) + "px";
+}
+function cerrarMenu() {
+  if (msgMenu) msgMenu.classList.remove("show");
+  if (reactionPicker) reactionPicker.classList.remove("show");
+}
+document.addEventListener("touchstart", (e) => {
+  if (msgMenu && msgMenu.classList.contains("show") && !msgMenu.contains(e.target)) cerrarMenu();
+  if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) {
+    reactionPicker.classList.remove("show");
+  }
+});
+
+if (menuPinBtn) {
+  menuPinBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    const nuevo = !m.pinned;
+    cerrarMenu();
+    if (nuevo) {
+      await supabaseClient.from("zumm_messages").update({ pinned: false })
+        .eq("room", currentRoom).eq("pinned", true);
+    }
+    await supabaseClient.from("zumm_messages").update({ pinned: nuevo }).eq("id", m.id);
+    cargarMensajeFijado();
+  });
+}
+if (menuCopyBtn) {
+  menuCopyBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    try { await navigator.clipboard.writeText(mensajeMenuActual.text || ""); alert("📋 Copiado"); }
+    catch (e) { alert("No se pudo copiar."); }
+    cerrarMenu();
+  });
+}
+if (menuEditBtn) {
+  menuEditBtn.addEventListener("click", () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    cerrarMenu();
+    setTimeout(() => abrirEditorMensaje(m), 150);
+  });
+}
+if (menuDeleteBtn) {
+  menuDeleteBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    cerrarMenu();
+    if (!confirm("¿Borrar este mensaje?")) return;
+    const { error } = await supabaseClient.from("zumm_messages").delete().eq("id", m.id);
+    if (error) { alert("No se pudo borrar: " + error.message); return; }
+    removeMessageFromDOM(m.id);
+  });
+}
+
+// ============ FAVORITOS ============
+async function cargarFavoritos() {
+  try {
+    const { data } = await supabaseClient.from("zumm_favoritos")
+      .select("mensaje_id").eq("username", username);
+    favoritosIds = new Set((data || []).map(f => f.mensaje_id));
+  } catch (e) {}
+}
+if (menuFavBtn) {
+  menuFavBtn.addEventListener("click", async () => {
+    if (!mensajeMenuActual) return;
+    const m = mensajeMenuActual;
+    cerrarMenu();
+    if (favoritosIds.has(m.id)) {
+      await supabaseClient.from("zumm_favoritos").delete()
+        .eq("username", username).eq("mensaje_id", m.id);
+      favoritosIds.delete(m.id);
+      alert("⭐ Quitado");
+    } else {
+      let preview = m.text || "📎 Archivo";
+      if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
+      if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
+      if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+      if (preview.length > 60) preview = preview.substring(0, 60) + "...";
+      await supabaseClient.from("zumm_favoritos").insert([{
+        username: username, mensaje_id: m.id, room: currentRoom,
+        preview: (m.username || "?") + ": " + preview
+      }]);
+      favoritosIds.add(m.id);
+      alert("⭐ Guardado");
+    }
+    const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
+    if (el) el.classList.toggle("favorite", favoritosIds.has(m.id));
+  });
+}
+if (favBtn) {
+  favBtn.addEventListener("click", async () => {
+    cerrarPaneles();
+    if (!favModal) return;
+    favModal.classList.add("show");
+    favList.innerHTML = "";
+    favEmpty.style.display = "none";
+    const { data } = await supabaseClient.from("zumm_favoritos")
+      .select("*").eq("username", username).order("created_at", { ascending: false });
+    if (!data || data.length === 0) { favEmpty.style.display = "block"; return; }
+    data.forEach(f => {
+      const li = document.createElement("li");
+      const meta = document.createElement("div");
+      meta.className = "list-meta";
+      meta.textContent = new Date(f.created_at).toLocaleDateString() + " · " + (f.room || "general");
+      li.appendChild(meta);
+      const texto = document.createElement("div");
+      texto.textContent = f.preview || "(sin texto)";
+      li.appendChild(texto);
+      const del = document.createElement("button");
+      del.className = "list-del";
+      del.textContent = "✕";
+      del.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm("¿Quitar?")) return;
+        await supabaseClient.from("zumm_favoritos").delete()
+          .eq("username", username).eq("mensaje_id", f.mensaje_id);
+        favoritosIds.delete(f.mensaje_id);
+        li.remove();
+        if (favList.children.length === 0) favEmpty.style.display = "block";
+      });
+      li.appendChild(del);
+      li.addEventListener("click", (e) => {
+        if (e.target === del) return;
+        favModal.classList.remove("show");
+        if (f.room === currentRoom) {
+          const el = messagesEl.querySelector('[data-msg-id="' + f.mensaje_id + '"]');
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("highlight");
+            setTimeout(() => el.classList.remove("highlight"), 2000);
+          }
+        } else if (f.room) {
+          if (confirm("¿Ir a la sala '" + f.room + "'?")) {
+            switchRoom(f.room);
+            setTimeout(() => {
+              const el = messagesEl.querySelector('[data-msg-id="' + f.mensaje_id + '"]');
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                el.classList.add("highlight");
+                setTimeout(() => el.classList.remove("highlight"), 2000);
+              }
+            }, 600);
+          }
+        }
+      });
+      favList.appendChild(li);
+    });
+  });
+}
+if (favCloseBtn) favCloseBtn.addEventListener("click", () => favModal.classList.remove("show"));
+
+// ============ DESTACADOS ============
+if (highlightBtn) {
+  highlightBtn.addEventListener("click", async () => {
+    cerrarPaneles();
+    if (!highlightModal) return;
+    highlightModal.classList.add("show");
+    highlightList.innerHTML = "";
+    highlightEmpty.style.display = "none";
+    const { data } = await supabaseClient.from("zumm_messages")
+      .select("*").eq("room", currentRoom)
+      .not("reactions", "is", null)
+      .order("created_at", { ascending: false }).limit(100);
+
+    const conReacciones = (data || [])
+      .map(m => ({ ...m, numReacc: (m.reactions || "").split(",").filter(x => x.trim()).length }))
+      .filter(m => m.numReacc >= 2)
+      .sort((a, b) => b.numReacc - a.numReacc)
+      .slice(0, 20);
+
+    if (conReacciones.length === 0) {
+      highlightEmpty.textContent = "Aún no hay mensajes destacados (necesitan 2+ reacciones).";
+      highlightEmpty.style.display = "block"; return;
+    }
+    conReacciones.forEach(m => {
+      const li = document.createElement("li");
+      const meta = document.createElement("div");
+      meta.className = "list-meta";
+      meta.textContent = (m.username || "?") + " · " + formatTime(m.created_at) + " · " + m.numReacc + " 🔥";
+      li.appendChild(meta);
+      const texto = document.createElement("div");
+      let preview = m.text || "📎 Archivo";
+      if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
+      if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
+      if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+      if (preview.length > 100) preview = preview.substring(0, 100) + "...";
+      texto.textContent = preview;
+      li.appendChild(texto);
+      li.addEventListener("click", () => {
+        highlightModal.classList.remove("show");
+        const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add("highlight");
+          setTimeout(() => el.classList.remove("highlight"), 2000);
+        }
+      });
+      highlightList.appendChild(li);
+    });
+  });
+}
+if (highlightCloseBtn) highlightCloseBtn.addEventListener("click", () => highlightModal.classList.remove("show"));
+
+// ============ RECORDATORIOS ============
+function formatearFechaRecordatorio(iso) {
+  const d = new Date(iso);
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const anio = d.getFullYear();
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return dia + "/" + mes + "/" + anio + " " + h + ":" + min;
+}
+
+async function cargarRecordatorios() {
+  if (!remindersList) return;
+  remindersList.innerHTML = "";
+  remindersEmpty.style.display = "none";
+  const { data } = await supabaseClient.from("zumm_recordatorios")
+    .select("*").eq("owner", username).order("fecha", { ascending: true });
+
+  if (!data || data.length === 0) { remindersEmpty.style.display = "block"; return; }
+  const ahora = Date.now();
+  data.forEach(r => {
+    const li = document.createElement("li");
+    const fecha = new Date(r.fecha);
+    const vencido = fecha.getTime() < ahora;
+    const meta = document.createElement("div");
+    meta.className = "list-meta";
+    meta.textContent = (vencido ? "⏰ " : "📅 ") + formatearFechaRecordatorio(r.fecha) + (r.enviado ? " (enviado)" : "");
+    li.appendChild(meta);
+    const texto = document.createElement("div");
+    texto.textContent = r.texto;
+    li.appendChild(texto);
+    const del = document.createElement("button");
+    del.className = "list-del";
+    del.textContent = "✕";
+    del.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("¿Eliminar?")) return;
+      await supabaseClient.from("zumm_recordatorios").delete().eq("id", r.id);
+      li.remove();
+      if (remindersList.children.length === 0) remindersEmpty.style.display = "block";
+    });
+    li.appendChild(del);
+    remindersList.appendChild(li);
+  });
+}
+
+if (remindersBtn) {
+  remindersBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (!remindersModal) return;
+    remindersModal.classList.add("show");
+    cargarRecordatorios();
+  });
+}
+if (remindersCloseBtn) remindersCloseBtn.addEventListener("click", () => remindersModal.classList.remove("show"));
+if (newReminderBtn) {
+  newReminderBtn.addEventListener("click", () => {
+    reminderText.value = ""; reminderDate.value = "";
+    newReminderModal.classList.add("show");
+  });
+}
+if (reminderCancelBtn) reminderCancelBtn.addEventListener("click", () => newReminderModal.classList.remove("show"));
+if (reminderSaveBtn) {
+  reminderSaveBtn.addEventListener("click", async () => {
+    const texto = reminderText.value.trim();
+    const fecha = reminderDate.value;
+    if (!texto) { alert("Escribe el texto."); return; }
+    if (!fecha) { alert("Elige fecha y hora."); return; }
+    const fechaISO = new Date(fecha).toISOString();
+    if (new Date(fechaISO).getTime() < Date.now()) { alert("Fecha debe ser futura."); return; }
+    const { error } = await supabaseClient.from("zumm_recordatorios")
+      .insert([{ owner: username, room: currentRoom, texto: texto, fecha: fechaISO }]);
+    if (error) { alert("Error: " + error.message); return; }
+    newReminderModal.classList.remove("show");
+    cargarRecordatorios();
+  });
+}
+
+setInterval(async () => {
+  try {
+    const ahora = new Date().toISOString();
+    const { data } = await supabaseClient.from("zumm_recordatorios")
+      .select("*").eq("owner", username).eq("enviado", false).lte("fecha", ahora);
+    if (!data || data.length === 0) return;
+    for (const r of data) {
+      await supabaseClient.from("zumm_messages").insert([{
+        text: "⏰ Recordatorio: " + r.texto, username: username, room: r.room
+      }]);
+      await supabaseClient.from("zumm_recordatorios").update({ enviado: true }).eq("id", r.id);
+    }
+  } catch (e) {}
+}, 30000);
+
+// ============ ENCUESTA ============
+if (pollBtn) {
+  pollBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    pollQuestion.value = ""; pollOpt1.value = ""; pollOpt2.value = ""; pollOpt3.value = "";
+    pollModal.classList.add("show");
+  });
+}
+if (pollCancelBtn) pollCancelBtn.addEventListener("click", () => pollModal.classList.remove("show"));
+if (pollSaveBtn) {
+  pollSaveBtn.addEventListener("click", async () => {
+    const q = pollQuestion.value.trim();
+    const o1 = pollOpt1.value.trim();
+    const o2 = pollOpt2.value.trim();
+    const o3 = pollOpt3.value.trim();
+    if (!q || !o1 || !o2) { alert("Pregunta y 2 opciones mínimo."); return; }
+    const opciones = [o1, o2];
+    if (o3) opciones.push(o3);
+    const pollData = { question: q, options: opciones, votes: {} };
+    const { data, error } = await supabaseClient.from("zumm_messages")
+      .insert([{
+        text: "", username: username, room: currentRoom,
+        file_url: JSON.stringify(pollData), file_name: "Encuesta", file_type: "poll/1"
+      }])
+      .select().single();
+    if (error) { alert("Error: " + error.message); return; }
+    pollModal.classList.remove("show");
+    renderMessage(data, false);
+  });
+}
+
+// ============ BLOQUEADOS ============
+async function bloquearUsuario(nombre) {
+  if (!nombre) return;
+  if (nombre.toLowerCase() === username.toLowerCase()) { alert("No puedes bloquearte."); return; }
+  await supabaseClient.from("zumm_bloqueados").insert([{ owner: username, bloqueado: nombre }]);
+  bloqueados.add(nombre.toLowerCase());
+  rendered.clear();
+  if (messagesEl) messagesEl.innerHTML = "";
+  loadHistory();
+  alert("🚫 " + nombre + " bloqueado.");
+}
+async function desbloquearUsuario(nombre) {
+  await supabaseClient.from("zumm_bloqueados")
+    .delete().eq("owner", username).eq("bloqueado", nombre);
+  bloqueados.delete(nombre.toLowerCase());
+  rendered.clear();
+  if (messagesEl) messagesEl.innerHTML = "";
+  loadHistory();
+  alert("✅ " + nombre + " desbloqueado.");
+}
+
+if (profileBlockBtn) {
+  profileBlockBtn.addEventListener("click", async () => {
+    if (!perfilActual) return;
+    if (!confirm("¿Bloquear a " + perfilActual + "?")) return;
+    await bloquearUsuario(perfilActual);
+    profileModal.classList.remove("show");
+  });
+}
+if (profileUnblockBtn) {
+  profileUnblockBtn.addEventListener("click", async () => {
+    if (!perfilActual) return;
+    if (!confirm("¿Desbloquear a " + perfilActual + "?")) return;
+    await desbloquearUsuario(perfilActual);
+    profileModal.classList.remove("show");
+  });
+}
+
+if (blockedBtn) {
+  blockedBtn.addEventListener("click", async () => {
+    cerrarPaneles();
+    if (!blockedModal) return;
+    blockedModal.classList.add("show");
+    blockedList.innerHTML = "";
+    blockedEmpty.style.display = "none";
+    const { data } = await supabaseClient.from("zumm_bloqueados")
+      .select("bloqueado").eq("owner", username);
+    if (!data || data.length === 0) { blockedEmpty.style.display = "block"; return; }
+    data.forEach(b => {
+      const li = document.createElement("li");
+      const texto = document.createElement("div");
+      texto.textContent = b.bloqueado;
+      li.appendChild(texto);
+      const del = document.createElement("button");
+      del.className = "list-del";
+      del.textContent = "✕";
+      del.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await desbloquearUsuario(b.bloqueado);
+        li.remove();
+        if (blockedList.children.length === 0) blockedEmpty.style.display = "block";
+      });
+      li.appendChild(del);
+      blockedList.appendChild(li);
+    });
+  });
+}
+if (blockedCloseBtn) blockedCloseBtn.addEventListener("click", () => blockedModal.classList.remove("show"));
+
+// ============ CONTACTOS ============
+function estaEnContactos(nombre) {
+  return misContactos.some(c => c.toLowerCase() === (nombre || "").toLowerCase());
+}
+
+async function mostrarContactos() {
+  if (!contactsList) return;
+  contactsList.innerHTML = "";
+  contactsEmpty.style.display = "none";
+  await cargarContactos();
+
+  if (misContactos.length === 0) {
+    contactsEmpty.style.display = "block";
+    return;
+  }
+
+  misContactos.forEach(c => {
+    const li = document.createElement("li");
+
+    const meta = document.createElement("div");
+    meta.className = "list-meta";
+    const estaOnline = usersOnline.some(u => u.toLowerCase() === c.toLowerCase());
+    meta.innerHTML = '<span class="' + (estaOnline ? "contact-online" : "contact-offline") + '">● ' + (estaOnline ? "En línea" : "Desconectado") + '</span>';
+    li.appendChild(meta);
+
+    const nombreDiv = document.createElement("div");
+    nombreDiv.style.fontWeight = "bold";
+    nombreDiv.style.fontSize = "15px";
+    nombreDiv.textContent = c;
+    li.appendChild(nombreDiv);
+
+    const actions = document.createElement("div");
+    actions.className = "contact-actions";
+
+    const btnChat = document.createElement("button");
+    btnChat.textContent = "💬 Chat";
+    btnChat.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openPrivateWith(c);
+      contactsModal.classList.remove("show");
+    });
+    actions.appendChild(btnChat);
+
+    if (estaOnline) {
+      const btnLlamar = document.createElement("button");
+      btnLlamar.textContent = "📞 Llamar";
+      btnLlamar.addEventListener("click", (e) => {
+        e.stopPropagation();
+        contactsModal.classList.remove("show");
+        startCall(c, false);
+      });
+      actions.appendChild(btnLlamar);
+    }
+
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "🗑️";
+    btnDel.style.flex = "0 0 auto";
+    btnDel.style.padding = "6px 10px";
+    btnDel.style.color = "#ff5252";
+    btnDel.style.borderColor = "#ff5252";
+    btnDel.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("¿Quitar a " + c + " de contactos?")) return;
+      await eliminarContacto(c);
+      li.remove();
+      if (contactsList.children.length === 0) contactsEmpty.style.display = "block";
+    });
+    actions.appendChild(btnDel);
+
+    li.appendChild(actions);
+    contactsList.appendChild(li);
+  });
+}
+
+if (contactsBtn) {
+  contactsBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (!contactsModal) return;
+    contactsModal.classList.add("show");
+    mostrarContactos();
+  });
+}
+if (contactsCloseBtn) contactsCloseBtn.addEventListener("click", () => contactsModal.classList.remove("show"));
+
+if (newContactBtn) {
+  newContactBtn.addEventListener("click", async () => {
+    const nombre = prompt("Nombre del contacto:");
+    if (!nombre || !nombre.trim()) return;
+    await añadirContacto(nombre);
+    mostrarContactos();
+  });
+}
+
+if (profileAddContactBtn) {
+  profileAddContactBtn.addEventListener("click", async () => {
+    if (!perfilActual) return;
+    if (estaEnContactos(perfilActual)) {
+      alert("Ya está en tus contactos.");
+      return;
+    }
+    await añadirContacto(perfilActual);
+    abrirPerfil(perfilActual, false);
+  });
+}
+
+// ============ REACCIONES ============
+async function toggleReaccion(msgId, emoji) {
+  const { data: msg } = await supabaseClient.from("zumm_messages")
+    .select("reactions").eq("id", msgId).single();
+  if (!msg) return;
+  const actuales = (msg.reactions || "").split(",").filter(x => x.trim());
+  const miTag = emoji + ":" + username;
+  let nuevas;
+  if (actuales.includes(miTag)) nuevas = actuales.filter(x => x !== miTag);
+  else {
+    nuevas = actuales.filter(x => !x.endsWith(":" + username));
+    nuevas.push(miTag);
+  }
+  await supabaseClient.from("zumm_messages")
+    .update({ reactions: nuevas.join(",") }).eq("id", msgId);
+}
+
+// ============ BÚSQUEDA ============
+if (searchBtn) {
+  searchBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (!searchBar) return;
+    searchBar.classList.add("show");
+    if (searchInput) setTimeout(() => searchInput.focus(), 100);
+  });
+}
+if (searchClose) {
+  searchClose.addEventListener("click", () => {
+    if (searchBar) searchBar.classList.remove("show");
+    limpiarBusqueda();
+  });
+}
+function limpiarBusqueda() {
+  if (searchInput) searchInput.value = "";
+  document.querySelectorAll(".msg.highlight").forEach(el => el.classList.remove("highlight"));
+  document.querySelectorAll(".msg").forEach(el => { el.style.display = "flex"; });
+}
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.toLowerCase().trim();
+    const mensajes = document.querySelectorAll(".msg");
+    if (!q) { mensajes.forEach(el => { el.style.display = "flex"; el.classList.remove("highlight"); }); return; }
+    mensajes.forEach(el => {
+      const texto = (el.textContent || "").toLowerCase();
+      const coincide = texto.includes(q);
+      el.style.display = coincide ? "flex" : "none";
+      el.classList.toggle("highlight", coincide);
+    });
+  });
+}
+
+// ============ SCROLL BTN ============
+function actualizarBotonAbajo() {
+  if (!messagesEl || !scrollDownBtn) return;
+  const distanciaAbajo = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+  scrollDownBtn.classList.toggle("show", distanciaAbajo > 150);
+}
+if (messagesEl) messagesEl.addEventListener("scroll", actualizarBotonAbajo);
+if (scrollDownBtn) {
+  scrollDownBtn.addEventListener("click", () => {
+    if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollDownBtn.classList.remove("show");
+  });
+}
+
+// ============ MODAL IMG ============
+function openImageModal(url) {
+  let modal = document.getElementById("imgModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "imgModal";
+    const img = document.createElement("img");
+    const close = document.createElement("button");
+    close.className = "close-modal";
+    close.textContent = "✕";
+    close.addEventListener("click", () => modal.classList.remove("show"));
+    modal.appendChild(img); modal.appendChild(close);
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
+    document.body.appendChild(modal);
+  }
+  modal.querySelector("img").src = url;
+  modal.classList.add("show");
+}
+
+// ============ PRESENCIA ============
+let usersOnline = [];
+let presenceInterval = null;
+let presenceRefreshInterval = null;
+let avataresPorUsuario = {};
+
+async function registrarPresencia() {
+  await supabaseClient.from("zumm_presence")
+    .upsert({
+      username: username, room: currentRoom,
+      last_seen: new Date().toISOString(),
+      avatar_url: myAvatarUrl || null
+    }, { onConflict: "username,room" }).catch(() => {});
+}
+
+async function leerPresencia() {
+  try {
+    const hace30s = new Date(Date.now() - 30000).toISOString();
+    const { data, error } = await supabaseClient.from("zumm_presence")
+      .select("username, last_seen, avatar_url, typing_at")
+      .eq("room", currentRoom).gte("last_seen", hace30s);
+    if (error) return;
+
+    usersOnline = (data || [])
+      .map(u => u.username)
+      .filter(u => u.toLowerCase() !== username.toLowerCase());
+
+    avataresPorUsuario = {};
+    (data || []).forEach(u => {
+      if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
+    });
+
+    const ahora = Date.now();
+    const escribiendo = (data || [])
+      .filter(u => u.username.toLowerCase() !== username.toLowerCase())
+      .filter(u => u.typing_at && (ahora - new Date(u.typing_at).getTime() < 5000))
+      .map(u => u.username);
+
+    actualizarIndicadorTyping(escribiendo);
+    renderUserList();
+  } catch (e) {}
+}
+
+function iniciarPresencia() {
+  registrarPresencia(); leerPresencia();
+  clearInterval(presenceInterval);
+  presenceInterval = setInterval(registrarPresencia, 8000);
+  clearInterval(presenceRefreshInterval);
+  presenceRefreshInterval = setInterval(leerPresencia, 3000);
+}
+
+supabaseClient
+  .channel("zumm-presence-realtime")
+  .on("postgres_changes", { event: "*", schema: "public", table: "zumm_presence" },
+      () => { leerPresencia(); })
+  .subscribe();
+
+// ============ LISTA USUARIOS ============
+function updateUsersBtn() {
+  if (usersBtn) {
+    const hay = usersOnline.length > 0;
+    usersBtn.classList.toggle("has-users", hay);
+  }
+}
+
+function renderUserList() {
+  if (!userList) return;
+  userList.innerHTML = "";
+  if (usersOnline.length === 0) {
+    if (noUsers) { noUsers.style.display = "block"; noUsers.textContent = "Nadie más conectado"; }
+    updateUsersBtn(); return;
+  }
+  if (noUsers) noUsers.style.display = "none";
+
+  usersOnline.forEach(name => {
+    const li = document.createElement("li");
+    const span = document.createElement("span");
+    span.textContent = name;
+    span.addEventListener("click", (e) => { e.stopPropagation(); abrirPerfil(name, false); });
+    li.appendChild(span);
+
+    const actions = document.createElement("div");
+    actions.className = "user-actions";
+
+    const mkBtn = (texto, titulo, fn) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.title = titulo; b.textContent = texto;
+      b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+      return b;
+    };
+
+    actions.appendChild(mkBtn("💬", "Chat privado", () => openPrivateWith(name)));
+    actions.appendChild(mkBtn("📞", "Llamar", () => startCall(name, false)));
+    actions.appendChild(mkBtn("📹", "Videollamada", () => startCall(name, true)));
+
+    li.appendChild(actions);
+    userList.appendChild(li);
+  });
+  updateUsersBtn();
+}
+
+if (usersBtn) {
+  usersBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (usersPanel) usersPanel.classList.add("show");
+    leerPresencia();
+  });
+}
+if (usersPanelClose) {
+  usersPanelClose.addEventListener("click", () => {
+    if (usersPanel) usersPanel.classList.remove("show");
+  });
+}
+
+// ============ PERFIL ============
+let perfilActual = null;
+
+function mostrarAvatarPropio() {
+  if (!userMeAvatar) return;
+  if (myAvatarUrl) {
+    userMeAvatar.textContent = "";
+    userMeAvatar.style.backgroundImage = "url(" + myAvatarUrl + ")";
+  } else {
+    userMeAvatar.textContent = avatarLetter(username);
+    userMeAvatar.style.backgroundImage = "";
+  }
+}
+mostrarAvatarPropio();
+
+function abrirPerfil(nombre, editable) {
+  if (!profileModal) return;
+  if (nombre === BOT_NAME) return;
+  perfilActual = nombre;
+  const esMio = nombre.toLowerCase() === username.toLowerCase();
+
+  const url = esMio ? myAvatarUrl : (avataresPorUsuario[nombre.toLowerCase()] || "");
+  if (url) {
+    profileAvatar.style.backgroundImage = "url(" + url + ")";
+    profileAvatar.textContent = "";
+  } else {
+    profileAvatar.style.backgroundImage = "";
+    profileAvatar.textContent = avatarLetter(nombre);
+    profileAvatar.style.background = colorForUser(nombre);
+  }
+  profileName.textContent = nombre;
+
+  if (esMio) {
+    profileBioDisplay.textContent = myBio || "Sin bio";
+    profileStatusDisplay.textContent = myStatus || "Sin estado";
+  } else {
+    profileBioDisplay.textContent = "Cargando...";
+    profileStatusDisplay.textContent = "Cargando...";
+    supabaseClient.from("zumm_presence").select("bio, status_text")
+      .eq("username", nombre).limit(1).then(({ data }) => {
+        if (data && data[0]) {
+          profileBioDisplay.textContent = data[0].bio || "Sin bio";
+          profileStatusDisplay.textContent = data[0].status_text || "Sin estado";
+        }
+      });
+  }
+
+  profileBioInput.style.display = "none";
+  profileStatusInput.style.display = "none";
+  profileBioDisplay.style.display = "block";
+  profileStatusDisplay.style.display = "block";
+  profileEditBtn.style.display = esMio ? "block" : "none";
+  profileSaveBtn.style.display = "none";
+  profileCancelBtn.style.display = "none";
+
+  if (!esMio) {
+    const estaBloqueado = bloqueados.has(nombre.toLowerCase());
+    profileBlockBtn.style.display = estaBloqueado ? "none" : "block";
+    profileUnblockBtn.style.display = estaBloqueado ? "block" : "none";
+    const estaEnCon = estaEnContactos(nombre);
+    profileAddContactBtn.style.display = estaEnCon ? "none" : "block";
+  } else {
+    profileBlockBtn.style.display = "none";
+    profileUnblockBtn.style.display = "none";
+    profileAddContactBtn.style.display = "none";
+  }
+
+  profileModal.classList.add("show");
+}
+
+if (userMeAvatar) userMeAvatar.addEventListener("click", () => abrirPerfil(username, true));
+if (profileCloseBtn) profileCloseBtn.addEventListener("click", () => profileModal.classList.remove("show"));
+
+if (profileEditBtn) {
+  profileEditBtn.addEventListener("click", () => {
+    if (!perfilActual || perfilActual.toLowerCase() !== username.toLowerCase()) return;
+    profileBioInput.value = myBio;
+    profileStatusInput.value = myStatus;
+    profileBioDisplay.style.display = "none";
+    profileStatusDisplay.style.display = "none";
+    profileBioInput.style.display = "block";
+    profileStatusInput.style.display = "block";
+    profileEditBtn.style.display = "none";
+    profileSaveBtn.style.display = "block";
+    profileCancelBtn.style.display = "block";
+  });
+}
+if (profileCancelBtn) profileCancelBtn.addEventListener("click", () => abrirPerfil(username, true));
+if (profileSaveBtn) {
+  profileSaveBtn.addEventListener("click", async () => {
+    myBio = (profileBioInput.value || "").trim().substring(0, 100);
+    myStatus = (profileStatusInput.value || "").trim().substring(0, 60);
+    LS.setItem("zummchat_bio", myBio);
+    LS.setItem("zummchat_status", myStatus);
+    await supabaseClient.from("zumm_presence").upsert({
+      username: username, room: currentRoom,
+      last_seen: new Date().toISOString(),
+      avatar_url: myAvatarUrl || null,
+      bio: myBio, status_text: myStatus
+    }, { onConflict: "username,room" });
+    abrirPerfil(username, true);
+    alert("✅ Perfil actualizado");
+  });
+}
+
+if (avatarInput) {
+  avatarInput.addEventListener("change", async () => {
+    const file = avatarInput.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Máx 2 MB."); avatarInput.value = ""; return; }
+    userMeAvatar.textContent = "⏳";
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const nombreArchivo = "avatar_" + username.toLowerCase().replace(/\s/g, "") + "_" + Date.now() + "." + ext;
+      const { error: upErr } = await supabaseClient.storage.from("archivos")
+        .upload(nombreArchivo, file, { contentType: file.type, upsert: true });
+      if (upErr) { alert("Error: " + upErr.message); mostrarAvatarPropio(); return; }
+      const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
+      myAvatarUrl = urlData.publicUrl;
+      LS.setItem("zummchat_avatar", myAvatarUrl);
+      mostrarAvatarPropio();
+      await supabaseClient.from("zumm_presence").upsert({
+        username: username, room: currentRoom,
+        last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
+        bio: myBio, status_text: myStatus
+      }, { onConflict: "username,room" });
+      alert("✅ Foto actualizada");
+    } catch (e) { alert("Error: " + e.message); mostrarAvatarPropio(); }
+    finally { avatarInput.value = ""; }
+  });
+}
+
+function actualizarNombreEnUI() { if (userMeName) userMeName.textContent = "Tú: " + username; }
+actualizarNombreEnUI();
+
+if (changeNameBtn) {
+  changeNameBtn.addEventListener("click", async () => {
+    const nuevo = prompt("Escribe tu nuevo nombre:", username);
+    if (!nuevo || !nuevo.trim()) return;
+    const limpio = nuevo.trim().substring(0, 20);
+    if (limpio.toLowerCase() === username.toLowerCase()) return;
+    const viejo = username;
+    username = limpio;
+    LS.setItem("zummchat_user", username);
+    actualizarNombreEnUI();
+    await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
+    await supabaseClient.from("zumm_presence").upsert({
+      username: username, room: currentRoom,
+      last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
+      bio: myBio, status_text: myStatus
+    }, { onConflict: "username,room" });
+    alert("✅ Nombre cambiado a: " + username);
+  });
+}
+
+// ============ ESTADÍSTICAS PERSONALES ============
+if (statsBtn) {
+  statsBtn.addEventListener("click", async () => {
+    cerrarPaneles();
+    if (!statsModal) return;
+    statsModal.classList.add("show");
+    statTotalMsgs.textContent = "..."; statFiles.textContent = "...";
+    statVoice.textContent = "..."; statDays.textContent = "..."; statFirst.textContent = "...";
+    const { data } = await supabaseClient.from("zumm_messages")
+      .select("created_at, file_type").eq("username", username);
+    if (!data || data.length === 0) {
+      statTotalMsgs.textContent = "0"; statFiles.textContent = "0";
+      statVoice.textContent = "0"; statDays.textContent = "0"; statFirst.textContent = "—";
+      return;
+    }
+    const total = data.length;
+    const conArchivo = data.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/")).length;
+    const conVoz = data.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
+    const fechas = new Set(data.map(m => m.created_at.substring(0, 10)));
+    const primera = new Date(data[data.length - 1].created_at);
+    const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
+    statTotalMsgs.textContent = total;
+    statFiles.textContent = conArchivo;
+    statVoice.textContent = conVoz;
+    statDays.textContent = fechas.size;
+    statFirst.textContent = primeraStr;
+  });
+}
+if (statsCloseBtn) statsCloseBtn.addEventListener("click", () => statsModal.classList.remove("show"));
+
+// ============ ESTADÍSTICAS GRUPO ============
+if (groupStatsBtn) {
+  groupStatsBtn.addEventListener("click", async () => {
+    cerrarPaneles();
+    if (!groupStatsModal) return;
+    groupStatsModal.classList.add("show");
+    gStatTotal.textContent = "..."; gStatUsers.textContent = "...";
+    gStatTop.textContent = "..."; gStatFiles.textContent = "...";
+    gStatVoice.textContent = "..."; gStatFirst.textContent = "...";
+    gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-dim);font-size:13px;'>Cargando...</p>";
+    const { data } = await supabaseClient.from("zumm_messages")
+      .select("username, created_at, file_type").eq("room", currentRoom);
+    if (!data || data.length === 0) {
+      gStatTotal.textContent = "0"; gStatUsers.textContent = "0";
+      gStatTop.textContent = "—"; gStatFiles.textContent = "0";
+      gStatVoice.textContent = "0"; gStatFirst.textContent = "—";
+      gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-muted);font-size:13px;'>Sin mensajes aún</p>";
+      return;
+    }
+    const total = data.length;
+    const usuarios = {};
+    const sinBot = data.filter(m => m.username !== BOT_NAME);
+    sinBot.forEach(m => {
+      const u = m.username || "Anónimo";
+      usuarios[u] = (usuarios[u] || 0) + 1;
+    });
+    const lista = Object.entries(usuarios).sort((a, b) => b[1] - a[1]);
+    const numUsuarios = lista.length;
+    const top = lista[0] ? lista[0][0] + " (" + lista[0][1] + ")" : "—";
+    const conArchivo = sinBot.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/")).length;
+    const conVoz = sinBot.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
+    const primera = new Date(data[0].created_at);
+    const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
+    gStatTotal.textContent = total;
+    gStatUsers.textContent = numUsuarios;
+    gStatTop.textContent = top;
+    gStatFiles.textContent = conArchivo;
+    gStatVoice.textContent = conVoz;
+    gStatFirst.textContent = primeraStr;
+    gStatRanking.innerHTML = "<div style='color:var(--accent);font-weight:bold;margin:14px 0 8px 0;font-size:14px;text-align:center;'>🏆 Ranking</div>";
+    const medallas = ["🥇", "🥈", "🥉"];
+    lista.forEach((entry, idx) => {
+      const row = document.createElement("div");
+      row.className = "rank-row";
+      const pos = document.createElement("span");
+      pos.className = "rank-pos";
+      pos.textContent = medallas[idx] || ("#" + (idx + 1));
+      const nombre = document.createElement("span");
+      nombre.className = "rank-name";
+      nombre.textContent = entry[0];
+      const count = document.createElement("span");
+      count.className = "rank-count";
+      count.textContent = entry[1] + " 💬";
+      row.appendChild(pos); row.appendChild(nombre); row.appendChild(count);
+      gStatRanking.appendChild(row);
+    });
+  });
+}
+if (groupStatsCloseBtn) groupStatsCloseBtn.addEventListener("click", () => groupStatsModal.classList.remove("show"));
+
+// ============ LLAMADAS ============
+let pc = null, localStream = null, activeCall = null, incomingCall = null;
+let iceQueue = [], inviteTimer = null, ringTimeout = null, muted = false;
+let signalsLastId = 0, signalsCheckInterval = null;
+let currentFacingMode = "user", listaCamaras = [];
+
+async function cargarListaCamaras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    listaCamaras = devices.filter(d => d.kind === "videoinput");
+  } catch (e) {}
+}
+
+async function enviarSenal(toUser, signalType, payload) {
+  await supabaseClient.from("zumm_signals")
+    .insert([{
+      from_user: username, to_user: toUser, from_client: myClientId,
+      signal_type: signalType, payload: JSON.stringify(payload || {})
+    }]);
+}
+
+async function leerSenales() {
+  const { data } = await supabaseClient.from("zumm_signals")
+    .select("*").eq("to_user", username)
+    .gt("id", signalsLastId).order("id", { ascending: true }).limit(50);
+  for (const s of (data || [])) {
+    if (s.from_client === myClientId) continue;
+    if (s.id > signalsLastId) signalsLastId = s.id;
+    const edad = Date.now() - new Date(s.created_at).getTime();
+    if (edad > 60000) continue;
+    procesarSenal(s);
+  }
+}
+
+function procesarSenal(s) {
+  let payload = {};
+  try { payload = JSON.parse(s.payload || "{}"); } catch (e) {}
+  const fromName = s.from_user;
+  const callId = payload.callId;
+
+  switch (s.signal_type) {
+    case "invite":
+      if (payload.targetName && payload.targetName.toLowerCase() !== username.toLowerCase()) return;
+      if (activeCall || incomingCall) { enviarSenal(fromName, "reject", { callId, reason: "busy" }); return; }
+      incomingCall = { callId, fromName, fromId: s.from_client, video: !!payload.video };
+      if (incomingAvatar) {
+        incomingAvatar.textContent = avatarLetter(fromName);
+        incomingAvatar.style.background = colorForUser(fromName);
+      }
+      if (incomingName) incomingName.textContent = fromName;
+      if (incomingText) incomingText.textContent = payload.video ? "Videollamada entrante..." : "Llamada entrante...";
+      if (incomingModal) incomingModal.classList.add("show");
+      playRingtone();
+      clearTimeout(ringTimeout);
+      ringTimeout = setTimeout(() => {
+        if (incomingCall && incomingCall.callId === callId) dismissIncoming(false);
+      }, 35000);
+      break;
+    case "accept":
+      if (!activeCall || activeCall.role !== "caller" || activeCall.callId !== callId) return;
+      activeCall.peerId = s.from_client;
+      clearTimeout(inviteTimer); inviteTimer = null;
+      if (callStatus) callStatus.textContent = "Conectando...";
+      crearOferta(); break;
+    case "offer":
+      if (!activeCall || activeCall.role !== "callee" || activeCall.callId !== callId) return;
+      if (!localStream) return;
+      recibirOferta(payload.sdp); break;
+    case "answer":
+      if (!activeCall || activeCall.role !== "caller" || activeCall.callId !== callId || !pc) return;
+      recibirRespuesta(payload.sdp); break;
+    case "ice":
+      if (!payload.candidate) return;
+      if (pc && pc.remoteDescription) pc.addIceCandidate(new RTCIceCandidate(payload.candidate)).catch(() => {});
+      else iceQueue.push(payload.candidate);
+      break;
+    case "hangup":
+      if (incomingCall && incomingCall.callId === callId) dismissIncoming(false);
+      if (activeCall && activeCall.callId === callId) { endCall(false); alert(fromName + " colgó."); }
+      break;
+    case "reject":
+      if (!activeCall || activeCall.callId !== callId) return;
+      endCall(false);
+      alert((payload.reason === "busy") ? fromName + " está ocupado." : fromName + " rechazó.");
+      break;
+  }
+}
+
+function supportsCalls() {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return true;
+  alert("Tu navegador no soporta llamadas."); return false;
+}
+
+async function startCall(targetName, withVideo) {
+  if (activeCall || incomingCall) { alert("Ya tienes una llamada activa."); return; }
+  if (!supportsCalls()) return;
+  const match = usersOnline.find(u => u.toLowerCase() === targetName.toLowerCase());
+  if (!match) { alert(targetName + " no está en línea."); return; }
+  targetName = match;
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: withVideo ? { width: 640, height: 480, facingMode: "user" } : false
+    });
+  } catch (e) { alert("No se pudo acceder al micrófono/cámara:\n" + e.message); return; }
+
+  localStream = stream;
+  currentFacingMode = "user";
+  await cargarListaCamaras();
+
+  const callId = myClientId + "-" + Date.now();
+  activeCall = { callId, peerName: targetName, peerId: null, role: "caller", video: !!withVideo };
+  showCallOverlay("Llamando a " + targetName + "...");
+  await enviarSenal(targetName, "invite", { targetName, callId, video: !!withVideo });
+
+  clearTimeout(inviteTimer);
+  inviteTimer = setTimeout(() => {
+    if (activeCall && activeCall.role === "caller" && !pc) {
+      enviarSenal(targetName, "cancel", { callId });
+      endCall(false);
+      alert(targetName + " no respondió.");
+    }
+  }, 35000);
+}
+
+function dismissIncoming(notify) {
+  if (!incomingCall) return;
+  if (notify) enviarSenal(incomingCall.fromName, "reject", { callId: incomingCall.callId });
+  incomingCall = null;
+  stopRingtone();
+  clearTimeout(ringTimeout);
+  if (incomingModal) incomingModal.classList.remove("show");
+}
+
+if (rejectBtn) rejectBtn.addEventListener("click", () => dismissIncoming(true));
+
+if (incomingAcceptBtn) {
+  incomingAcceptBtn.addEventListener("click", async () => {
+    if (!incomingCall) return;
+    const call = incomingCall;
+    incomingCall = null;
+    stopRingtone(); clearTimeout(ringTimeout);
+    if (incomingModal) incomingModal.classList.remove("show");
+    if (!supportsCalls()) { enviarSenal(call.fromName, "reject", { callId: call.callId }); return; }
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: call.video ? { width: 640, height: 480, facingMode: "user" } : false
+      });
+    } catch (e) {
+      alert("Error mic/cámara:\n" + e.message);
+      enviarSenal(call.fromName, "reject", { callId: call.callId }); return;
+    }
+    currentFacingMode = "user";
+    await cargarListaCamaras();
+    activeCall = { callId: call.callId, peerName: call.fromName, peerId: call.fromId, role: "callee", video: call.video };
+    showCallOverlay("Conectando con " + call.fromName + "...");
+    attachLocalPreview();
+    await enviarSenal(call.fromName, "accept", { callId: call.callId });
+  });
+}
+
+function createPeer() {
+  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  pc.onicecandidate = (e) => {
+    if (e.candidate && activeCall) {
+      enviarSenal(activeCall.peerName, "ice", { callId: activeCall.callId, candidate: e.candidate });
+    }
+  };
+  pc.ontrack = (e) => {
+    if (remoteVideo) {
+      remoteVideo.srcObject = e.streams[0];
+      remoteVideo.play().catch(() => {});
+    }
+  };
+  pc.onconnectionstatechange = () => {
+    if (!pc || !activeCall) return;
+    if (pc.connectionState === "connected") {
+      if (callStatus) callStatus.textContent = "En llamada con " + activeCall.peerName;
+    } else if (pc.connectionState === "failed") { alert("Se perdió la conexión."); endCall(true); }
+  };
+}
+
+async function crearOferta() {
+  try {
+    createPeer();
+    attachLocalPreview();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await enviarSenal(activeCall.peerName, "offer", { callId: activeCall.callId, sdp: pc.localDescription });
+  } catch (e) { alert("Error: " + e.message); endCall(true); }
+}
+
+async function recibirOferta(sdp) {
+  try {
+    if (!pc) createPeer();
+    attachLocalPreview();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await enviarSenal(activeCall.peerName, "answer", { callId: activeCall.callId, sdp: pc.localDescription });
+    flushIce();
+  } catch (e) { alert("Error: " + e.message); endCall(true); }
+}
+
+async function recibirRespuesta(sdp) {
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    flushIce();
+  } catch (e) { endCall(true); }
+}
+
+function flushIce() {
+  while (iceQueue.length && pc && pc.remoteDescription) {
+    const c = iceQueue.shift();
+    pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+  }
+}
+
+function attachLocalPreview() {
+  if (localVideo && localStream) {
+    localVideo.srcObject = localStream;
+    localVideo.play().catch(() => {});
+  }
+}
+
+function showCallOverlay(texto) {
+  if (callOverlay) callOverlay.classList.add("show");
+  if (callStatus) callStatus.textContent = texto;
+  if (acceptCallBtn) acceptCallBtn.style.display = "none";
+
+  const videos = document.querySelector(".videos");
+  const soloAudio = !(activeCall && activeCall.video);
+  if (videos) videos.classList.toggle("audio-only", soloAudio);
+
+  const audioAvatar = document.getElementById("audioAvatar");
+  if (audioAvatar) {
+    if (soloAudio && activeCall) {
+      audioAvatar.textContent = avatarLetter(activeCall.peerName);
+      audioAvatar.style.background = colorForUser(activeCall.peerName);
+    } else audioAvatar.textContent = "";
+  }
+  if (switchCamBtn) {
+    if (activeCall && activeCall.video) {
+      switchCamBtn.style.display = "inline-block";
+      switchCamBtn.textContent = "🔄 Frontal";
+    } else switchCamBtn.style.display = "none";
+  }
+  muted = false;
+  if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
+}
+
+function endCall(notify) {
+  if (notify && activeCall) enviarSenal(activeCall.peerName, "hangup", { callId: activeCall.callId });
+  clearTimeout(inviteTimer); inviteTimer = null;
+  clearTimeout(ringTimeout);
+  if (pc) { try { pc.close(); } catch (e) {} pc = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  iceQueue = []; activeCall = null; muted = false; currentFacingMode = "user";
+  if (muteBtn) { muteBtn.textContent = "🎤 Mic"; muteBtn.classList.remove("muted"); }
+  if (switchCamBtn) switchCamBtn.style.display = "none";
+  if (localVideo) localVideo.srcObject = null;
+  if (remoteVideo) remoteVideo.srcObject = null;
+  if (callOverlay) callOverlay.classList.remove("show");
+}
+
+if (muteBtn) {
+  muteBtn.addEventListener("click", () => {
+    if (!localStream) return;
+    muted = !muted;
+    localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+    muteBtn.textContent = muted ? "🔇 Mic" : "🎤 Mic";
+    muteBtn.classList.toggle("muted", muted);
+  });
+}
+
+async function cambiarCamara() {
+  if (!localStream || !activeCall || !activeCall.video) return;
+  try {
+    localStream.getVideoTracks().forEach(t => {
+      try { t.stop(); } catch (e) {}
+      try { localStream.removeTrack(t); } catch (e) {}
+    });
+    await new Promise(r => setTimeout(r, 300));
+    await cargarListaCamaras();
+    currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+
+    let nuevoStream = null;
+    if (listaCamaras.length >= 2) {
+      const idxDeseado = currentFacingMode === "user" ? 0 : (listaCamaras.length - 1);
+      try {
+        nuevoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { deviceId: { exact: listaCamaras[idxDeseado].deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+      } catch (e1) {}
+    }
+    if (!nuevoStream) {
+      try {
+        nuevoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { exact: currentFacingMode }, width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+      } catch (e2) {}
+    }
+    if (!nuevoStream) return;
+
+    const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
+    if (pc) {
+      const senderVideo = pc.getSenders().find(s => s.track && s.track.kind === "video");
+      if (senderVideo) await senderVideo.replaceTrack(nuevaPistaVideo);
+    }
+    localStream.addTrack(nuevaPistaVideo);
+    if (localVideo) {
+      localVideo.srcObject = null;
+      localVideo.srcObject = localStream;
+      await localVideo.play().catch(() => {});
+    }
+    if (switchCamBtn) {
+      switchCamBtn.textContent = currentFacingMode === "user" ? "🔄 Frontal" : "🔄 Trasera";
+    }
+  } catch (e) {}
+}
+
+if (switchCamBtn) switchCamBtn.addEventListener("click", cambiarCamara);
+if (hangupBtn) hangupBtn.addEventListener("click", () => endCall(true));
+
+if (callBtn) {
+  callBtn.addEventListener("click", () => {
+    if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
+    const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
+    if (!target || !target.trim()) return;
+    startCall(target.trim(), false);
+  });
+}
+
+if (videoBtn) {
+  videoBtn.addEventListener("click", () => {
+    if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
+    const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
+    if (!target || !target.trim()) return;
+    startCall(target.trim(), true);
+  });
+}
+
+clearInterval(signalsCheckInterval);
+signalsCheckInterval = setInterval(leerSenales, 1500);
+
+// ============ ARRANCAR ============
+if (chatTitle) chatTitle.textContent = "ZummChat · General";
+updateActiveTab();
+loadHistory();
+iniciarPresencia();
+leerSenales();
+cargarListaCamaras();
+actualizarBotonAbajo();
+cargarMensajeFijado();
+cargarFavoritos();
+cargarBloqueados();
+cargarContactos();
+setTimeout(saludarBienvenida, 3000);
+
+// © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

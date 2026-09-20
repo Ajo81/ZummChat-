@@ -18,7 +18,6 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
-// ============ DOM ============
 const messagesEl      = document.getElementById("messages");
 const inputEl         = document.getElementById("messageInput");
 const sendBtn         = document.getElementById("sendBtn");
@@ -57,8 +56,6 @@ const remindersBtn    = document.getElementById("remindersBtn");
 const pollBtn         = document.getElementById("pollBtn");
 const blockedBtn      = document.getElementById("blockedBtn");
 const contactsBtn     = document.getElementById("contactsBtn");
-const gamesBtn        = document.getElementById("gamesBtn");
-const giftsBtn        = document.getElementById("giftsBtn");
 const searchBar       = document.getElementById("searchBar");
 const searchInput     = document.getElementById("searchInput");
 const searchClose     = document.getElementById("searchClose");
@@ -142,19 +139,6 @@ const contactsList    = document.getElementById("contactsList");
 const contactsEmpty   = document.getElementById("contactsEmpty");
 const contactsCloseBtn = document.getElementById("contactsCloseBtn");
 const newContactBtn   = document.getElementById("newContactBtn");
-const newGameModal    = document.getElementById("newGameModal");
-const gameOpponent    = document.getElementById("gameOpponent");
-const gameCancelBtn   = document.getElementById("gameCancelBtn");
-const gameSaveBtn     = document.getElementById("gameSaveBtn");
-const giftModal       = document.getElementById("giftModal");
-const giftTo          = document.getElementById("giftTo");
-const giftPicker      = document.getElementById("giftPicker");
-const giftCancelBtn   = document.getElementById("giftCancelBtn");
-const giftSaveBtn     = document.getElementById("giftSaveBtn");
-const myGiftsModal    = document.getElementById("myGiftsModal");
-const myGiftsGrid     = document.getElementById("myGiftsGrid");
-const myGiftsEmpty    = document.getElementById("myGiftsEmpty");
-const myGiftsCloseBtn = document.getElementById("myGiftsCloseBtn");
 const usersPanel      = document.getElementById("usersPanel");
 const usersPanelClose = document.getElementById("usersPanelClose");
 const userList        = document.getElementById("userList");
@@ -198,7 +182,6 @@ const ICE_SERVERS = [
   }
 ];
 
-// ============ STORAGE ============
 function makeStorage(tipo) {
   try {
     const backend = tipo === "local" ? window.localStorage : window.sessionStorage;
@@ -217,7 +200,6 @@ function makeStorage(tipo) {
 const LS = makeStorage("local");
 const SS = makeStorage("session");
 
-// ============ USUARIO ============
 let username = LS.getItem("zummchat_user");
 if (!username) {
   username = prompt("¿Cómo te llamas?");
@@ -235,7 +217,6 @@ let myBio = LS.getItem("zummchat_bio") || "";
 let myStatus = LS.getItem("zummchat_status") || "";
 let currentRoom = "general";
 
-// ============ BLOQUEADOS ============
 let bloqueados = new Set();
 async function cargarBloqueados() {
   try {
@@ -244,7 +225,6 @@ async function cargarBloqueados() {
   } catch (e) {}
 }
 
-// ============ CONTACTOS ============
 let misContactos = [];
 async function cargarContactos() {
   try {
@@ -272,7 +252,6 @@ function estaEnContactos(nombre) {
   return misContactos.some(c => c.toLowerCase() === (nombre || "").toLowerCase());
 }
 
-// ============ SILENCIAR ============
 let chatsSilenciados = JSON.parse(LS.getItem("zummchat_silenciados") || "[]");
 function guardarSilenciados() { LS.setItem("zummchat_silenciados", JSON.stringify(chatsSilenciados)); }
 function chatEstaSilenciado(room) { return chatsSilenciados.includes(room); }
@@ -294,7 +273,6 @@ function actualizarBotonesSilenciados() {
   });
 }
 
-// ============ TEMA Y PACK ============
 let temaActual = LS.getItem("zummchat_tema") || "dark";
 let packActual = LS.getItem("zummchat_pack") || "";
 function aplicarTema() {
@@ -335,7 +313,6 @@ if (colorBtn) colorBtn.addEventListener("click", () => {
   alert("🎨 Tema: " + packsDisponibles[idx].nombre);
 });
 
-// ============ SONIDO ============
 let sonidoActivo = LS.getItem("zummchat_sonido") !== "off";
 let audioCtx = null;
 function initAudio() {
@@ -372,7 +349,6 @@ if (soundBtn) soundBtn.addEventListener("click", () => {
   if (sonidoActivo) reproducirSonidoInsistente();
 });
 
-// ============ NOTIFICACIONES ============
 if ("Notification" in window && Notification.permission === "default") {
   setTimeout(() => { Notification.requestPermission().catch(() => {}); }, 3000);
 }
@@ -412,7 +388,6 @@ function resetearTitulo() {
 window.addEventListener("focus", resetearTitulo);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) resetearTitulo(); });
 
-// ============ RINGTONE ============
 let ringInterval = null;
 function playRingtone() {
   initAudio(); if (!audioCtx) return;
@@ -438,7 +413,6 @@ function stopRingtone() {
   if (navigator.vibrate) navigator.vibrate(0);
 }
 
-// ============ UTILIDADES ============
 function colorForUser(name) {
   if (name === BOT_NAME) return "#00ff66";
   if (!name) name = "Anónimo";
@@ -468,7 +442,6 @@ function formatearSegundos(s) {
   return m + ":" + String(seg).padStart(2, "0");
 }
 
-// ============ PANELES ============
 function cerrarPaneles() {
   if (configPanel) configPanel.classList.remove("show");
   if (attachMenu) attachMenu.classList.remove("show");
@@ -492,7 +465,6 @@ document.addEventListener("touchstart", (e) => {
   if (attachMenu && attachMenu.classList.contains("show") && !attachMenu.contains(e.target) && e.target !== attachBtn) attachMenu.classList.remove("show");
 });
 
-// ============ LINKIFY ============
 function linkify(texto) {
   if (!texto) return "";
   const urlRegex = /(https?:\/\/[^\s<]+)/g;
@@ -510,7 +482,6 @@ function linkify(texto) {
   return frag;
 }
 
-// ============ BOT ============
 const mensajesBienvenida = [
   "¡Hola {nombre}! 👋 Bienvenido a {sala}.",
   "🎉 {nombre} se unió a {sala}. ¡Saluda!",
@@ -531,7 +502,6 @@ async function saludarBienvenida() {
   setTimeout(() => { enviarMensajeBot(texto); }, 2000);
 }
 
-// ============ GRUPOS ============
 let gruposPersonalizados = JSON.parse(LS.getItem("zummchat_grupos") || "[]");
 let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
 function guardarGrupos() { LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados)); }
@@ -582,7 +552,6 @@ if (addRoomBtn) addRoomBtn.addEventListener("click", () => {
   setTimeout(() => alert("✅ Grupo '" + limpio + "' creado.\n\nDiles que toquen ➕ y escriban: " + limpio), 300);
 });
 
-// ============ SALAS ============
 function switchRoom(room) {
   currentRoom = room;
   if (!room.startsWith("priv:")) hidePrivados(); else showPrivados();
@@ -660,7 +629,6 @@ if (shareBtn) shareBtn.addEventListener("click", async () => {
   }
 });
 
-// ============ EMOJIS ============
 const EMOJIS = [
   "😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢",
   "😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜",
@@ -681,7 +649,6 @@ if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
   if (emojiBar) emojiBar.classList.toggle("show");
 });
 
-// ============ ARCHIVOS ============
 async function subirYEnviarArchivo(file, tipo) {
   if (!file) return;
   if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert("Máx " + MAX_SIZE_MB + " MB"); return; }
@@ -731,7 +698,6 @@ if (menuLocationBtn) menuLocationBtn.addEventListener("click", () => {
 });
 if (menuVoiceBtn) menuVoiceBtn.addEventListener("click", () => { cerrarPaneles(); iniciarGrabacion(); });
 
-// ============ NOTAS DE VOZ ============
 let mediaRecorder = null, audioChunks = [], grabando = false;
 let recTimerInterval = null, recSegundos = 0, audioStreamRec = null;
 function iniciarGrabacion() {
@@ -805,7 +771,6 @@ async function detenerGrabacion(enviar) {
 if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
 if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
 
-// ============ FECHAS ============
 let lastDateKey = "";
 function dateKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
 function dateLabel(d) {
@@ -827,21 +792,11 @@ function maybeAddDateSeparator(iso) {
   messagesEl.appendChild(sep);
 }
 
-// ============ PARSE HELPERS ============
 function parsePoll(m) {
   if (!m.file_type || !m.file_type.startsWith("poll/")) return null;
   try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
 }
-function parseGame(m) {
-  if (!m.file_type || m.file_type !== "game/tictactoe") return null;
-  try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
-}
-function parseGift(m) {
-  if (!m.file_type || !m.file_type.startsWith("gift/")) return null;
-  try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
-}
 
-// ============ MENSAJES ============
 const rendered = new Set();
 let favoritosIds = new Set();
 function scrollToBottom() { if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight; }
@@ -869,8 +824,6 @@ function renderMessage(m, esNuevo) {
       if (tipo.startsWith("audio/")) textoNotif = "🎤 Nota de voz";
       else if (tipo.startsWith("location/")) textoNotif = "📍 Ubicación";
       else if (tipo.startsWith("poll/")) textoNotif = "📊 Encuesta";
-      else if (tipo === "game/tictactoe") textoNotif = "🎮 Tres en raya";
-      else if (tipo.startsWith("gift/")) textoNotif = "🎁 Te enviaron un regalo";
       else if (m.file_url) textoNotif = "📎 Archivo";
       else textoNotif = m.text || "Nuevo mensaje";
       mostrarNotificacion(m.username || "Alguien", textoNotif, m.room);
@@ -915,8 +868,6 @@ function renderMessage(m, esNuevo) {
   const body = document.createElement("div");
   body.className = "msg-body";
   const pollData = parsePoll(m);
-  const gameData = parseGame(m);
-  const giftData = parseGift(m);
   if (pollData) {
     const box = document.createElement("div");
     box.className = "poll-box";
@@ -951,24 +902,12 @@ function renderMessage(m, esNuevo) {
     info.textContent = totalVotos + " voto" + (totalVotos === 1 ? "" : "s");
     box.appendChild(info);
     body.appendChild(box);
-  } else if (gameData) {
-    body.appendChild(crearTableroTresEnRaya(m, gameData));
-  } else if (giftData) {
-    const g = document.createElement("div");
-    g.className = "gift-msg";
-    const emoji = document.createElement("span");
-    emoji.className = "gift-emoji"; emoji.textContent = giftData.emoji;
-    const txt = document.createElement("div");
-    txt.className = "gift-text";
-    txt.innerHTML = "<strong>" + (giftData.from || "?") + "</strong> le envió <strong>" + giftData.emoji + " " + giftData.label + "</strong> a <strong>" + (giftData.to || "?") + "</strong>";
-    g.appendChild(emoji); g.appendChild(txt);
-    body.appendChild(g);
   } else if (m.text) {
     const txt = document.createElement("div");
     txt.appendChild(linkify(m.text));
     body.appendChild(txt);
   }
-  if (m.file_url && !pollData && !gameData && !giftData) {
+  if (m.file_url && !pollData) {
     const tipo = m.file_type || "";
     if (tipo.startsWith("audio/")) {
       const voiceDiv = document.createElement("div");
@@ -1040,7 +979,7 @@ function renderMessage(m, esNuevo) {
   }
   content.appendChild(header);
   content.appendChild(body);
-  if (reacciones.length > 0 && !pollData && !gameData) {
+  if (reacciones.length > 0 && !pollData) {
     const bar = document.createElement("div");
     bar.className = "reactions-bar";
     const conteo = {};
@@ -1124,7 +1063,6 @@ supabaseClient
       payload => { if (payload.old && payload.old.id) removeMessageFromDOM(payload.old.id); })
   .subscribe();
 
-// ============ VOTAR ENCUESTA ============
 async function votarEncuesta(msgId, idx) {
   const { data: msg } = await supabaseClient.from("zumm_messages").select("file_url").eq("id", msgId).single();
   if (!msg) return;
@@ -1139,208 +1077,6 @@ async function votarEncuesta(msgId, idx) {
   await supabaseClient.from("zumm_messages").update({ file_url: JSON.stringify(poll) }).eq("id", msgId);
 }
 
-// ============ TRES EN RAYA ============
-function crearTableroTresEnRaya(m, game) {
-  const box = document.createElement("div");
-  box.className = "ttt-box";
-  const titulo = document.createElement("div");
-  titulo.className = "ttt-title";
-  titulo.textContent = "🎮 " + game.pX + " (❌) vs " + game.pO + " (⭕)";
-  box.appendChild(titulo);
-  const status = document.createElement("div");
-  status.className = "ttt-status";
-  const soy = (username.toLowerCase() === game.pX.toLowerCase()) ? "X" :
-              (username.toLowerCase() === game.pO.toLowerCase()) ? "O" : null;
-  const soyJugador = soy !== null;
-  if (game.winner) {
-    if (game.winner === "empate") status.textContent = "🤝 ¡Empate!";
-    else {
-      const ganador = game.winner === "X" ? game.pX : game.pO;
-      status.textContent = "🏆 Ganó " + ganador + " (" + game.winner + ")";
-    }
-  } else if (soyJugador) {
-    if (game.turn === soy) {
-      status.textContent = "✋ Es tu turno";
-      status.classList.add("my-turn");
-    } else {
-      status.textContent = "⏳ Esperando a " + (game.turn === "X" ? game.pX : game.pO) + "...";
-    }
-  } else {
-    status.textContent = "👀 Turno de " + (game.turn === "X" ? game.pX : game.pO);
-  }
-  box.appendChild(status);
-  const tablero = document.createElement("div");
-  tablero.className = "ttt-board";
-  const lineasGanadoras = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
-  const ganadoras = [];
-  if (game.winner && game.winner !== "empate") {
-    lineasGanadoras.forEach(l => {
-      if (game.board[l[0]] === game.winner && game.board[l[1]] === game.winner && game.board[l[2]] === game.winner) {
-        ganadoras.push(...l);
-      }
-    });
-  }
-  game.board.forEach((val, idx) => {
-    const cell = document.createElement("div");
-    cell.className = "ttt-cell";
-    if (val) {
-      cell.classList.add("filled", val.toLowerCase());
-      cell.textContent = val === "X" ? "❌" : "⭕";
-    }
-    if (ganadoras.includes(idx)) cell.classList.add("win");
-    if (!val && !game.winner && soyJugador && game.turn === soy) {
-      cell.addEventListener("click", (e) => {
-        e.stopPropagation();
-        hacerMovimiento(m.id, idx, soy);
-      });
-    } else {
-      cell.style.cursor = "default";
-    }
-    tablero.appendChild(cell);
-  });
-  box.appendChild(tablero);
-  return box;
-}
-
-async function hacerMovimiento(msgId, idx, simbolo) {
-  const { data: msg } = await supabaseClient.from("zumm_messages").select("file_url").eq("id", msgId).single();
-  if (!msg) return;
-  let game; try { game = JSON.parse(msg.file_url || "{}"); } catch (e) { return; }
-  if (!game.board || game.winner) return;
-  if (game.turn !== simbolo) return;
-  if (game.board[idx]) return;
-  game.board[idx] = simbolo;
-  const lineasGanadoras = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
-  let ganador = null;
-  for (const l of lineasGanadoras) {
-    if (game.board[l[0]] && game.board[l[0]] === game.board[l[1]] && game.board[l[1]] === game.board[l[2]]) {
-      ganador = game.board[l[0]];
-      break;
-    }
-  }
-  if (ganador) game.winner = ganador;
-  else if (game.board.every(c => c)) game.winner = "empate";
-  else game.turn = (game.turn === "X" ? "O" : "X");
-  await supabaseClient.from("zumm_messages").update({ file_url: JSON.stringify(game) }).eq("id", msgId);
-}
-
-if (gamesBtn) gamesBtn.addEventListener("click", () => {
-  cerrarPaneles();
-  gameOpponent.value = "";
-  newGameModal.classList.add("show");
-});
-if (gameCancelBtn) gameCancelBtn.addEventListener("click", () => newGameModal.classList.remove("show"));
-if (gameSaveBtn) gameSaveBtn.addEventListener("click", async () => {
-  const oponente = gameOpponent.value.trim();
-  if (!oponente) { alert("Escribe el nombre del oponente."); return; }
-  if (oponente.toLowerCase() === username.toLowerCase()) { alert("No puedes jugar contra ti."); return; }
-  const gameData = {
-    board: [null,null,null,null,null,null,null,null,null],
-    turn: "X",
-    pX: username,
-    pO: oponente,
-    winner: null
-  };
-  const { data, error } = await supabaseClient.from("zumm_messages")
-    .insert([{ text: "", username: username, room: currentRoom,
-      file_url: JSON.stringify(gameData), file_name: "Tres en raya", file_type: "game/tictactoe" }])
-    .select().single();
-  if (error) { alert("Error: " + error.message); return; }
-  newGameModal.classList.remove("show");
-  renderMessage(data, false);
-});
-
-// ============ REGALOS ============
-let regaloSeleccionado = null;
-
-if (giftsBtn) giftsBtn.addEventListener("click", () => {
-  cerrarPaneles();
-  giftTo.value = "";
-  regaloSeleccionado = null;
-  document.querySelectorAll(".gift-opt").forEach(b => b.classList.remove("selected"));
-  giftModal.classList.add("show");
-});
-
-document.querySelectorAll(".gift-opt").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".gift-opt").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    regaloSeleccionado = {
-      type: btn.dataset.gift,
-      emoji: btn.dataset.emoji,
-      label: btn.querySelector("span").textContent
-    };
-  });
-});
-
-if (giftCancelBtn) giftCancelBtn.addEventListener("click", () => giftModal.classList.remove("show"));
-
-if (giftSaveBtn) giftSaveBtn.addEventListener("click", async () => {
-  const paraQuien = giftTo.value.trim();
-  if (!paraQuien) { alert("Escribe a quién."); return; }
-  if (paraQuien.toLowerCase() === username.toLowerCase()) { alert("No puedes regalarte a ti mismo."); return; }
-  if (!regaloSeleccionado) { alert("Elige un regalo."); return; }
-  const giftData = {
-    from: username,
-    to: paraQuien,
-    type: regaloSeleccionado.type,
-    emoji: regaloSeleccionado.emoji,
-    label: regaloSeleccionado.label
-  };
-  const { error: regErr } = await supabaseClient.from("zumm_regalos").insert([{
-    owner: paraQuien,
-    gift_type: regaloSeleccionado.type,
-    gift_emoji: regaloSeleccionado.emoji,
-    from_user: username
-  }]);
-  if (regErr) { alert("Error: " + regErr.message); return; }
-  const { data, error } = await supabaseClient.from("zumm_messages")
-    .insert([{ text: "", username: username, room: currentRoom,
-      file_url: JSON.stringify(giftData), file_name: "Regalo",
-      file_type: "gift/" + regaloSeleccionado.type }])
-    .select().single();
-  if (error) { alert("Error: " + error.message); return; }
-  giftModal.classList.remove("show");
-  renderMessage(data, false);
-  reproducirSonidoInsistente();
-});
-
-async function mostrarMisRegalos() {
-  if (!myGiftsModal) return;
-  myGiftsModal.classList.add("show");
-  myGiftsGrid.innerHTML = "";
-  myGiftsEmpty.style.display = "none";
-  const { data } = await supabaseClient.from("zumm_regalos").select("*").eq("owner", username);
-  if (!data || data.length === 0) { myGiftsEmpty.style.display = "block"; return; }
-  const conteo = {};
-  data.forEach(r => {
-    if (!conteo[r.gift_type]) conteo[r.gift_type] = { emoji: r.gift_emoji, count: 0 };
-    conteo[r.gift_type].count++;
-  });
-  Object.values(conteo).forEach(g => {
-    const card = document.createElement("div");
-    card.className = "gift-card";
-    const emoji = document.createElement("div");
-    emoji.className = "gift-card-emoji"; emoji.textContent = g.emoji;
-    const count = document.createElement("div");
-    count.className = "gift-card-count"; count.textContent = "x" + g.count;
-    const label = document.createElement("div");
-    label.className = "gift-card-label"; label.textContent = "recibidos";
-    card.appendChild(emoji); card.appendChild(count); card.appendChild(label);
-    myGiftsGrid.appendChild(card);
-  });
-}
-if (myGiftsCloseBtn) myGiftsCloseBtn.addEventListener("click", () => myGiftsModal.classList.remove("show"));
-
-// ============ ESCRIBIENDO ============
 let typingTimeout = null, ultimoTypingEnviado = 0;
 function enviarTyping() {
   const ahora = Date.now();
@@ -1373,7 +1109,6 @@ function actualizarIndicadorTyping(usuariosTyping) {
   typingIndicator.classList.add("show");
 }
 
-// ============ MENSAJE FIJADO ============
 async function cargarMensajeFijado() {
   if (!pinnedBar || !pinnedText) return;
   const { data } = await supabaseClient.from("zumm_messages")
@@ -1386,8 +1121,6 @@ async function cargarMensajeFijado() {
   if (m.file_type && m.file_type.startsWith("audio/")) preview += "🎤 Nota de voz";
   else if (m.file_type && m.file_type.startsWith("location/")) preview += "📍 Ubicación";
   else if (m.file_type && m.file_type.startsWith("poll/")) preview += "📊 Encuesta";
-  else if (m.file_type && m.file_type.startsWith("game/")) preview += "🎮 Tres en raya";
-  else if (m.file_type && m.file_type.startsWith("gift/")) preview += "🎁 Regalo";
   else if (m.text) preview += m.text;
   else preview += "📎 Archivo";
   if (preview.length > 60) preview = preview.substring(0, 60) + "...";
@@ -1401,14 +1134,11 @@ if (unpinBtn) unpinBtn.addEventListener("click", async () => {
   pinnedBar.classList.remove("show");
 });
 
-// ============ EDITAR ============
 let mensajeEditando = null;
 function abrirEditorMensaje(m) {
   if (!editModal || !editInput) return;
   if ((m.username || "").toLowerCase() !== username.toLowerCase()) { alert("Solo los tuyos."); return; }
-  if (m.file_type && (m.file_type.startsWith("poll/") || m.file_type.startsWith("game/") || m.file_type.startsWith("gift/"))) {
-    alert("No puedes editar este tipo."); return;
-  }
+  if (m.file_type && m.file_type.startsWith("poll/")) { alert("No puedes editar una encuesta."); return; }
   mensajeEditando = m;
   editInput.value = m.text || "";
   editModal.classList.add("show");
@@ -1431,14 +1161,13 @@ if (editSaveBtn) editSaveBtn.addEventListener("click", async () => {
   editModal.classList.remove("show"); mensajeEditando = null;
 });
 
-// ============ MENÚ MENSAJE ============
 let mensajeMenuActual = null;
 function mostrarMenuMensaje(m, x, y) {
   if (!msgMenu) return;
   mensajeMenuActual = m;
   const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
-  const esEspecial = m.file_type && (m.file_type.startsWith("poll/") || m.file_type.startsWith("game/") || m.file_type.startsWith("gift/"));
-  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esEspecial ? "block" : "none";
+  const esPoll = m.file_type && m.file_type.startsWith("poll/");
+  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esPoll ? "block" : "none";
   if (menuDeleteBtn) menuDeleteBtn.style.display = esMio ? "block" : "none";
   if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
   if (menuFavBtn) menuFavBtn.textContent = favoritosIds.has(m.id) ? "⭐ Quitar fav" : "⭐ Favorito";
@@ -1485,7 +1214,6 @@ if (menuDeleteBtn) menuDeleteBtn.addEventListener("click", async () => {
   removeMessageFromDOM(m.id);
 });
 
-// ============ FAVORITOS ============
 async function cargarFavoritos() {
   try {
     const { data } = await supabaseClient.from("zumm_favoritos").select("mensaje_id").eq("username", username);
@@ -1503,8 +1231,6 @@ if (menuFavBtn) menuFavBtn.addEventListener("click", async () => {
     if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
     if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
     if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
-    if (m.file_type && m.file_type.startsWith("game/")) preview = "🎮 Tres en raya";
-    if (m.file_type && m.file_type.startsWith("gift/")) preview = "🎁 Regalo";
     if (preview.length > 60) preview = preview.substring(0, 60) + "...";
     await supabaseClient.from("zumm_favoritos").insert([{
       username: username, mensaje_id: m.id, room: currentRoom,
@@ -1563,7 +1289,6 @@ if (favBtn) favBtn.addEventListener("click", async () => {
 });
 if (favCloseBtn) favCloseBtn.addEventListener("click", () => favModal.classList.remove("show"));
 
-// ============ DESTACADOS ============
 if (highlightBtn) highlightBtn.addEventListener("click", async () => {
   cerrarPaneles();
   if (!highlightModal) return;
@@ -1576,7 +1301,7 @@ if (highlightBtn) highlightBtn.addEventListener("click", async () => {
     .map(m => ({ ...m, numReacc: (m.reactions || "").split(",").filter(x => x.trim()).length }))
     .filter(m => m.numReacc >= 2).sort((a, b) => b.numReacc - a.numReacc).slice(0, 20);
   if (conReacciones.length === 0) {
-    highlightEmpty.textContent = "Aún no hay mensajes destacados.";
+    highlightEmpty.textContent = "Aún no hay destacados.";
     highlightEmpty.style.display = "block"; return;
   }
   conReacciones.forEach(m => {
@@ -1589,8 +1314,6 @@ if (highlightBtn) highlightBtn.addEventListener("click", async () => {
     let preview = m.text || "📎";
     if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
     if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
-    if (m.file_type && m.file_type.startsWith("game/")) preview = "🎮 Tres en raya";
-    if (m.file_type && m.file_type.startsWith("gift/")) preview = "🎁 Regalo";
     if (preview.length > 100) preview = preview.substring(0, 100) + "...";
     texto.textContent = preview;
     li.appendChild(texto);
@@ -1604,7 +1327,6 @@ if (highlightBtn) highlightBtn.addEventListener("click", async () => {
 });
 if (highlightCloseBtn) highlightCloseBtn.addEventListener("click", () => highlightModal.classList.remove("show"));
 
-// ============ RECORDATORIOS ============
 function formatearFechaRecordatorio(iso) {
   const d = new Date(iso);
   return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
@@ -1679,7 +1401,6 @@ setInterval(async () => {
   } catch (e) {}
 }, 30000);
 
-// ============ ENCUESTA ============
 if (pollBtn) pollBtn.addEventListener("click", () => {
   cerrarPaneles();
   pollQuestion.value = ""; pollOpt1.value = ""; pollOpt2.value = ""; pollOpt3.value = "";
@@ -1700,7 +1421,6 @@ if (pollSaveBtn) pollSaveBtn.addEventListener("click", async () => {
   pollModal.classList.remove("show"); renderMessage(data, false);
 });
 
-// ============ BLOQUEADOS ============
 async function bloquearUsuario(nombre) {
   if (!nombre) return;
   if (nombre.toLowerCase() === username.toLowerCase()) { alert("No puedes bloquearte."); return; }
@@ -1749,7 +1469,6 @@ if (blockedBtn) blockedBtn.addEventListener("click", async () => {
 });
 if (blockedCloseBtn) blockedCloseBtn.addEventListener("click", () => blockedModal.classList.remove("show"));
 
-// ============ CONTACTOS ============
 async function mostrarContactos() {
   if (!contactsList) return;
   contactsList.innerHTML = ""; contactsEmpty.style.display = "none";
@@ -1814,7 +1533,6 @@ if (profileAddContactBtn) profileAddContactBtn.addEventListener("click", async (
   abrirPerfil(perfilActual, false);
 });
 
-// ============ REACCIONES ============
 async function toggleReaccion(msgId, emoji) {
   const { data: msg } = await supabaseClient.from("zumm_messages").select("reactions").eq("id", msgId).single();
   if (!msg) return;
@@ -1829,7 +1547,6 @@ async function toggleReaccion(msgId, emoji) {
   await supabaseClient.from("zumm_messages").update({ reactions: nuevas.join(",") }).eq("id", msgId);
 }
 
-// ============ BÚSQUEDA ============
 if (searchBtn) searchBtn.addEventListener("click", () => {
   cerrarPaneles();
   if (!searchBar) return;
@@ -1857,7 +1574,6 @@ if (searchInput) searchInput.addEventListener("input", () => {
   });
 });
 
-// ============ SCROLL BTN ============
 function actualizarBotonAbajo() {
   if (!messagesEl || !scrollDownBtn) return;
   const distanciaAbajo = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
@@ -1869,7 +1585,6 @@ if (scrollDownBtn) scrollDownBtn.addEventListener("click", () => {
   scrollDownBtn.classList.remove("show");
 });
 
-// ============ MODAL IMG ============
 function openImageModal(url) {
   let modal = document.getElementById("imgModal");
   if (!modal) {
@@ -1887,7 +1602,6 @@ function openImageModal(url) {
   modal.classList.add("show");
 }
 
-// ============ PRESENCIA ============
 let usersOnline = [];
 let presenceInterval = null, presenceRefreshInterval = null;
 let avataresPorUsuario = {};
@@ -1935,7 +1649,6 @@ supabaseClient
       () => { leerPresencia(); })
   .subscribe();
 
-// ============ LISTA USUARIOS ============
 function updateUsersBtn() {
   if (usersBtn) {
     const hay = usersOnline.length > 0;
@@ -1981,7 +1694,6 @@ if (usersPanelClose) usersPanelClose.addEventListener("click", () => {
   if (usersPanel) usersPanel.classList.remove("show");
 });
 
-// ============ PERFIL ============
 let perfilActual = null;
 function mostrarAvatarPropio() {
   if (!userMeAvatar) return;
@@ -2043,27 +1755,7 @@ function abrirPerfil(nombre, editable) {
   }
   profileModal.classList.add("show");
 }
-
-// Tocar avatar propio: corto = perfil, mantener = regalos
-if (userMeAvatar) {
-  let longPressHecho = false;
-  let timer = null;
-  const iniciar = () => {
-    longPressHecho = false;
-    timer = setTimeout(() => {
-      longPressHecho = true;
-      mostrarMisRegalos();
-    }, 700);
-  };
-  const terminar = () => {
-    clearTimeout(timer);
-    if (!longPressHecho) abrirPerfil(username, true);
-  };
-  userMeAvatar.addEventListener("touchstart", iniciar, { passive: true });
-  userMeAvatar.addEventListener("touchend", terminar);
-  userMeAvatar.addEventListener("touchcancel", () => clearTimeout(timer));
-}
-
+if (userMeAvatar) userMeAvatar.addEventListener("click", () => abrirPerfil(username, true));
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", () => profileModal.classList.remove("show"));
 if (profileEditBtn) profileEditBtn.addEventListener("click", () => {
   if (!perfilActual || perfilActual.toLowerCase() !== username.toLowerCase()) return;
@@ -2134,7 +1826,6 @@ if (changeNameBtn) changeNameBtn.addEventListener("click", async () => {
   alert("✅ Nombre: " + username);
 });
 
-// ============ STATS PERSONALES ============
 if (statsBtn) statsBtn.addEventListener("click", async () => {
   cerrarPaneles();
   if (!statsModal) return;
@@ -2148,7 +1839,7 @@ if (statsBtn) statsBtn.addEventListener("click", async () => {
     return;
   }
   const total = data.length;
-  const conArchivo = data.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/") && !m.file_type.startsWith("game/") && !m.file_type.startsWith("gift/")).length;
+  const conArchivo = data.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/")).length;
   const conVoz = data.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
   const fechas = new Set(data.map(m => m.created_at.substring(0, 10)));
   const primera = new Date(data[data.length - 1].created_at);
@@ -2161,7 +1852,6 @@ if (statsBtn) statsBtn.addEventListener("click", async () => {
 });
 if (statsCloseBtn) statsCloseBtn.addEventListener("click", () => statsModal.classList.remove("show"));
 
-// ============ STATS GRUPO ============
 if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
   cerrarPaneles();
   if (!groupStatsModal) return;
@@ -2188,7 +1878,7 @@ if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
   const lista = Object.entries(usuarios).sort((a, b) => b[1] - a[1]);
   const numUsuarios = lista.length;
   const top = lista[0] ? lista[0][0] + " (" + lista[0][1] + ")" : "—";
-  const conArchivo = sinBot.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/") && !m.file_type.startsWith("game/") && !m.file_type.startsWith("gift/")).length;
+  const conArchivo = sinBot.filter(m => m.file_type && !m.file_type.startsWith("audio/") && !m.file_type.startsWith("location/") && !m.file_type.startsWith("poll/")).length;
   const conVoz = sinBot.filter(m => m.file_type && m.file_type.startsWith("audio/")).length;
   const primera = new Date(data[0].created_at);
   const primeraStr = primera.getDate().toString().padStart(2, "0") + "/" + (primera.getMonth() + 1).toString().padStart(2, "0") + "/" + primera.getFullYear();
@@ -2216,7 +1906,6 @@ if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
 });
 if (groupStatsCloseBtn) groupStatsCloseBtn.addEventListener("click", () => groupStatsModal.classList.remove("show"));
 
-// ============ LLAMADAS ============
 let pc = null, localStream = null, activeCall = null, incomingCall = null;
 let iceQueue = [], inviteTimer = null, ringTimeout = null, muted = false;
 let signalsLastId = 0, signalsCheckInterval = null;
@@ -2528,7 +2217,6 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 
-// ============ ARRANCAR ============
 if (chatTitle) chatTitle.textContent = "ZummChat · General";
 updateActiveTab();
 loadHistory();

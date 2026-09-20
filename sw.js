@@ -1,3 +1,4 @@
+
 // ============================================================
 // ZummChat - Service Worker
 // Creado por: José Yudier Arencibia Ajo
@@ -5,9 +6,9 @@
 // Año: 2026 - Todos los derechos reservados.
 // ============================================================
 
-const CACHE = "zummchat-v38";
+const CACHE = "zummchat-v39";
 const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
-                "./manifest.json", "./logo.png", "./icon.png", "./icon-192.png"];
+                "./manifest.json", "./logo.png", "./icon.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

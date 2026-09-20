@@ -5,7 +5,6 @@
 // Año: 2026 - Todos los derechos reservados.
 // ============================================================
 
-// ============ CONEXIÓN SUPABASE (Mi Círculo) ============
 const SUPABASE_URL = "https://biqjwbopvjyovxmmutly.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpcWp3Ym9wdmp5b3Z4bW11dGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg0ODQsImV4cCI6MjEwMzYyNDQ4NH0.q7IdjNy_OPDpPOJNUJ3FkxDm91LjJPmEP0pFu9CD4dA";
 
@@ -28,10 +27,13 @@ const shareBtn        = document.getElementById("shareBtn");
 const chatTitle       = document.getElementById("chat-title");
 const privateBtn      = document.getElementById("privateBtn");
 const privRoomBar     = document.getElementById("priv-room-bar");
+const roomBar         = document.getElementById("room-bar");
+const addRoomBtn      = document.getElementById("addRoomBtn");
 const emojiBtn        = document.getElementById("emojiBtn");
 const emojiBar        = document.getElementById("emoji-bar");
 const fileBtn         = document.getElementById("fileBtn");
 const fileInput       = document.getElementById("fileInput");
+const voiceBtn        = document.getElementById("voiceBtn");
 const soundBtn        = document.getElementById("soundBtn");
 const callBtn         = document.getElementById("callBtn");
 const videoBtn        = document.getElementById("videoBtn");
@@ -56,6 +58,10 @@ const rejectBtn       = document.getElementById("rejectBtn");
 const incomingAcceptBtn = document.getElementById("incomingAcceptBtn");
 const userMeName      = document.getElementById("userMeName");
 const changeNameBtn   = document.getElementById("changeNameBtn");
+const recordingPanel  = document.getElementById("recordingPanel");
+const recordingTime   = document.getElementById("recordingTime");
+const cancelRecBtn    = document.getElementById("cancelRecBtn");
+const stopRecBtn      = document.getElementById("stopRecBtn");
 
 const MAX_SIZE_MB = 5;
 
@@ -117,7 +123,6 @@ if (changeNameBtn) {
     const nuevo = prompt("Escribe tu nuevo nombre:", username);
     if (!nuevo || !nuevo.trim()) return;
     const limpio = nuevo.trim().substring(0, 20);
-
     if (limpio.toLowerCase() === username.toLowerCase()) return;
 
     const viejo = username;
@@ -128,9 +133,7 @@ if (changeNameBtn) {
     try {
       await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
       await supabaseClient.from("zumm_presence").upsert({
-        username: username,
-        room: currentRoom,
-        last_seen: new Date().toISOString()
+        username: username, room: currentRoom, last_seen: new Date().toISOString()
       }, { onConflict: "username,room" });
     } catch (e) { console.warn(e); }
 
@@ -196,14 +199,9 @@ if (soundBtn) {
   });
 }
 
-// ================================================================
-// ============ NOTIFICACIONES (SISTEMA + TÍTULO) ================
-// ================================================================
-
+// ============ NOTIFICACIONES ============
 if ("Notification" in window && Notification.permission === "default") {
-  setTimeout(() => {
-    Notification.requestPermission().catch(() => {});
-  }, 3000);
+  setTimeout(() => { Notification.requestPermission().catch(() => {}); }, 3000);
 }
 
 let mensajesNoLeidos = 0;
@@ -223,13 +221,10 @@ function mostrarNotificacion(remitente, texto) {
         vibrate: [200, 100, 200, 100, 200],
         silent: false
       });
-      n.onclick = () => {
-        try { window.focus(); } catch (e) {}
-        n.close();
-      };
+      n.onclick = () => { try { window.focus(); } catch (e) {} n.close(); };
       setTimeout(() => { try { n.close(); } catch (e) {} }, 8000);
     }
-  } catch (e) { console.warn("Notif error:", e); }
+  } catch (e) {}
 
   mensajesNoLeidos++;
   document.title = "(" + mensajesNoLeidos + ") 💬 ZummChat";
@@ -245,7 +240,12 @@ function mostrarNotificacion(remitente, texto) {
   reproducirSonidoInsistente();
 }
 
-window.addEventListener("focus", () => {
+window.addEventListener("focus", resetearTitulo);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) resetearTitulo();
+});
+
+function resetearTitulo() {
   mensajesNoLeidos = 0;
   document.title = TITULO_BASE;
   if (tituloParpadeoInterval) {
@@ -253,21 +253,9 @@ window.addEventListener("focus", () => {
     tituloParpadeoInterval = null;
     tituloParpadeando = false;
   }
-});
+}
 
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) {
-    mensajesNoLeidos = 0;
-    document.title = TITULO_BASE;
-    if (tituloParpadeoInterval) {
-      clearInterval(tituloParpadeoInterval);
-      tituloParpadeoInterval = null;
-      tituloParpadeando = false;
-    }
-  }
-});
-
-// ============ RINGTONE (llamadas) ============
+// ============ RINGTONE ============
 let ringInterval = null;
 
 function playRingtone() {
@@ -323,11 +311,90 @@ function roomLabel(room) {
     const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase()) || partes[0];
     return "🔒 " + otro;
   }
+  if (room.startsWith("grupo:")) {
+    return "👥 " + room.replace("grupo:", "");
+  }
   return room.charAt(0).toUpperCase() + room.slice(1);
 }
 
 function hidePrivados() { if (privRoomBar) privRoomBar.style.display = "none"; }
 function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
+
+// ================================================================
+// ============ GRUPOS PERSONALIZADOS ============================
+// ================================================================
+
+let gruposPersonalizados = JSON.parse(LS.getItem("zummchat_grupos") || "[]");
+
+function guardarGrupos() {
+  LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados));
+}
+
+function crearBotonGrupo(nombreGrupo) {
+  if (!roomBar) return;
+  const roomId = "grupo:" + nombreGrupo;
+  if (roomBar.querySelector('[data-room="' + roomId + '"]')) return;
+
+  const btn = document.createElement("button");
+  btn.className = "room-btn";
+  btn.dataset.room = roomId;
+
+  const label = document.createElement("span");
+  label.textContent = "👥 " + nombreGrupo;
+  btn.appendChild(label);
+
+  const close = document.createElement("button");
+  close.className = "close";
+  close.textContent = "✕";
+  close.style.cssText = "background:rgba(0,0,0,0.3);border:none;color:inherit;border-radius:50%;width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;margin-left:6px;padding:0;";
+  close.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!confirm("¿Eliminar el grupo '" + nombreGrupo + "' de tu lista?")) return;
+    gruposPersonalizados = gruposPersonalizados.filter(g => g !== nombreGrupo);
+    guardarGrupos();
+    btn.remove();
+    if (currentRoom === roomId) switchRoom("general");
+  });
+  btn.appendChild(close);
+
+  btn.addEventListener("click", () => switchRoom(roomId));
+  roomBar.insertBefore(btn, addRoomBtn);
+}
+
+gruposPersonalizados.forEach(g => crearBotonGrupo(g));
+
+if (addRoomBtn) {
+  addRoomBtn.addEventListener("click", () => {
+    const nombre = prompt("Nombre del nuevo grupo:\n\n(Solo letras, números y guiones)");
+    if (!nombre || !nombre.trim()) return;
+
+    const limpio = nombre.trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\-]/g, "")
+      .substring(0, 30);
+
+    if (!limpio) {
+      alert("Nombre inválido. Usa letras o números.");
+      return;
+    }
+
+    if (gruposPersonalizados.includes(limpio)) {
+      alert("Ese grupo ya existe.");
+      switchRoom("grupo:" + limpio);
+      return;
+    }
+
+    gruposPersonalizados.push(limpio);
+    guardarGrupos();
+    crearBotonGrupo(limpio);
+    switchRoom("grupo:" + limpio);
+
+    setTimeout(() => {
+      alert("✅ Grupo '" + limpio + "' creado.\n\nPara invitar a otros, diles que toquen ➕ y escriban el mismo nombre: " + limpio);
+    }, 300);
+  });
+}
 
 // ============ SALAS ============
 function switchRoom(room) {
@@ -350,6 +417,7 @@ function updateActiveTab() {
 }
 
 document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
+  if (!btn.dataset.room) return;
   btn.addEventListener("click", () => switchRoom(btn.dataset.room));
 });
 
@@ -506,6 +574,201 @@ if (fileInput) {
   });
 }
 
+// ================================================================
+// ============ NOTAS DE VOZ =====================================
+// ================================================================
+
+let mediaRecorder = null;
+let audioChunks = [];
+let grabando = false;
+let recTimerInterval = null;
+let recSegundos = 0;
+let audioStreamRec = null;
+
+function formatearSegundos(s) {
+  const m = Math.floor(s / 60);
+  const seg = s % 60;
+  return m + ":" + String(seg).padStart(2, "0");
+}
+
+function iniciarGrabacion() {
+  if (grabando) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert("Tu navegador no soporta grabación de audio.");
+    return;
+  }
+  if (!window.MediaRecorder) {
+    alert("Tu navegador no soporta MediaRecorder.");
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    audioStreamRec = stream;
+    audioChunks = [];
+
+    let mimeType = "audio/webm";
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
+    else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
+    else if (MediaRecorder.isTypeSupported("audio/ogg")) mimeType = "audio/ogg";
+
+    try {
+      mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+    } catch (e) {
+      mediaRecorder = new MediaRecorder(stream);
+    }
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      audioStreamRec = null;
+    };
+
+    mediaRecorder.start();
+    grabando = true;
+    recSegundos = 0;
+
+    if (voiceBtn) {
+      voiceBtn.classList.add("recording");
+      voiceBtn.textContent = "⏹️";
+    }
+    if (recordingPanel) recordingPanel.classList.add("show");
+    if (recordingTime) recordingTime.textContent = "0:00";
+
+    clearInterval(recTimerInterval);
+    recTimerInterval = setInterval(() => {
+      recSegundos++;
+      if (recordingTime) recordingTime.textContent = formatearSegundos(recSegundos);
+
+      // Límite de 2 minutos
+      if (recSegundos >= 120) {
+        detenerGrabacion(true);
+      }
+    }, 1000);
+
+  }).catch(e => {
+    alert("No se pudo acceder al micrófono:\n" + e.message);
+  });
+}
+
+function cancelarGrabacion() {
+  if (!grabando) return;
+  grabando = false;
+  clearInterval(recTimerInterval);
+  recTimerInterval = null;
+
+  try {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.onstop = () => {
+        if (audioStreamRec) {
+          audioStreamRec.getTracks().forEach(t => t.stop());
+          audioStreamRec = null;
+        }
+      };
+      mediaRecorder.stop();
+    }
+  } catch (e) {}
+
+  audioChunks = [];
+
+  if (voiceBtn) {
+    voiceBtn.classList.remove("recording");
+    voiceBtn.textContent = "🎤";
+  }
+  if (recordingPanel) recordingPanel.classList.remove("show");
+}
+
+async function detenerGrabacion(enviar) {
+  if (!grabando) return;
+  grabando = false;
+  clearInterval(recTimerInterval);
+  recTimerInterval = null;
+
+  const duracionFinal = recSegundos;
+
+  const promesa = new Promise(resolve => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+      resolve();
+      return;
+    }
+    mediaRecorder.onstop = () => {
+      if (audioStreamRec) {
+        audioStreamRec.getTracks().forEach(t => t.stop());
+        audioStreamRec = null;
+      }
+      resolve();
+    };
+    try { mediaRecorder.stop(); } catch (e) { resolve(); }
+  });
+
+  await promesa;
+
+  if (voiceBtn) {
+    voiceBtn.classList.remove("recording");
+    voiceBtn.textContent = "🎤";
+  }
+  if (recordingPanel) recordingPanel.classList.remove("show");
+
+  if (!enviar) { audioChunks = []; return; }
+  if (audioChunks.length === 0) { alert("No se grabó nada."); return; }
+
+  const blob = new Blob(audioChunks, { type: audioChunks[0].type || "audio/webm" });
+  audioChunks = [];
+
+  if (blob.size > MAX_SIZE_MB * 1024 * 1024) {
+    alert("La nota de voz es muy larga.");
+    return;
+  }
+
+  if (voiceBtn) { voiceBtn.textContent = "⏳"; voiceBtn.disabled = true; }
+
+  try {
+    const ext = blob.type.includes("mp4") ? "m4a" : (blob.type.includes("ogg") ? "ogg" : "webm");
+    const nombreArchivo = "audio_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "." + ext;
+
+    const { error: upErr } = await supabaseClient.storage.from("archivos")
+      .upload(nombreArchivo, blob, { contentType: blob.type });
+
+    if (upErr) {
+      alert("No se pudo subir la nota de voz: " + upErr.message);
+      return;
+    }
+
+    const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
+    const publicUrl = urlData.publicUrl;
+
+    const { data, error } = await supabaseClient.from("zumm_messages")
+      .insert([{
+        text: "",
+        username: username,
+        room: currentRoom,
+        file_url: publicUrl,
+        file_name: "audio-" + formatearSegundos(duracionFinal),
+        file_type: blob.type
+      }])
+      .select()
+      .single();
+
+    if (error) { alert("No se pudo enviar: " + error.message); return; }
+    renderMessage(data, false);
+  } catch (e) {
+    alert("Error al enviar: " + e.message);
+  } finally {
+    if (voiceBtn) { voiceBtn.textContent = "🎤"; voiceBtn.disabled = false; }
+  }
+}
+
+if (voiceBtn) {
+  voiceBtn.addEventListener("click", () => {
+    if (grabando) detenerGrabacion(true);
+    else iniciarGrabacion();
+  });
+}
+if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
+if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
+
 // ============ FECHAS ============
 let lastDateKey = "";
 function dateKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
@@ -552,7 +815,11 @@ function renderMessage(m, esNuevo) {
   if (esNuevo) {
     const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
     if (!esMio) {
-      const textoNotif = m.text || (m.file_url ? "📎 Archivo" : "Nuevo mensaje");
+      const tipo = m.file_type || "";
+      let textoNotif;
+      if (tipo.startsWith("audio/")) textoNotif = "🎤 Nota de voz";
+      else if (m.file_url) textoNotif = "📎 Archivo";
+      else textoNotif = m.text || "Nuevo mensaje";
       mostrarNotificacion(m.username || "Alguien", textoNotif);
     }
   }
@@ -615,7 +882,72 @@ function renderMessage(m, esNuevo) {
 
   if (m.file_url) {
     const tipo = m.file_type || "";
-    if (tipo.startsWith("image/")) {
+
+    if (tipo.startsWith("audio/")) {
+      // Nota de voz
+      const voiceDiv = document.createElement("div");
+      voiceDiv.className = "voice-note";
+
+      const playBtn = document.createElement("button");
+      playBtn.className = "voice-play-btn";
+      playBtn.textContent = "▶";
+
+      const audio = document.createElement("audio");
+      audio.src = m.file_url;
+      audio.preload = "metadata";
+
+      const wave = document.createElement("div");
+      wave.className = "voice-wave";
+      const barras = 20;
+      for (let i = 0; i < barras; i++) {
+        const span = document.createElement("span");
+        span.style.height = (5 + Math.random() * 25) + "px";
+        wave.appendChild(span);
+      }
+
+      const duracion = document.createElement("span");
+      duracion.className = "voice-duration";
+      duracion.textContent = "0:00";
+
+      audio.addEventListener("loadedmetadata", () => {
+        if (isFinite(audio.duration)) {
+          duracion.textContent = formatearSegundos(Math.round(audio.duration));
+        }
+      });
+
+      audio.addEventListener("timeupdate", () => {
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          const restante = Math.max(0, Math.round(audio.duration - audio.currentTime));
+          duracion.textContent = formatearSegundos(restante);
+        }
+      });
+
+      playBtn.addEventListener("click", () => {
+        if (audio.paused) {
+          document.querySelectorAll("audio").forEach(a => {
+            if (a !== audio) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
+          });
+          audio.play().catch(() => {});
+        } else {
+          audio.pause();
+        }
+      });
+
+      audio.addEventListener("play", () => { playBtn.textContent = "⏸"; });
+      audio.addEventListener("pause", () => { playBtn.textContent = "▶"; });
+      audio.addEventListener("ended", () => {
+        playBtn.textContent = "▶";
+        audio.currentTime = 0;
+        if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
+      });
+
+      voiceDiv.appendChild(playBtn);
+      voiceDiv.appendChild(wave);
+      voiceDiv.appendChild(duracion);
+      voiceDiv.appendChild(audio);
+      body.appendChild(voiceDiv);
+
+    } else if (tipo.startsWith("image/")) {
       const img = document.createElement("img");
       img.src = m.file_url;
       img.className = "msg-file-img";
@@ -730,9 +1062,7 @@ async function registrarPresencia() {
     const { error } = await supabaseClient
       .from("zumm_presence")
       .upsert({
-        username: username,
-        room: currentRoom,
-        last_seen: new Date().toISOString()
+        username: username, room: currentRoom, last_seen: new Date().toISOString()
       }, { onConflict: "username,room" });
     if (error) console.warn("Presencia error:", error.message);
   } catch (e) { console.warn("Presencia excepción:", e); }
@@ -858,7 +1188,6 @@ async function cargarListaCamaras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     listaCamaras = devices.filter(d => d.kind === "videoinput");
-    console.log("📷 Cámaras:", listaCamaras.length);
   } catch (e) { console.warn("Error cámaras:", e); }
 }
 
@@ -867,11 +1196,8 @@ async function enviarSenal(toUser, signalType, payload) {
     const { error } = await supabaseClient
       .from("zumm_signals")
       .insert([{
-        from_user: username,
-        to_user: toUser,
-        from_client: myClientId,
-        signal_type: signalType,
-        payload: JSON.stringify(payload || {})
+        from_user: username, to_user: toUser, from_client: myClientId,
+        signal_type: signalType, payload: JSON.stringify(payload || {})
       }]);
     if (error) console.warn("Enviar señal error:", error.message);
   } catch (e) { console.warn("Enviar señal excepción:", e); }
@@ -961,10 +1287,7 @@ function procesarSenal(s) {
       const enActiva = activeCall && activeCall.callId === callId;
       const enEntrante = incomingCall && incomingCall.callId === callId;
       if (enEntrante) dismissIncoming(false);
-      if (enActiva) {
-        endCall(false);
-        alert(fromName + " colgó.");
-      }
+      if (enActiva) { endCall(false); alert(fromName + " colgó."); }
       break;
 
     case "reject":
@@ -978,7 +1301,7 @@ function procesarSenal(s) {
 
 function supportsCalls() {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return true;
-  alert("Tu navegador no soporta llamadas.\nUsa Chrome actualizado y HTTPS.");
+  alert("Tu navegador no soporta llamadas.");
   return false;
 }
 
@@ -1009,7 +1332,6 @@ async function startCall(targetName, withVideo) {
   activeCall = { callId, peerName: targetName, peerId: null, role: "caller", video: !!withVideo };
 
   showCallOverlay("Llamando a " + targetName + "...");
-
   await enviarSenal(targetName, "invite", { targetName, callId, video: !!withVideo });
 
   clearTimeout(inviteTimer);
@@ -1031,9 +1353,7 @@ function dismissIncoming(notify) {
   if (incomingModal) incomingModal.classList.remove("show");
 }
 
-if (rejectBtn) {
-  rejectBtn.addEventListener("click", () => dismissIncoming(true));
-}
+if (rejectBtn) rejectBtn.addEventListener("click", () => dismissIncoming(true));
 
 if (incomingAcceptBtn) {
   incomingAcceptBtn.addEventListener("click", async () => {
@@ -1044,10 +1364,7 @@ if (incomingAcceptBtn) {
     clearTimeout(ringTimeout);
     if (incomingModal) incomingModal.classList.remove("show");
 
-    if (!supportsCalls()) {
-      enviarSenal(call.fromName, "reject", { callId: call.callId });
-      return;
-    }
+    if (!supportsCalls()) { enviarSenal(call.fromName, "reject", { callId: call.callId }); return; }
 
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
@@ -1064,11 +1381,8 @@ if (incomingAcceptBtn) {
     await cargarListaCamaras();
 
     activeCall = {
-      callId: call.callId,
-      peerName: call.fromName,
-      peerId: call.fromId,
-      role: "callee",
-      video: call.video
+      callId: call.callId, peerName: call.fromName, peerId: call.fromId,
+      role: "callee", video: call.video
     };
 
     showCallOverlay("Conectando con " + call.fromName + "...");
@@ -1112,10 +1426,7 @@ async function crearOferta() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     await enviarSenal(activeCall.peerName, "offer", { callId: activeCall.callId, sdp: pc.localDescription });
-  } catch (e) {
-    alert("Error: " + e.message);
-    endCall(true);
-  }
+  } catch (e) { alert("Error: " + e.message); endCall(true); }
 }
 
 async function recibirOferta(sdp) {
@@ -1128,10 +1439,7 @@ async function recibirOferta(sdp) {
     await pc.setLocalDescription(answer);
     await enviarSenal(activeCall.peerName, "answer", { callId: activeCall.callId, sdp: pc.localDescription });
     flushIce();
-  } catch (e) {
-    alert("Error: " + e.message);
-    endCall(true);
-  }
+  } catch (e) { alert("Error: " + e.message); endCall(true); }
 }
 
 async function recibirRespuesta(sdp) {
@@ -1169,18 +1477,14 @@ function showCallOverlay(texto) {
     if (soloAudio && activeCall) {
       audioAvatar.textContent = avatarLetter(activeCall.peerName);
       audioAvatar.style.background = colorForUser(activeCall.peerName);
-    } else {
-      audioAvatar.textContent = "";
-    }
+    } else { audioAvatar.textContent = ""; }
   }
 
   if (switchCamBtn) {
     if (activeCall && activeCall.video) {
       switchCamBtn.style.display = "inline-block";
       switchCamBtn.textContent = "🔄 Frontal";
-    } else {
-      switchCamBtn.style.display = "none";
-    }
+    } else { switchCamBtn.style.display = "none"; }
   }
 
   muted = false;
@@ -1222,7 +1526,6 @@ if (muteBtn) {
   });
 }
 
-// ============ CAMBIAR CÁMARA ============
 async function cambiarCamara() {
   if (!localStream) { alert("No hay stream activo."); return; }
   if (!activeCall || !activeCall.video) { alert("Solo en videollamadas."); return; }
@@ -1267,18 +1570,13 @@ async function cambiarCamara() {
       } catch (e3) {}
     }
 
-    if (!nuevoStream) {
-      alert("No se pudo cambiar la cámara.");
-      return;
-    }
+    if (!nuevoStream) { alert("No se pudo cambiar la cámara."); return; }
 
     const nuevaPistaVideo = nuevoStream.getVideoTracks()[0];
-
     if (pc) {
       const senderVideo = pc.getSenders().find(s => s.track && s.track.kind === "video");
       if (senderVideo) await senderVideo.replaceTrack(nuevaPistaVideo);
     }
-
     localStream.addTrack(nuevaPistaVideo);
 
     if (localVideo) {
@@ -1296,13 +1594,8 @@ async function cambiarCamara() {
   }
 }
 
-if (switchCamBtn) {
-  switchCamBtn.addEventListener("click", cambiarCamara);
-}
-
-if (hangupBtn) {
-  hangupBtn.addEventListener("click", () => endCall(true));
-}
+if (switchCamBtn) switchCamBtn.addEventListener("click", cambiarCamara);
+if (hangupBtn) hangupBtn.addEventListener("click", () => endCall(true));
 
 if (callBtn) {
   callBtn.addEventListener("click", () => {
@@ -1333,6 +1626,4 @@ iniciarPresencia();
 leerSenales();
 cargarListaCamaras();
 
-// ============================================================
 // © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.
-// ============================================================

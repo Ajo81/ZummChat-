@@ -163,12 +163,13 @@ const recordingTime   = document.getElementById("recordingTime");
 const cancelRecBtn    = document.getElementById("cancelRecBtn");
 const stopRecBtn      = document.getElementById("stopRecBtn");
 
-// --- REFERENCIAS PARA LA LISTA DE CHATS (ESTILO WHATSAPP) ---
+// --- REFERENCIAS LISTA DE CHATS ---
 const chatListContainer = document.getElementById("chat-list-container");
 const chatView          = document.getElementById("chat-view");
 const chatListEl        = document.getElementById("chat-list");
 const backBtn           = document.getElementById("backBtn");
 const newGroupBtn       = document.getElementById("newGroupBtn");
+const joinGroupBtn      = document.getElementById("joinGroupBtn");
 const shareHomeBtn      = document.getElementById("shareHomeBtn");
 
 const MAX_SIZE_MB = 5;
@@ -381,30 +382,23 @@ function mostrarNotificacion(remitente, texto, room) {
   reproducirSonidoInsistente();
 }
 
-// ================= NUEVAS FUNCIONES DE NOTIFICACIÓN DE CONEXIÓN =================
+// ================= NOTIFICACIÓN DE CONEXIÓN =================
 function mostrarNotificacionConexion(nombreUsuario) {
   const roomPrivado = "priv:" + nombreUsuario;
   if (chatEstaSilenciado(roomPrivado)) return;
-  
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       const n = new Notification("🟢 " + nombreUsuario + " se conectó", {
         body: "Está en línea ahora",
-        icon: "icon.png",
-        badge: "icon.png",
-        tag: "zummchat-presence",
-        renotify: false,
-        silent: true,
-        vibrate: [100]
+        icon: "icon.png", badge: "icon.png",
+        tag: "zummchat-presence", renotify: false,
+        silent: true, vibrate: [100]
       });
       n.onclick = () => { try { window.focus(); } catch (e) {} n.close(); };
       setTimeout(() => { try { n.close(); } catch (e) {} }, 5000);
     }
   } catch (e) {}
-  
-  if (sonidoActivo) {
-    reproducirSonidoConexion();
-  }
+  if (sonidoActivo) reproducirSonidoConexion();
 }
 
 function reproducirSonidoConexion() {
@@ -419,11 +413,10 @@ function reproducirSonidoConexion() {
     gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.25);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
   } catch (e) {}
 }
-// ================= FIN NUEVAS FUNCIONES =================
+// ================= FIN NOTIFICACIÓN DE CONEXIÓN =================
 
 function resetearTitulo() {
   mensajesNoLeidos = 0; document.title = TITULO_BASE;
@@ -550,19 +543,101 @@ let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
 function guardarGrupos() { LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados)); }
 function guardarGruposOcultos() { LS.setItem("zummchat_grupos_ocultos", JSON.stringify(gruposOcultos)); }
 
-if (newGroupBtn) newGroupBtn.addEventListener("click", () => {
+// ================= CREAR GRUPO CON CONTRASEÑA =================
+if (newGroupBtn) newGroupBtn.addEventListener("click", async () => {
   const nombre = prompt("Nombre del grupo:");
   if (!nombre || !nombre.trim()) return;
   const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
-  if (!limpio) { alert("Inválido."); return; }
-  if (gruposOcultos.includes(limpio)) { gruposOcultos = gruposOcultos.filter(g => g !== limpio); guardarGruposOcultos(); }
-  if (gruposPersonalizados.includes(limpio)) { alert("Ya existe."); switchRoom("grupo:" + limpio); return; }
-  gruposPersonalizados.push(limpio); guardarGrupos(); 
+  if (!limpio) { alert("Nombre inválido. Usa letras y números."); return; }
+
+  const { data: existente } = await supabaseClient
+    .from("zumm_grupos").select("nombre, password").eq("nombre", limpio).maybeSingle();
+
+  if (existente) {
+    alert("⚠️ Ya existe un grupo con ese nombre.\nSi quieres unirte, usa el botón 🔑 Unirse.");
+    return;
+  }
+
+  const pass = prompt("Contraseña para el grupo (opcional).\nSi la dejas vacía, el grupo será público.\nSi pones una, solo entrará quien la sepa:");
+
+  const { error } = await supabaseClient.from("zumm_grupos").insert([{
+    nombre: limpio,
+    password: (pass && pass.trim()) ? pass.trim() : null,
+    creador: username
+  }]);
+
+  if (error) {
+    alert("Error al crear el grupo: " + error.message);
+    return;
+  }
+
+  if (gruposOcultos.includes(limpio)) {
+    gruposOcultos = gruposOcultos.filter(g => g !== limpio);
+    guardarGruposOcultos();
+  }
+  if (!gruposPersonalizados.includes(limpio)) {
+    gruposPersonalizados.push(limpio);
+    guardarGrupos();
+  }
+
   switchRoom("grupo:" + limpio);
-  setTimeout(() => alert("✅ Grupo '" + limpio + "' creado.\n\nDiles que toquen ➕ y escriban: " + limpio), 300);
+
+  if (pass && pass.trim()) {
+    setTimeout(() => {
+      alert("✅ Grupo '" + limpio + "' creado 🔒\n\nComparte con tus amigos:\n• Nombre: " + limpio + "\n• Contraseña: " + pass);
+    }, 300);
+  } else {
+    setTimeout(() => {
+      alert("✅ Grupo '" + limpio + "' creado (público).\n\nDiles que toquen 🔑 Unirse y escriban:\n" + limpio);
+    }, 300);
+  }
 });
 
-// ================= FUNCIÓN PARA COMPARTIR ENLACE =================
+// ================= UNIRSE A GRUPO CON CONTRASEÑA =================
+if (joinGroupBtn) joinGroupBtn.addEventListener("click", async () => {
+  const nombre = prompt("Nombre del grupo al que quieres unirte:");
+  if (!nombre || !nombre.trim()) return;
+  const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
+  if (!limpio) { alert("Nombre inválido."); return; }
+
+  const { data: grupo, error } = await supabaseClient
+    .from("zumm_grupos").select("nombre, password, creador").eq("nombre", limpio).maybeSingle();
+
+  if (error) { alert("Error: " + error.message); return; }
+
+  if (!grupo) {
+    if (gruposPersonalizados.includes(limpio)) {
+      switchRoom("grupo:" + limpio);
+      return;
+    }
+    alert("❌ No existe ningún grupo con ese nombre.\n\nPídele al creador el nombre correcto.");
+    return;
+  }
+
+  if (grupo.password) {
+    const pass = prompt("🔒 Este grupo está protegido.\nEscribe la contraseña:");
+    if (pass === null) return;
+    if (pass.trim() !== grupo.password) {
+      alert("❌ Contraseña incorrecta. No puedes entrar.");
+      return;
+    }
+  }
+
+  if (gruposOcultos.includes(limpio)) {
+    gruposOcultos = gruposOcultos.filter(g => g !== limpio);
+    guardarGruposOcultos();
+  }
+  if (!gruposPersonalizados.includes(limpio)) {
+    gruposPersonalizados.push(limpio);
+    guardarGrupos();
+  }
+
+  switchRoom("grupo:" + limpio);
+  setTimeout(() => alert("✅ Te uniste al grupo '" + limpio + "'"), 300);
+});
+// ================= FIN CREAR/UNIRSE GRUPO =================
+
+// ================= COMPARTIR ENLACE =================
 function compartirEnlace() {
   const url = location.href;
   const datos = { title: "ZummChat", text: "¡Únete a mi chat ZummChat! 🐦💬", url: url };
@@ -574,12 +649,11 @@ function compartirEnlace() {
       .catch(() => prompt("Copia este enlace para compartirlo:", url));
   }
 }
-
 if (shareBtn) shareBtn.addEventListener("click", compartirEnlace);
 if (shareHomeBtn) shareHomeBtn.addEventListener("click", compartirEnlace);
-// ================= FIN FUNCIÓN COMPARTIR =================
+// ================= FIN COMPARTIR ENLACE =================
 
-// ================= LÓGICA DE NAVEGACIÓN (ESTILO WHATSAPP) =================
+// ================= NAVEGACIÓN ESTILO WHATSAPP =================
 function showChatList() {
   inChatView = false;
   currentRoom = null;
@@ -610,31 +684,23 @@ function renderChatList() {
   todosGrupos.forEach(room => {
     const li = document.createElement("li");
     li.className = "chat-item";
-    
     const avatar = document.createElement("div");
     avatar.className = "chat-avatar";
     avatar.style.background = "var(--accent)";
     avatar.textContent = "👥";
-    
     const info = document.createElement("div");
     info.className = "chat-info";
-    
     const name = document.createElement("div");
     name.className = "chat-name";
     name.textContent = roomLabel(room);
-    
     const preview = document.createElement("div");
     preview.className = "chat-preview";
     preview.textContent = "Grupo de chat";
-    
     info.appendChild(name);
     info.appendChild(preview);
     li.appendChild(avatar);
     li.appendChild(info);
-    
-    li.addEventListener("click", () => {
-      switchRoom(room);
-    });
+    li.addEventListener("click", () => switchRoom(room));
     chatListEl.appendChild(li);
   });
 
@@ -672,10 +738,8 @@ function renderChatList() {
 function crearItemChat(nombreUsuario, roomId) {
   const li = document.createElement("li");
   li.className = "chat-item";
-
   const estaOnline = usersOnline.some(u => u.toLowerCase() === nombreUsuario.toLowerCase());
   const urlAvatar = avataresPorUsuario[nombreUsuario.toLowerCase()] || "";
-
   const avatar = document.createElement("div");
   avatar.className = "chat-avatar";
   if (urlAvatar) {
@@ -685,28 +749,21 @@ function crearItemChat(nombreUsuario, roomId) {
     avatar.style.background = colorForUser(nombreUsuario);
     avatar.textContent = avatarLetter(nombreUsuario);
   }
-
   const info = document.createElement("div");
   info.className = "chat-info";
-
   const name = document.createElement("div");
   name.className = "chat-name";
   name.textContent = nombreUsuario;
-
   const preview = document.createElement("div");
   preview.className = "chat-preview";
   preview.textContent = estaOnline ? "En línea" : "Desconectado";
-
   info.appendChild(name);
   info.appendChild(preview);
-
   const statusDot = document.createElement("div");
   statusDot.className = "chat-status-dot" + (estaOnline ? "" : " offline");
-
   li.appendChild(avatar);
   li.appendChild(info);
   li.appendChild(statusDot);
-
   li.addEventListener("click", () => {
     if (!privateRooms.includes(roomId)) {
       privateRooms.push(roomId);
@@ -714,16 +771,14 @@ function crearItemChat(nombreUsuario, roomId) {
     }
     switchRoom(roomId);
   });
-
   chatListEl.appendChild(li);
 }
-// ================= FIN LÓGICA DE NAVEGACIÓN =================
+// ================= FIN NAVEGACIÓN =================
 
 function switchRoom(room) {
   currentRoom = room;
   showChatView();
-  registrarPresencia(); // NUEVO: Registro inmediato al entrar a una sala
-
+  registrarPresencia();
   if (chatTitle) chatTitle.textContent = roomLabel(room);
   rendered.clear(); lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
@@ -1728,7 +1783,7 @@ function openImageModal(url) {
   modal.classList.add("show");
 }
 
-// ================= PRESENCIA Y NOTIFICACIONES DE CONEXIÓN =================
+// ================= PRESENCIA =================
 let usersOnline = [];
 let usuariosConocidos = new Set();
 let primeraCargaPresencia = true;
@@ -1751,19 +1806,15 @@ async function leerPresencia() {
       .select("username, room, last_seen, avatar_url, typing_at")
       .gte("last_seen", hace30s);
     if (error) return;
-    
     const usuariosUnicos = {};
     (data || []).forEach(u => {
       if (!usuariosUnicos[u.username] || new Date(u.last_seen) > new Date(usuariosUnicos[u.username].last_seen)) {
         usuariosUnicos[u.username] = u;
       }
     });
-    
     const nuevaLista = Object.values(usuariosUnicos)
       .map(u => u.username)
       .filter(u => u.toLowerCase() !== username.toLowerCase());
-    
-    // DETECCIÓN DE USUARIOS NUEVOS
     if (!primeraCargaPresencia && document.hidden && sonidoActivo) {
       nuevaLista.forEach(u => {
         const yaEstaba = usuariosConocidos.has(u.toLowerCase());
@@ -1774,17 +1825,13 @@ async function leerPresencia() {
         }
       });
     }
-    
     usuariosConocidos = new Set(nuevaLista.map(u => u.toLowerCase()));
     primeraCargaPresencia = false;
-    
     usersOnline = nuevaLista;
-      
     avataresPorUsuario = {};
     Object.values(usuariosUnicos).forEach(u => {
       if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
     });
-    
     const ahora = Date.now();
     const escribiendo = (data || [])
       .filter(u => u.room === currentRoom && u.username.toLowerCase() !== username.toLowerCase())
@@ -1792,7 +1839,6 @@ async function leerPresencia() {
       .map(u => u.username);
     actualizarIndicadorTyping(escribiendo);
     renderUserList();
-    
     if (!inChatView) {
       renderChatList();
     }
@@ -1810,36 +1856,25 @@ supabaseClient
       () => { leerPresencia(); })
   .subscribe();
 
-// ================= PING DE PRESENCIA EN EVENTOS CLAVE =================
-// Registrar presencia cuando la app vuelve a estar visible
+// Ping de presencia en eventos clave
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     registrarPresencia();
     leerPresencia();
   }
 });
-
-// Registrar presencia al recuperar el foco
 window.addEventListener("focus", () => {
   registrarPresencia();
   leerPresencia();
 });
-
-// Registrar presencia al primer toque o click del usuario
-document.body.addEventListener("touchstart", () => {
-  registrarPresencia();
-}, { once: true, passive: true });
-document.body.addEventListener("click", () => {
-  registrarPresencia();
-}, { once: true });
-
-// Registrar presencia cada 15 segundos si el usuario está activo
+document.body.addEventListener("touchstart", () => { registrarPresencia(); }, { once: true, passive: true });
+document.body.addEventListener("click", () => { registrarPresencia(); }, { once: true });
 setInterval(() => {
   if (!document.hidden && document.hasFocus()) {
     registrarPresencia();
   }
 }, 15000);
-// ================= FIN PING DE PRESENCIA =================
+// ================= FIN PRESENCIA =================
 
 function updateUsersBtn() {
   if (usersBtn) {
@@ -1880,7 +1915,7 @@ function renderUserList() {
 if (usersBtn) usersBtn.addEventListener("click", () => {
   cerrarPaneles();
   if (usersPanel) usersPanel.classList.add("show");
-  registrarPresencia(); // NUEVO: Registrar antes de leer
+  registrarPresencia();
   leerPresencia();
 });
 if (usersPanelClose) usersPanelClose.addEventListener("click", () => {
@@ -2103,6 +2138,7 @@ if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
 });
 if (groupStatsCloseBtn) groupStatsCloseBtn.addEventListener("click", () => groupStatsModal.classList.remove("show"));
 
+// ================= LLAMADAS Y VIDEOLLAMADAS =================
 let pc = null, localStream = null, activeCall = null, incomingCall = null;
 let iceQueue = [], inviteTimer = null, ringTimeout = null, muted = false;
 let signalsLastId = 0, signalsCheckInterval = null;
@@ -2400,17 +2436,13 @@ async function cambiarCamara() {
 if (switchCamBtn) switchCamBtn.addEventListener("click", cambiarCamara);
 if (hangupBtn) hangupBtn.addEventListener("click", () => endCall(true));
 
-// ================= BOTONES DE LLAMADA Y VIDEOLLAMADA =================
+// Botones de llamada y videollamada (con detección de chat privado)
 if (callBtn) callBtn.addEventListener("click", () => {
   if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
     const partes = currentRoom.replace("priv:", "").split("|");
     const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase());
-    if (otro) {
-      startCall(otro, false);
-      return;
-    }
+    if (otro) { startCall(otro, false); return; }
   }
-  
   if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
   const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
   if (!target || !target.trim()) return;
@@ -2421,18 +2453,14 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
   if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
     const partes = currentRoom.replace("priv:", "").split("|");
     const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase());
-    if (otro) {
-      startCall(otro, true);
-      return;
-    }
+    if (otro) { startCall(otro, true); return; }
   }
-
   if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
   const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
   if (!target || !target.trim()) return;
   startCall(target.trim(), true);
 });
-// ================= FIN BOTONES DE LLAMADA =================
+// ================= FIN LLAMADAS =================
 
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);

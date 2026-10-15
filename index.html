@@ -45,7 +45,6 @@
       </div>
     </div>
 
-    <!-- PANTALLA PRINCIPAL: LISTA DE CHATS -->
     <div id="chat-list-container">
       <div class="home-buttons-row">
         <button id="newGroupBtn" type="button" class="new-chat-btn">➕ Crear</button>
@@ -55,7 +54,6 @@
       <ul id="chat-list"></ul>
     </div>
 
-    <!-- PANTALLA DE CHAT ACTIVO -->
     <div id="chat-view" style="display:none; flex: 1; flex-direction: column; overflow: hidden;">
       <div id="searchBar">
         <input type="text" id="searchInput" placeholder="Buscar en este chat..." autocomplete="off">
@@ -68,11 +66,8 @@
       </div>
 
       <div id="messages"></div>
-
       <div id="typingIndicator"></div>
-
       <button id="scrollDownBtn" type="button" title="Ir al último mensaje">⬇️</button>
-
       <div id="emoji-bar"></div>
 
       <div id="input-area">
@@ -135,7 +130,7 @@
       <span id="userMeName">Tú: ...</span>
       <button id="changeNameBtn" type="button" title="Cambiar nombre">✏️</button>
     </div>
-    <input type="file" id="avatarInput" accept="image/*" style="display:none">
+    <input type="file" id="avatarInput" accept="image/*" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
     <ul id="userList"></ul>
     <p id="noUsers">Conectando...</p>
   </div>

@@ -45,7 +45,6 @@ html, body {
   transition: background .3s, color .3s;
 }
 
-/* ================= SPLASH ================= */
 #splash {
   position: fixed; inset: 0;
   background: linear-gradient(#003300, #000);
@@ -77,7 +76,6 @@ html, body {
   50%      { text-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent); }
 }
 
-/* ================= CONTENEDOR PRINCIPAL ================= */
 #chat-container {
   height: 100vh;
   height: 100dvh;
@@ -131,7 +129,6 @@ html, body {
   50%      { box-shadow: 0 0 0 8px transparent; }
 }
 
-/* ================= LISTA DE CHATS ================= */
 #chat-list-container {
   flex: 1;
   overflow-y: auto;
@@ -142,7 +139,6 @@ html, body {
   flex-direction: column;
   gap: 8px;
 }
-
 .home-buttons-row {
   display: flex;
   gap: 6px;
@@ -160,7 +156,6 @@ html, body {
   font-size: 13px;
   padding: 10px 8px;
 }
-
 .new-chat-btn {
   background: var(--bg-card);
   color: var(--accent);
@@ -175,13 +170,11 @@ html, body {
   transition: all .2s;
 }
 .new-chat-btn:active { background: var(--accent); color: var(--bg); }
-
 #chat-list {
   list-style: none;
   padding: 0; margin: 0;
   display: flex; flex-direction: column; gap: 4px;
 }
-
 .chat-item {
   display: flex; align-items: center; gap: 12px;
   background: var(--bg-card);
@@ -192,7 +185,6 @@ html, body {
   border-left: 3px solid transparent;
 }
 .chat-item:active { background: var(--border-light); border-left-color: var(--accent); }
-
 .chat-avatar {
   width: 48px; height: 48px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -200,12 +192,10 @@ html, body {
   flex-shrink: 0; text-transform: uppercase;
   background-size: cover; background-position: center; overflow: hidden;
 }
-
 .chat-info { flex: 1; min-width: 0; }
 .chat-name { font-size: 15px; font-weight: bold; color: var(--text); margin-bottom: 2px; }
 .chat-preview { font-size: 13px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-time { font-size: 11px; color: var(--text-muted); }
-
 .chat-status-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--accent); flex-shrink: 0;
@@ -213,7 +203,6 @@ html, body {
 }
 .chat-status-dot.offline { background: var(--text-muted); box-shadow: none; }
 
-/* ================= CONFIG PANEL ================= */
 #configPanel {
   position: fixed; top: 0; right: 0;
   width: 320px; max-width: 90vw;
@@ -260,7 +249,6 @@ html, body {
 .config-icon { font-size: 26px; line-height: 1; }
 .config-label { font-size: 12px; font-weight: bold; color: var(--text-dim); }
 
-/* ================= ATTACH MENU ================= */
 #attachMenu {
   position: fixed;
   bottom: 80px; left: 12px;
@@ -287,7 +275,6 @@ html, body {
 .attach-item:active { background: var(--bg-card); }
 .attach-item span { font-size: 20px; }
 
-/* ================= SEARCH BAR ================= */
 #searchBar {
   display: none;
   background: var(--bg-card);
@@ -319,7 +306,6 @@ html, body {
   100% { background: var(--bg-card); }
 }
 
-/* ================= PINNED BAR ================= */
 #pinnedBar {
   display: none;
   background: var(--bg-card);
@@ -343,7 +329,6 @@ html, body {
   cursor: pointer; padding: 2px 6px;
 }
 
-/* ================= ROOM BAR (compatibilidad) ================= */
 #room-bar { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; scrollbar-width: none; flex-shrink: 0; }
 #room-bar::-webkit-scrollbar { display: none; }
 .room-btn {
@@ -382,7 +367,6 @@ html, body {
   display: flex; align-items: center; justify-content: center; font-weight: bold;
 }
 
-/* ================= MENSAJES ================= */
 #messages {
   flex: 1 1 auto;
   min-height: 0;
@@ -397,7 +381,6 @@ html, body {
   position: relative;
   margin-bottom: 6px;
 }
-
 .msg {
   background: var(--bg-card); padding: 10px 12px; border-radius: 12px;
   border-left: 3px solid var(--accent); word-wrap: break-word;
@@ -417,7 +400,6 @@ html, body {
   border-bottom: 1px dashed var(--accent);
 }
 .msg.bot-msg .msg-name { color: var(--accent); font-style: italic; }
-
 .avatar {
   width: 38px; height: 38px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -425,7 +407,6 @@ html, body {
   flex-shrink: 0; text-transform: uppercase;
   background-size: cover; background-position: center; overflow: hidden;
 }
-
 .msg-content { flex: 1; min-width: 0; }
 .msg-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 12px; }
 .msg-name { font-weight: bold; cursor: pointer; }
@@ -436,7 +417,6 @@ html, body {
 .msg-body { font-size: 15px; line-height: 1.4; word-wrap: break-word; }
 .msg-body a.auto-link { color: var(--accent); text-decoration: underline; word-break: break-all; }
 
-/* ================= ENCUESTAS ================= */
 .poll-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 6px; }
 .poll-question { color: var(--accent); font-weight: bold; font-size: 15px; margin-bottom: 10px; word-break: break-word; }
 .poll-option {
@@ -452,12 +432,10 @@ html, body {
 .poll-text { position: relative; z-index: 1; font-size: 14px; flex: 1; word-break: break-word; }
 .poll-count { position: relative; z-index: 1; color: var(--accent); font-weight: bold; font-size: 13px; margin-left: 10px; flex-shrink: 0; }
 
-/* ================= UBICACIÓN ================= */
 .location-msg { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-top: 6px; display: flex; align-items: center; gap: 10px; color: var(--accent); text-decoration: none; }
 .location-msg .loc-icon { font-size: 26px; }
 .location-msg .loc-text { flex: 1; font-size: 14px; }
 
-/* ================= REACCIONES ================= */
 .reactions-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .reaction-bubble {
   background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
@@ -468,7 +446,6 @@ html, body {
 .reaction-bubble.mine { border-color: var(--accent); background: var(--bg-card); }
 .reaction-bubble .count { font-size: 11px; color: var(--text-dim); font-weight: bold; }
 
-/* ================= NOTA DE VOZ ================= */
 .voice-note { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 24px; padding: 8px 14px; margin-top: 6px; max-width: 280px; }
 .voice-play-btn { background: var(--accent); color: var(--bg); border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .voice-play-btn:active { transform: scale(.95); }
@@ -476,18 +453,15 @@ html, body {
 .voice-wave span { width: 3px; background: var(--accent); border-radius: 2px; opacity: 0.6; }
 .voice-duration { color: var(--text-dim); font-size: 12px; flex-shrink: 0; min-width: 32px; text-align: right; }
 
-/* ================= EMOJI BAR ================= */
 #emoji-bar { display: none; gap: 6px; overflow-x: auto; background: var(--bg-card); border-radius: 10px; padding: 8px; margin-bottom: 6px; scrollbar-width: none; flex-shrink: 0; }
 #emoji-bar.show { display: flex; }
 #emoji-bar::-webkit-scrollbar { display: none; }
 #emoji-bar button { background: transparent; border: none; font-size: 24px; cursor: pointer; padding: 4px 6px; border-radius: 6px; flex-shrink: 0; }
 
-/* ================= INDICADOR TYPING ================= */
 #typingIndicator { display: none; color: var(--accent); font-size: 12px; font-style: italic; padding: 4px 10px; margin-bottom: 4px; animation: fade-in-typing 0.3s ease; flex-shrink: 0; }
 #typingIndicator.show { display: block; }
 @keyframes fade-in-typing { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ================= BOTÓN SCROLL ABAJO ================= */
 #scrollDownBtn {
   position: fixed; bottom: 130px; right: 24px;
   width: 46px; height: 46px; border-radius: 50%;
@@ -500,7 +474,6 @@ html, body {
 #scrollDownBtn.show { display: flex; }
 #scrollDownBtn:active { transform: scale(.9); }
 
-/* ================= INPUT AREA ================= */
 #input-area { display: flex; gap: 6px; margin-bottom: 4px; flex-shrink: 0; }
 #emojiBtn, #attachBtn {
   background: var(--bg-card); color: var(--accent);
@@ -521,7 +494,6 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ================= PANEL GRABACIÓN ================= */
 #recordingPanel { display: none; background: #2a0d0d; border: 2px solid #ff5252; border-radius: 12px; padding: 12px; margin-bottom: 6px; text-align: center; flex-shrink: 0; }
 #recordingPanel.show { display: block; }
 #recordingIndicator { color: #ff5252; font-weight: bold; font-size: 15px; margin-bottom: 10px; }
@@ -531,25 +503,20 @@ html, body {
 #cancelRecBtn { background: #333; color: #fff; }
 #stopRecBtn { background: var(--accent); color: var(--bg); }
 
-/* ================= FOOTER ================= */
 #footer-credit { text-align: center; font-size: 10px; color: var(--text-muted); padding: 2px 0; letter-spacing: 0.3px; font-style: italic; user-select: none; opacity: 0.7; flex-shrink: 0; }
 #footer-credit strong { color: var(--accent); font-weight: 600; opacity: 0.85; }
 
-/* ================= FECHA SEPARADOR ================= */
 .date-sep { text-align: center; color: var(--accent); font-size: 12px; font-weight: bold; letter-spacing: 2px; margin: 12px 0 6px 0; opacity: 0.8; }
 .date-sep::before, .date-sep::after { content: " ─── "; color: var(--border); }
 
-/* ================= ARCHIVOS ADJUNTOS ================= */
 .msg-file-img { max-width: 100%; max-height: 300px; border-radius: 8px; margin-top: 6px; cursor: pointer; display: block; }
 .msg-file-link { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 6px; color: var(--accent); text-decoration: none; font-size: 14px; word-break: break-all; }
 
-/* ================= MODAL IMAGEN ================= */
 #imgModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
 #imgModal.show { display: flex; }
 #imgModal img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 #imgModal .close-modal { position: absolute; top: 20px; right: 20px; background: var(--accent); color: var(--bg); border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; font-weight: bold; cursor: pointer; }
 
-/* ================= PANEL USUARIOS ================= */
 #usersPanel { position: fixed; top: 0; right: 0; width: 280px; max-width: 85vw; height: 100%; background: var(--bg-secondary); border-left: 2px solid var(--accent); z-index: 9998; transform: translateX(100%); transition: transform .3s ease; display: flex; flex-direction: column; padding: 16px; }
 #usersPanel.show { transform: translateX(0); }
 #usersPanelHeader { display: flex; justify-content: space-between; align-items: center; color: var(--accent); font-weight: bold; font-size: 18px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; }
@@ -566,7 +533,6 @@ html, body {
 #userList li .user-actions button { background: transparent; border: none; font-size: 16px; cursor: pointer; padding: 2px; }
 #noUsers { color: var(--text-muted); text-align: center; font-size: 13px; margin-top: 20px; font-style: italic; }
 
-/* ================= LLAMADAS ================= */
 #callOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.97); z-index: 10000; justify-content: center; align-items: center; padding: 16px; }
 #callOverlay.show { display: flex; }
 .call-box { width: 100%; max-width: 500px; text-align: center; }
@@ -587,7 +553,6 @@ html, body {
 #acceptCallBtn { background: var(--accent); color: var(--bg); }
 #hangupBtn { background: #ff5252; color: #fff; }
 
-/* ================= LLAMADA ENTRANTE ================= */
 #incomingModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.97); z-index: 10001; justify-content: center; align-items: center; padding: 20px; }
 #incomingModal.show { display: flex; }
 .incoming-content { text-align: center; }
@@ -600,7 +565,6 @@ html, body {
 #rejectBtn { background: #ff5252; color: #fff; }
 #incomingAcceptBtn { background: var(--accent); color: var(--bg); }
 
-/* ================= EDIT MODALS ================= */
 #editModal, #newReminderModal, #pollModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10002; justify-content: center; align-items: center; padding: 20px; }
 #editModal.show, #newReminderModal.show, #pollModal.show { display: flex; }
 .edit-content { background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
@@ -612,20 +576,17 @@ html, body {
 #editCancelBtn, #reminderCancelBtn, #pollCancelBtn { background: var(--bg-card); color: var(--text); }
 #editSaveBtn, #reminderSaveBtn, #pollSaveBtn { background: var(--accent); color: var(--bg); }
 
-/* ================= MENÚ MENSAJE ================= */
 #msgMenu { display: none; position: fixed; background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 10px; padding: 6px; z-index: 10003; box-shadow: 0 4px 16px rgba(0,0,0,0.6); flex-direction: column; gap: 4px; min-width: 150px; }
 #msgMenu.show { display: flex; }
 #msgMenu button { background: transparent; border: none; color: var(--text); padding: 10px 14px; text-align: left; font-size: 14px; cursor: pointer; border-radius: 6px; font-weight: bold; }
 #msgMenu button:active { background: var(--bg-card); }
 #menuDeleteBtn { color: #ff5252; }
 
-/* ================= REACTION PICKER ================= */
 #reactionPicker { display: none; position: fixed; background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 30px; padding: 8px 12px; z-index: 10004; box-shadow: 0 4px 16px rgba(0,0,0,0.6); gap: 8px; }
 #reactionPicker.show { display: flex; }
 #reactionPicker button { background: transparent; border: none; font-size: 24px; cursor: pointer; padding: 4px; border-radius: 50%; transition: transform .15s; }
 #reactionPicker button:active { transform: scale(1.3); }
 
-/* ================= MODALES GENERALES ================= */
 #profileModal, #statsModal, #groupStatsModal, #favModal,
 #highlightModal, #remindersModal, #blockedModal, #contactsModal,
 #soundsModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10005; justify-content: center; align-items: center; padding: 20px; }
@@ -633,7 +594,6 @@ html, body {
 #favModal.show, #highlightModal.show, #remindersModal.show,
 #blockedModal.show, #contactsModal.show, #soundsModal.show { display: flex; }
 
-/* ================= PERFIL ================= */
 .profile-content { background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 16px; padding: 24px; width: 100%; max-width: 360px; text-align: center; position: relative; }
 #profileCloseBtn { position: absolute; top: 10px; right: 14px; background: transparent; border: none; color: var(--text-dim); font-size: 22px; cursor: pointer; }
 #profileAvatar { width: 100px; height: 100px; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 44px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; text-transform: uppercase; background-size: cover; background-position: center; overflow: hidden; border: 3px solid var(--accent); }
@@ -652,7 +612,6 @@ html, body {
 #profileUnblockBtn { background: var(--accent); color: var(--bg); }
 #profileAddContactBtn { background: var(--bg-card); color: var(--accent); border: 1px solid var(--accent); }
 
-/* ================= STATS ================= */
 .stats-content { background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 16px; padding: 22px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
 .stats-content h3 { color: var(--accent); font-size: 20px; margin: 0 0 18px 0; text-align: center; }
 .stat-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 14px; }
@@ -665,7 +624,6 @@ html, body {
 .rank-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-count { color: var(--accent); font-weight: bold; }
 
-/* ================= LISTAS ================= */
 .fav-content { background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 16px; padding: 22px; width: 100%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; }
 .fav-content h3 { color: var(--accent); font-size: 20px; margin: 0 0 16px 0; text-align: center; }
 #favList, #highlightList, #remindersList, #blockedList, #contactsList, #soundsList { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
@@ -677,62 +635,23 @@ html, body {
 #favList li:active, #highlightList li:active,
 #remindersList li:active, #blockedList li:active,
 #contactsList li:active { background: var(--bg-secondary); }
-
 .list-meta { color: var(--text-dim); font-size: 11px; margin-bottom: 4px; }
 .list-del { float: right; color: #ff5252; background: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0 4px; }
 #favEmpty, #highlightEmpty, #remindersEmpty, #blockedEmpty, #contactsEmpty { text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0; }
 #favCloseBtn, #highlightCloseBtn, #remindersCloseBtn,
 #blockedCloseBtn, #contactsCloseBtn { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--accent); color: var(--bg); border: none; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; }
 
-/* ================= CONTACTOS ================= */
 .contact-online { color: var(--accent); font-size: 11px; font-weight: bold; }
 .contact-offline { color: var(--text-muted); font-size: 11px; }
 .contact-actions { display: flex; gap: 6px; margin-top: 6px; }
 .contact-actions button { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--accent); font-size: 12px; font-weight: bold; cursor: pointer; background: var(--bg); color: var(--accent); }
 .contact-actions button:active { background: var(--accent); color: var(--bg); }
 
-/* ================= MODAL DE SONIDOS ================= */
-#soundsList li {
-  background: var(--bg-card);
-  border-left: 3px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px;
-  transition: all .2s;
-  font-size: 15px;
-}
+#soundsList li { background: var(--bg-card); border-left: 3px solid var(--border); border-radius: 8px; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: all .2s; font-size: 15px; }
 #soundsList li:active { background: var(--bg-secondary); }
-#soundsList li.seleccionado {
-  border-left-color: var(--accent);
-  background: rgba(0,255,102,0.08);
-}
-#soundsList li .snd-name {
-  flex: 1;
-  color: var(--text);
-  font-weight: bold;
-}
-#soundsList li .snd-play {
-  background: var(--bg);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  border-radius: 50%;
-  width: 36px; height: 36px;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
+#soundsList li.seleccionado { border-left-color: var(--accent); background: rgba(0,255,102,0.08); }
+#soundsList li .snd-name { flex: 1; color: var(--text); font-weight: bold; }
+#soundsList li .snd-play { background: var(--bg); border: 1px solid var(--accent); color: var(--accent); border-radius: 50%; width: 36px; height: 36px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 #soundsList li .snd-play:active { background: var(--accent); color: var(--bg); }
-#soundsList li .snd-check {
-  color: var(--accent);
-  font-size: 20px;
-  font-weight: bold;
-}
-#soundsCloseBtn {
-  display: block; width: 100%; margin-top: 16px;
-  padding: 12px; background: var(--accent); color: var(--bg);
-  border: none; border-radius: 10px;
-  font-weight: bold; font-size: 15px; cursor: pointer;
-}
+#soundsList li .snd-check { color: var(--accent); font-size: 20px; font-weight: bold; }
+#soundsCloseBtn { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--accent); color: var(--bg); border: none; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; }

@@ -44,6 +44,7 @@ const colorBtn        = document.getElementById("colorBtn");
 const searchBtn       = document.getElementById("searchBtn");
 const soundBtn        = document.getElementById("soundBtn");
 const soundIcon       = document.getElementById("soundIcon");
+const soundsBtn       = document.getElementById("soundsBtn");
 const statsBtn        = document.getElementById("statsBtn");
 const groupStatsBtn   = document.getElementById("groupStatsBtn");
 const favBtn          = document.getElementById("favBtn");
@@ -102,6 +103,7 @@ const profileCancelBtn = document.getElementById("profileCancelBtn");
 const profileBlockBtn = document.getElementById("profileBlockBtn");
 const profileUnblockBtn = document.getElementById("profileUnblockBtn");
 const profileAddContactBtn = document.getElementById("profileAddContactBtn");
+const profileAvatarChangeBtn = document.getElementById("profileAvatarChangeBtn");
 const favModal        = document.getElementById("favModal");
 const favList         = document.getElementById("favList");
 const favEmpty        = document.getElementById("favEmpty");
@@ -136,6 +138,9 @@ const contactsList    = document.getElementById("contactsList");
 const contactsEmpty   = document.getElementById("contactsEmpty");
 const contactsCloseBtn = document.getElementById("contactsCloseBtn");
 const newContactBtn   = document.getElementById("newContactBtn");
+const soundsModal     = document.getElementById("soundsModal");
+const soundsList      = document.getElementById("soundsList");
+const soundsCloseBtn  = document.getElementById("soundsCloseBtn");
 const usersPanel      = document.getElementById("usersPanel");
 const usersPanelClose = document.getElementById("usersPanelClose");
 const userList        = document.getElementById("userList");
@@ -319,25 +324,98 @@ function initAudio() {
   if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; } }
   if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
 }
+
+// ================= SONIDOS DISPONIBLES =================
+const SONIDOS_DISPONIBLES = [
+  { id: "clasico",    nombre: "🎵 Clásico",       notas: [880, 1100, 880],                    gap: 350, tipo: "sine" },
+  { id: "suave",      nombre: "🌙 Suave",          notas: [600, 800],                          gap: 400, tipo: "sine" },
+  { id: "alegre",     nombre: "🎉 Alegre",         notas: [523, 659, 784, 1046],               gap: 150, tipo: "sine" },
+  { id: "grave",      nombre: "🎸 Grave",          notas: [440, 330, 220],                     gap: 300, tipo: "triangle" },
+  { id: "campana",    nombre: "🔔 Campana",        notas: [1200, 1600, 1200],                  gap: 200, tipo: "sine" },
+  { id: "susurro",    nombre: "🤫 Susurro",        notas: [1000, 1200],                        gap: 250, tipo: "sine" },
+  { id: "urgente",    nombre: "🚨 Urgente",        notas: [900, 900, 900, 900],                gap: 120, tipo: "square" },
+  { id: "gotas",      nombre: "💧 Gotas",          notas: [700, 900, 700, 900],                gap: 180, tipo: "sine" },
+  { id: "cristal",    nombre: "💎 Cristal Zumm",   notas: [1046, 1318, 1568, 2093],            gap: 90,  tipo: "sine", eco: true },
+  { id: "silencioso", nombre: "🔕 Solo vibración", notas: [],                                  gap: 0,   tipo: "sine" }
+];
+let sonidoActual = LS.getItem("zummchat_tono") || "clasico";
+
 function reproducirSonidoInsistente() {
   if (!sonidoActivo) return;
-  initAudio(); if (!audioCtx) return;
-  const tonos = [880, 1100, 880];
-  tonos.forEach((freq, idx) => {
-    setTimeout(() => {
-      try {
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.type = "sine"; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-      } catch (e) {}
-    }, idx * 350);
-  });
+  const sonido = SONIDOS_DISPONIBLES.find(s => s.id === sonidoActual) || SONIDOS_DISPONIBLES[0];
+  initAudio();
+  if (sonido.notas.length > 0 && audioCtx) {
+    sonido.notas.forEach((freq, idx) => {
+      setTimeout(() => {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = sonido.tipo || "sine";
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.22, audioCtx.currentTime + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(); osc.stop(audioCtx.currentTime + 0.45);
+          if (sonido.eco) {
+            setTimeout(() => {
+              try {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = "sine";
+                osc2.frequency.value = freq * 2;
+                gain2.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.02);
+                gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+                osc2.connect(gain2); gain2.connect(audioCtx.destination);
+                osc2.start(); osc2.stop(audioCtx.currentTime + 0.35);
+              } catch (e) {}
+            }, 60);
+          }
+        } catch (e) {}
+      }, idx * sonido.gap);
+    });
+  }
   if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
 }
+
+function reproducirSonidoPreview(sonidoId) {
+  const sonido = SONIDOS_DISPONIBLES.find(s => s.id === sonidoId);
+  if (!sonido || sonido.notas.length === 0) return;
+  initAudio(); if (!audioCtx) return;
+  sonido.notas.forEach((freq, idx) => {
+    setTimeout(() => {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = sonido.tipo || "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.22, audioCtx.currentTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.45);
+        if (sonido.eco) {
+          setTimeout(() => {
+            try {
+              const osc2 = audioCtx.createOscillator();
+              const gain2 = audioCtx.createGain();
+              osc2.type = "sine";
+              osc2.frequency.value = freq * 2;
+              gain2.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+              gain2.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.02);
+              gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+              osc2.connect(gain2); gain2.connect(audioCtx.destination);
+              osc2.start(); osc2.stop(audioCtx.currentTime + 0.35);
+            } catch (e) {}
+          }, 60);
+        }
+      } catch (e) {}
+    }, idx * sonido.gap);
+  });
+}
+// ================= FIN SONIDOS =================
+
 document.body.addEventListener("touchstart", initAudio, { once: true });
 document.body.addEventListener("click", initAudio, { once: true });
 function updateSoundBtn() { if (soundIcon) soundIcon.textContent = sonidoActivo ? "🔔" : "🔕"; }
@@ -382,7 +460,6 @@ function mostrarNotificacion(remitente, texto, room) {
   reproducirSonidoInsistente();
 }
 
-// ================= NOTIFICACIÓN DE CONEXIÓN =================
 function mostrarNotificacionConexion(nombreUsuario) {
   const roomPrivado = "priv:" + nombreUsuario;
   if (chatEstaSilenciado(roomPrivado)) return;
@@ -416,7 +493,6 @@ function reproducirSonidoConexion() {
     osc.start(); osc.stop(audioCtx.currentTime + 0.25);
   } catch (e) {}
 }
-// ================= FIN NOTIFICACIÓN DE CONEXIÓN =================
 
 function resetearTitulo() {
   mensajesNoLeidos = 0; document.title = TITULO_BASE;
@@ -566,10 +642,7 @@ if (newGroupBtn) newGroupBtn.addEventListener("click", async () => {
     creador: username
   }]);
 
-  if (error) {
-    alert("Error al crear el grupo: " + error.message);
-    return;
-  }
+  if (error) { alert("Error al crear el grupo: " + error.message); return; }
 
   if (gruposOcultos.includes(limpio)) {
     gruposOcultos = gruposOcultos.filter(g => g !== limpio);
@@ -1783,6 +1856,91 @@ function openImageModal(url) {
   modal.classList.add("show");
 }
 
+// ================= MODAL DE SONIDOS =================
+function renderSoundsList() {
+  if (!soundsList) return;
+  soundsList.innerHTML = "";
+  SONIDOS_DISPONIBLES.forEach(sonido => {
+    const li = document.createElement("li");
+    if (sonido.id === sonidoActual) li.classList.add("seleccionado");
+
+    const name = document.createElement("span");
+    name.className = "snd-name";
+    name.textContent = sonido.nombre;
+    li.appendChild(name);
+
+    const play = document.createElement("button");
+    play.className = "snd-play";
+    play.type = "button";
+    play.textContent = "▶";
+    play.title = "Escuchar";
+    play.addEventListener("click", (e) => {
+      e.stopPropagation();
+      reproducirSonidoPreview(sonido.id);
+    });
+    li.appendChild(play);
+
+    if (sonido.id === sonidoActual) {
+      const check = document.createElement("span");
+      check.className = "snd-check";
+      check.textContent = "✓";
+      li.appendChild(check);
+    }
+
+    li.addEventListener("click", () => {
+      sonidoActual = sonido.id;
+      LS.setItem("zummchat_tono", sonidoActual);
+      reproducirSonidoPreview(sonido.id);
+      renderSoundsList();
+    });
+
+    soundsList.appendChild(li);
+  });
+}
+
+if (soundsBtn) {
+  soundsBtn.addEventListener("click", () => {
+    cerrarPaneles();
+    if (soundsModal) {
+      renderSoundsList();
+      soundsModal.classList.add("show");
+    }
+  });
+}
+if (soundsCloseBtn) {
+  soundsCloseBtn.addEventListener("click", () => {
+    if (soundsModal) soundsModal.classList.remove("show");
+  });
+}
+if (soundsModal) {
+  soundsModal.addEventListener("click", (e) => {
+    if (e.target === soundsModal) soundsModal.classList.remove("show");
+  });
+}
+// ================= FIN MODAL DE SONIDOS =================
+
+// ================= BOTÓN CAMBIAR FOTO EN EL PERFIL =================
+if (profileAvatarChangeBtn) {
+  profileAvatarChangeBtn.addEventListener("click", () => {
+    if (avatarInput) avatarInput.click();
+  });
+}
+
+if (avatarInput) {
+  avatarInput.addEventListener("change", () => {
+    setTimeout(() => {
+      if (profileModal && profileModal.classList.contains("show") && perfilActual) {
+        const esMio = perfilActual.toLowerCase() === username.toLowerCase();
+        if (esMio) {
+          mostrarAvatarPropio();
+          abrirPerfil(username, true);
+        }
+      }
+    }, 1500);
+  });
+}
+// ================= FIN BOTÓN FOTO =================
+
 // ================= PRESENCIA =================
 let usersOnline = [];
 let usuariosConocidos = new Set();
@@ -1856,7 +2014,6 @@ supabaseClient
       () => { leerPresencia(); })
   .subscribe();
 
-// Ping de presencia en eventos clave
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     registrarPresencia();
@@ -1971,6 +2128,7 @@ function abrirPerfil(nombre, editable) {
   profileEditBtn.style.display = esMio ? "block" : "none";
   profileSaveBtn.style.display = "none";
   profileCancelBtn.style.display = "none";
+  if (profileAvatarChangeBtn) profileAvatarChangeBtn.style.display = esMio ? "block" : "none";
   if (!esMio) {
     const estaBloqueado = bloqueados.has(nombre.toLowerCase());
     profileBlockBtn.style.display = estaBloqueado ? "none" : "block";
@@ -2436,7 +2594,6 @@ async function cambiarCamara() {
 if (switchCamBtn) switchCamBtn.addEventListener("click", cambiarCamara);
 if (hangupBtn) hangupBtn.addEventListener("click", () => endCall(true));
 
-// Botones de llamada y videollamada (con detección de chat privado)
 if (callBtn) callBtn.addEventListener("click", () => {
   if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
     const partes = currentRoom.replace("priv:", "").split("|");

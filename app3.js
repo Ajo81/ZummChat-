@@ -1922,7 +1922,12 @@ if (soundsModal) {
 // ================= BOTÓN CAMBIAR FOTO EN EL PERFIL =================
 if (profileAvatarChangeBtn) {
   profileAvatarChangeBtn.addEventListener("click", () => {
-    if (avatarInput) avatarInput.click();
+    if (!avatarInput) return;
+    try {
+      avatarInput.click();
+    } catch (e) {
+      alert("Tu navegador no permite abrir el selector de fotos.");
+    }
   });
 }
 

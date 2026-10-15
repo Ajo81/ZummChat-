@@ -1930,20 +1930,6 @@ if (profileAvatarChangeBtn) {
     }
   });
 }
-
-if (avatarInput) {
-  avatarInput.addEventListener("change", () => {
-    setTimeout(() => {
-      if (profileModal && profileModal.classList.contains("show") && perfilActual) {
-        const esMio = perfilActual.toLowerCase() === username.toLowerCase();
-        if (esMio) {
-          mostrarAvatarPropio();
-          abrirPerfil(username, true);
-        }
-      }
-    }, 1500);
-  });
-}
 // ================= FIN BOTÓN FOTO =================
 
 // ================= PRESENCIA =================
@@ -2196,6 +2182,10 @@ if (avatarInput) avatarInput.addEventListener("change", async () => {
       bio: myBio, status_text: myStatus
     }, { onConflict: "username,room" });
     alert("✅ Foto actualizada");
+    // Refrescar el modal de perfil si está abierto
+    if (profileModal && profileModal.classList.contains("show") && perfilActual && perfilActual.toLowerCase() === username.toLowerCase()) {
+      abrirPerfil(username, true);
+    }
   } catch (e) { alert("Error: " + e.message); mostrarAvatarPropio(); }
   finally { avatarInput.value = ""; }
 });

@@ -169,6 +169,7 @@ const chatView          = document.getElementById("chat-view");
 const chatListEl        = document.getElementById("chat-list");
 const backBtn           = document.getElementById("backBtn");
 const newGroupBtn       = document.getElementById("newGroupBtn");
+const shareHomeBtn      = document.getElementById("shareHomeBtn");
 
 const MAX_SIZE_MB = 5;
 const BOT_NAME = "🤖 ZummBot";
@@ -220,7 +221,7 @@ let myAvatarUrl = LS.getItem("zummchat_avatar") || "";
 let myBio = LS.getItem("zummchat_bio") || "";
 let myStatus = LS.getItem("zummchat_status") || "";
 let currentRoom = "general";
-let inChatView = false; // NUEVO: Estado para saber si estamos en la lista o en un chat
+let inChatView = false;
 
 let bloqueados = new Set();
 async function cargarBloqueados() {
@@ -269,7 +270,6 @@ function toggleSilenciar(room) {
     alert("🔕 SILENCIADO");
   }
   guardarSilenciados();
-  // actualizarBotonesSilenciados(); // Ya no se usan los botones de sala superiores
 }
 
 let temaActual = LS.getItem("zummchat_tema") || "dark";
@@ -380,6 +380,52 @@ function mostrarNotificacion(remitente, texto, room) {
   }
   reproducirSonidoInsistente();
 }
+
+// ================= NUEVAS FUNCIONES DE NOTIFICACIÓN DE CONEXIÓN =================
+function mostrarNotificacionConexion(nombreUsuario) {
+  // Evitar notificar si el chat está silenciado
+  const roomPrivado = "priv:" + nombreUsuario;
+  if (chatEstaSilenciado(roomPrivado)) return;
+  
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      const n = new Notification("🟢 " + nombreUsuario + " se conectó", {
+        body: "Está en línea ahora",
+        icon: "icon.png",
+        badge: "icon.png",
+        tag: "zummchat-presence",
+        renotify: false,
+        silent: true,
+        vibrate: [100]
+      });
+      n.onclick = () => { try { window.focus(); } catch (e) {} n.close(); };
+      setTimeout(() => { try { n.close(); } catch (e) {} }, 5000);
+    }
+  } catch (e) {}
+  
+  if (sonidoActivo) {
+    reproducirSonidoConexion();
+  }
+}
+
+function reproducirSonidoConexion() {
+  initAudio(); if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 1200;
+    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.25);
+  } catch (e) {}
+}
+// ================= FIN NUEVAS FUNCIONES =================
+
 function resetearTitulo() {
   mensajesNoLeidos = 0; document.title = TITULO_BASE;
   if (tituloParpadeoInterval) { clearInterval(tituloParpadeoInterval); tituloParpadeoInterval = null; tituloParpadeando = false; }
@@ -517,7 +563,24 @@ if (newGroupBtn) newGroupBtn.addEventListener("click", () => {
   setTimeout(() => alert("✅ Grupo '" + limpio + "' creado.\n\nDiles que toquen ➕ y escriban: " + limpio), 300);
 });
 
-// ================= NUEVA LÓGICA DE NAVEGACIÓN (ESTILO WHATSAPP) =================
+// ================= FUNCIÓN PARA COMPARTIR ENLACE =================
+function compartirEnlace() {
+  const url = location.href;
+  const datos = { title: "ZummChat", text: "¡Únete a mi chat ZummChat! 🐦💬", url: url };
+  if (navigator.share) {
+    navigator.share(datos).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(url)
+      .then(() => alert("✅ Enlace copiado al portapapeles:\n" + url))
+      .catch(() => prompt("Copia este enlace para compartirlo:", url));
+  }
+}
+
+if (shareBtn) shareBtn.addEventListener("click", compartirEnlace);
+if (shareHomeBtn) shareHomeBtn.addEventListener("click", compartirEnlace);
+// ================= FIN FUNCIÓN COMPARTIR =================
+
+// ================= LÓGICA DE NAVEGACIÓN (ESTILO WHATSAPP) =================
 function showChatList() {
   inChatView = false;
   currentRoom = null;
@@ -542,7 +605,6 @@ function renderChatList() {
   if (!chatListEl) return;
   chatListEl.innerHTML = "";
 
-  // 1. Agregar Grupos (General, Amigos, Familia, Trabajo + Personalizados)
   const gruposBase = ["general", "amigos", "familia", "trabajo"];
   const todosGrupos = [...gruposBase, ...gruposPersonalizados.filter(g => !gruposOcultos.includes(g)).map(g => "grupo:" + g)];
 
@@ -577,11 +639,9 @@ function renderChatList() {
     chatListEl.appendChild(li);
   });
 
-  // 2. Agregar Chats Privados (Contactos/Usuarios)
   const usuariosMostrados = new Set();
   const miUserLower = username.toLowerCase();
 
-  // A. Usuarios que ya tienen un chat privado guardado
   privateRooms.forEach(room => {
     const partes = room.replace("priv:", "").split("|");
     const otro = partes.find(n => n.toLowerCase() !== miUserLower);
@@ -591,7 +651,6 @@ function renderChatList() {
     }
   });
 
-  // B. Usuarios en línea (sin chat previo)
   usersOnline.forEach(u => {
     if (u.toLowerCase() !== miUserLower && !usuariosMostrados.has(u.toLowerCase())) {
       usuariosMostrados.add(u.toLowerCase());
@@ -601,7 +660,6 @@ function renderChatList() {
     }
   });
 
-  // C. Contactos guardados (offline, sin chat previo)
   misContactos.forEach(c => {
     if (c.toLowerCase() !== miUserLower && !usuariosMostrados.has(c.toLowerCase())) {
       usuariosMostrados.add(c.toLowerCase());
@@ -660,11 +718,11 @@ function crearItemChat(nombreUsuario, roomId) {
 
   chatListEl.appendChild(li);
 }
-// ================= FIN NUEVA LÓGICA DE NAVEGACIÓN =================
+// ================= FIN LÓGICA DE NAVEGACIÓN =================
 
 function switchRoom(room) {
   currentRoom = room;
-  showChatView(); // Cambiar a la vista de chat
+  showChatView();
 
   if (chatTitle) chatTitle.textContent = roomLabel(room);
   rendered.clear(); lastDateKey = "";
@@ -686,17 +744,6 @@ function openPrivateWith(otroNombre) {
   switchRoom(room);
   if (usersPanel) usersPanel.classList.remove("show");
 }
-
-if (shareBtn) shareBtn.addEventListener("click", async () => {
-  cerrarPaneles();
-  const url = location.href;
-  const datos = { title: "ZummChat", text: "Únete a ZummChat 🐦💬", url };
-  if (navigator.share) { try { await navigator.share(datos); } catch (e) {} }
-  else {
-    try { await navigator.clipboard.writeText(url); alert("Enlace copiado"); }
-    catch (e) { prompt("Copia:", url); }
-  }
-});
 
 const EMOJIS = [
   "😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢",
@@ -880,7 +927,7 @@ function avatarUrlDe(nombre) {
 }
 function renderMessage(m, esNuevo) {
   if (!m || !m.id || rendered.has(m.id)) return;
-  if (m.room !== currentRoom) return; // Solo renderizar si pertenece a la sala actual
+  if (m.room !== currentRoom) return;
   if (!messagesEl) return;
   if (m.username && bloqueados.has(m.username.toLowerCase())) return;
   rendered.add(m.id);
@@ -1125,7 +1172,7 @@ supabaseClient
         if (m.room === currentRoom) {
           renderMessage(m, true);
         } else if (!inChatView) {
-          renderChatList(); // Actualizar lista si estamos en el menú principal
+          renderChatList();
         }
       })
   .on("postgres_changes", { event: "UPDATE", schema: "public", table: "zumm_messages" },
@@ -1681,12 +1728,14 @@ function openImageModal(url) {
   modal.classList.add("show");
 }
 
+// ================= PRESENCIA Y NOTIFICACIONES DE CONEXIÓN =================
 let usersOnline = [];
+let usuariosConocidos = new Set(); // Para detectar quién se conecta
+let primeraCargaPresencia = true;  // Para no notificar al abrir la app
 let presenceInterval = null, presenceRefreshInterval = null;
 let avataresPorUsuario = {};
 
 async function registrarPresencia() {
-  // Si estamos en la lista de chats, usamos "general" como sala por defecto para presencia
   const sala = currentRoom || "general";
   await supabaseClient.from("zumm_presence").upsert({
     username: username, room: sala,
@@ -1698,13 +1747,11 @@ async function registrarPresencia() {
 async function leerPresencia() {
   try {
     const hace30s = new Date(Date.now() - 30000).toISOString();
-    // Traer presencia de TODOS los usuarios para la lista de chats
     const { data, error } = await supabaseClient.from("zumm_presence")
       .select("username, room, last_seen, avatar_url, typing_at")
       .gte("last_seen", hace30s);
     if (error) return;
     
-    // Filtrar usuarios únicos
     const usuariosUnicos = {};
     (data || []).forEach(u => {
       if (!usuariosUnicos[u.username] || new Date(u.last_seen) > new Date(usuariosUnicos[u.username].last_seen)) {
@@ -1712,16 +1759,34 @@ async function leerPresencia() {
       }
     });
     
-    usersOnline = Object.values(usuariosUnicos)
+    const nuevaLista = Object.values(usuariosUnicos)
       .map(u => u.username)
       .filter(u => u.toLowerCase() !== username.toLowerCase());
+    
+    // ================= DETECCIÓN DE USUARIOS NUEVOS =================
+    // Solo notificamos si: NO es la primera carga, la app está oculta, y el sonido está activo
+    if (!primeraCargaPresencia && document.hidden && sonidoActivo) {
+      nuevaLista.forEach(u => {
+        const yaEstaba = usuariosConocidos.has(u.toLowerCase());
+        if (!yaEstaba) {
+          if (!bloqueados.has(u.toLowerCase())) {
+            mostrarNotificacionConexion(u);
+          }
+        }
+      });
+    }
+    
+    usuariosConocidos = new Set(nuevaLista.map(u => u.toLowerCase()));
+    primeraCargaPresencia = false;
+    // ================================================================
+    
+    usersOnline = nuevaLista;
       
     avataresPorUsuario = {};
     Object.values(usuariosUnicos).forEach(u => {
       if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
     });
     
-    // Typing indicator (solo para la sala actual)
     const ahora = Date.now();
     const escribiendo = (data || [])
       .filter(u => u.room === currentRoom && u.username.toLowerCase() !== username.toLowerCase())
@@ -1730,7 +1795,6 @@ async function leerPresencia() {
     actualizarIndicadorTyping(escribiendo);
     renderUserList();
     
-    // Si estamos en la lista de chats, actualizarla para reflejar quién está en línea
     if (!inChatView) {
       renderChatList();
     }
@@ -1747,6 +1811,7 @@ supabaseClient
   .on("postgres_changes", { event: "*", schema: "public", table: "zumm_presence" },
       () => { leerPresencia(); })
   .subscribe();
+// ================= FIN PRESENCIA =================
 
 function updateUsersBtn() {
   if (usersBtn) {
@@ -2306,9 +2371,8 @@ async function cambiarCamara() {
 if (switchCamBtn) switchCamBtn.addEventListener("click", cambiarCamara);
 if (hangupBtn) hangupBtn.addEventListener("click", () => endCall(true));
 
-// ================= LÓGICA DE BOTONES DE LLAMADA Y VIDEOLLAMADA ACTUALIZADA =================
+// ================= BOTONES DE LLAMADA Y VIDEOLLAMADA =================
 if (callBtn) callBtn.addEventListener("click", () => {
-  // Si estamos dentro de un chat privado, llamar directamente a ese usuario
   if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
     const partes = currentRoom.replace("priv:", "").split("|");
     const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase());
@@ -2318,7 +2382,6 @@ if (callBtn) callBtn.addEventListener("click", () => {
     }
   }
   
-  // Si no, comportamiento normal (preguntar a quién llamar)
   if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
   const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién llamar?\nEn línea: " + usersOnline.join(", "));
   if (!target || !target.trim()) return;
@@ -2326,7 +2389,6 @@ if (callBtn) callBtn.addEventListener("click", () => {
 });
 
 if (videoBtn) videoBtn.addEventListener("click", () => {
-  // Si estamos dentro de un chat privado, videollamar directamente a ese usuario
   if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
     const partes = currentRoom.replace("priv:", "").split("|");
     const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase());
@@ -2336,19 +2398,17 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
     }
   }
 
-  // Si no, comportamiento normal (preguntar a quién videollamar)
   if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
   const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
   if (!target || !target.trim()) return;
   startCall(target.trim(), true);
 });
-// ================= FIN LÓGICA DE BOTONES DE LLAMADA =================
+// ================= FIN BOTONES DE LLAMADA =================
 
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 
 // ================= INICIALIZACIÓN =================
-// En lugar de abrir "general" por defecto, mostramos la lista de chats
 showChatList();
 
 iniciarPresencia();
@@ -2357,6 +2417,5 @@ cargarListaCamaras();
 actualizarBotonAbajo();
 cargarBloqueados();
 cargarContactos();
-// loadHistory() y cargarMensajeFijado() se llaman dentro de switchRoom cuando el usuario entra a un chat
 
 // © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

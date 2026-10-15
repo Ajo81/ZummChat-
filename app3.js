@@ -18,14 +18,15 @@ setTimeout(() => {
   setTimeout(() => splash.remove(), 500);
 }, 2000);
 
+// --- REFERENCIAS DOM ---
 const messagesEl      = document.getElementById("messages");
 const inputEl         = document.getElementById("messageInput");
 const sendBtn         = document.getElementById("sendBtn");
 const chatTitle       = document.getElementById("chat-title");
-const privateBtn      = document.getElementById("privateBtn");
-const privRoomBar     = document.getElementById("priv-room-bar");
-const roomBar         = document.getElementById("room-bar");
-const addRoomBtn      = document.getElementById("addRoomBtn");
+const privateBtn      = document.getElementById("privateBtn"); // Puede no existir ya en HTML
+const privRoomBar     = document.getElementById("priv-room-bar"); // Puede no existir ya en HTML
+const roomBar         = document.getElementById("room-bar"); // Ya no se usa visiblemente
+const addRoomBtn      = document.getElementById("addRoomBtn"); // Ahora es newGroupBtn
 const emojiBtn        = document.getElementById("emojiBtn");
 const emojiBar        = document.getElementById("emoji-bar");
 const attachBtn       = document.getElementById("attachBtn");
@@ -166,6 +167,13 @@ const recordingTime   = document.getElementById("recordingTime");
 const cancelRecBtn    = document.getElementById("cancelRecBtn");
 const stopRecBtn      = document.getElementById("stopRecBtn");
 
+// --- NUEVAS REFERENCIAS PARA LA LISTA DE CHATS ---
+const chatListContainer = document.getElementById("chat-list-container");
+const chatView          = document.getElementById("chat-view");
+const chatListEl        = document.getElementById("chat-list");
+const backBtn           = document.getElementById("backBtn");
+const newGroupBtn       = document.getElementById("newGroupBtn");
+
 const MAX_SIZE_MB = 5;
 const BOT_NAME = "🤖 ZummBot";
 
@@ -216,6 +224,7 @@ let myAvatarUrl = LS.getItem("zummchat_avatar") || "";
 let myBio = LS.getItem("zummchat_bio") || "";
 let myStatus = LS.getItem("zummchat_status") || "";
 let currentRoom = "general";
+let inChatView = false; // NUEVO: Estado para saber si estamos en la lista o en un chat
 
 let bloqueados = new Set();
 async function cargarBloqueados() {
@@ -267,10 +276,7 @@ function toggleSilenciar(room) {
   actualizarBotonesSilenciados();
 }
 function actualizarBotonesSilenciados() {
-  document.querySelectorAll(".room-btn").forEach(b => {
-    if (!b.dataset.room) return;
-    b.classList.toggle("muted-room", chatEstaSilenciado(b.dataset.room));
-  });
+  // Ya no hay botones de sala en el top bar, pero podemos usarlo si añadimos botones a la lista
 }
 
 let temaActual = LS.getItem("zummchat_tema") || "dark";
@@ -435,8 +441,6 @@ function roomLabel(room) {
   if (room.startsWith("grupo:")) return "👥 " + room.replace("grupo:", "");
   return room.charAt(0).toUpperCase() + room.slice(1);
 }
-function hidePrivados() { if (privRoomBar) privRoomBar.style.display = "none"; }
-function showPrivados() { if (privRoomBar) privRoomBar.style.display = "flex"; }
 function formatearSegundos(s) {
   const m = Math.floor(s / 60); const seg = s % 60;
   return m + ":" + String(seg).padStart(2, "0");
@@ -506,118 +510,189 @@ let gruposPersonalizados = JSON.parse(LS.getItem("zummchat_grupos") || "[]");
 let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
 function guardarGrupos() { LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados)); }
 function guardarGruposOcultos() { LS.setItem("zummchat_grupos_ocultos", JSON.stringify(gruposOcultos)); }
-function crearBotonGrupo(nombreGrupo) {
-  if (!roomBar) return;
-  if (gruposOcultos.includes(nombreGrupo)) return;
-  const roomId = "grupo:" + nombreGrupo;
-  if (roomBar.querySelector('[data-room="' + roomId + '"]')) return;
-  const btn = document.createElement("button");
-  btn.className = "room-btn"; btn.dataset.room = roomId;
-  const label = document.createElement("span");
-  label.textContent = "👥 " + nombreGrupo;
-  btn.appendChild(label);
-  const close = document.createElement("button");
-  close.className = "close"; close.textContent = "✕";
-  close.style.cssText = "background:rgba(0,0,0,0.3);border:none;color:inherit;border-radius:50%;width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;margin-left:6px;padding:0;";
-  close.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (!confirm("¿SALIR del grupo '" + nombreGrupo + "'?")) return;
-    if (!gruposOcultos.includes(nombreGrupo)) { gruposOcultos.push(nombreGrupo); guardarGruposOcultos(); }
-    gruposPersonalizados = gruposPersonalizados.filter(g => g !== nombreGrupo);
-    guardarGrupos(); btn.remove();
-    if (currentRoom === roomId) switchRoom("general");
-  });
-  btn.appendChild(close);
-  let longPress = null;
-  btn.addEventListener("touchstart", () => {
-    longPress = setTimeout(() => {
-      if (confirm("¿Silenciar '" + nombreGrupo + "'?")) toggleSilenciar(roomId);
-    }, 700);
-  }, { passive: true });
-  btn.addEventListener("touchend", () => clearTimeout(longPress));
-  btn.addEventListener("touchmove", () => clearTimeout(longPress));
-  btn.addEventListener("click", () => switchRoom(roomId));
-  roomBar.insertBefore(btn, addRoomBtn);
-  if (chatEstaSilenciado(roomId)) btn.classList.add("muted-room");
-}
-gruposPersonalizados.forEach(g => crearBotonGrupo(g));
-if (addRoomBtn) addRoomBtn.addEventListener("click", () => {
+
+if (newGroupBtn) newGroupBtn.addEventListener("click", () => {
   const nombre = prompt("Nombre del grupo:");
   if (!nombre || !nombre.trim()) return;
   const limpio = nombre.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "").substring(0, 30);
   if (!limpio) { alert("Inválido."); return; }
   if (gruposOcultos.includes(limpio)) { gruposOcultos = gruposOcultos.filter(g => g !== limpio); guardarGruposOcultos(); }
   if (gruposPersonalizados.includes(limpio)) { alert("Ya existe."); switchRoom("grupo:" + limpio); return; }
-  gruposPersonalizados.push(limpio); guardarGrupos(); crearBotonGrupo(limpio); switchRoom("grupo:" + limpio);
+  gruposPersonalizados.push(limpio); guardarGrupos(); 
+  switchRoom("grupo:" + limpio);
   setTimeout(() => alert("✅ Grupo '" + limpio + "' creado.\n\nDiles que toquen ➕ y escriban: " + limpio), 300);
 });
 
+// ================= NUEVA LÓGICA DE NAVEGACIÓN =================
+function showChatList() {
+  inChatView = false;
+  currentRoom = null;
+  if (chatTitle) chatTitle.textContent = "ZummChat · Chats";
+  if (chatListContainer) chatListContainer.style.display = "flex";
+  if (chatView) chatView.style.display = "none";
+  if (backBtn) backBtn.style.display = "none";
+  if (searchBar) searchBar.classList.remove("show");
+  renderChatList();
+}
+
+function showChatView() {
+  inChatView = true;
+  if (chatListContainer) chatListContainer.style.display = "none";
+  if (chatView) chatView.style.display = "flex";
+  if (backBtn) backBtn.style.display = "flex";
+}
+
+if (backBtn) backBtn.addEventListener("click", showChatList);
+
+function renderChatList() {
+  if (!chatListEl) return;
+  chatListEl.innerHTML = "";
+
+  // 1. Agregar Grupos (General, Amigos, Familia, Trabajo + Personalizados)
+  const gruposBase = ["general", "amigos", "familia", "trabajo"];
+  const todosGrupos = [...gruposBase, ...gruposPersonalizados.filter(g => !gruposOcultos.includes(g)).map(g => "grupo:" + g)];
+
+  todosGrupos.forEach(room => {
+    const li = document.createElement("li");
+    li.className = "chat-item";
+    
+    const avatar = document.createElement("div");
+    avatar.className = "chat-avatar";
+    avatar.style.background = "var(--accent)";
+    avatar.textContent = "👥";
+    
+    const info = document.createElement("div");
+    info.className = "chat-info";
+    
+    const name = document.createElement("div");
+    name.className = "chat-name";
+    name.textContent = roomLabel(room);
+    
+    const preview = document.createElement("div");
+    preview.className = "chat-preview";
+    preview.textContent = "Grupo de chat";
+    
+    info.appendChild(name);
+    info.appendChild(preview);
+    li.appendChild(avatar);
+    li.appendChild(info);
+    
+    li.addEventListener("click", () => {
+      switchRoom(room);
+    });
+    chatListEl.appendChild(li);
+  });
+
+  // 2. Agregar Chats Privados (Contactos/Usuarios)
+  const usuariosMostrados = new Set();
+  const miUserLower = username.toLowerCase();
+
+  // A. Usuarios que ya tienen un chat privado guardado
+  privateRooms.forEach(room => {
+    const partes = room.replace("priv:", "").split("|");
+    const otro = partes.find(n => n.toLowerCase() !== miUserLower);
+    if (otro && !usuariosMostrados.has(otro.toLowerCase())) {
+      usuariosMostrados.add(otro.toLowerCase());
+      crearItemChat(otro, room);
+    }
+  });
+
+  // B. Usuarios en línea (sin chat previo)
+  usersOnline.forEach(u => {
+    if (u.toLowerCase() !== miUserLower && !usuariosMostrados.has(u.toLowerCase())) {
+      usuariosMostrados.add(u.toLowerCase());
+      const partes = [username, u].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+      const room = "priv:" + partes[0] + "|" + partes[1];
+      crearItemChat(u, room);
+    }
+  });
+
+  // C. Contactos guardados (offline, sin chat previo)
+  misContactos.forEach(c => {
+    if (c.toLowerCase() !== miUserLower && !usuariosMostrados.has(c.toLowerCase())) {
+      usuariosMostrados.add(c.toLowerCase());
+      const partes = [username, c].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+      const room = "priv:" + partes[0] + "|" + partes[1];
+      crearItemChat(c, room);
+    }
+  });
+}
+
+function crearItemChat(nombreUsuario, roomId) {
+  const li = document.createElement("li");
+  li.className = "chat-item";
+
+  const estaOnline = usersOnline.some(u => u.toLowerCase() === nombreUsuario.toLowerCase());
+  const urlAvatar = avataresPorUsuario[nombreUsuario.toLowerCase()] || "";
+
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+  if (urlAvatar) {
+    avatar.style.backgroundImage = "url(" + urlAvatar + ")";
+    avatar.textContent = "";
+  } else {
+    avatar.style.background = colorForUser(nombreUsuario);
+    avatar.textContent = avatarLetter(nombreUsuario);
+  }
+
+  const info = document.createElement("div");
+  info.className = "chat-info";
+
+  const name = document.createElement("div");
+  name.className = "chat-name";
+  name.textContent = nombreUsuario;
+
+  const preview = document.createElement("div");
+  preview.className = "chat-preview";
+  preview.textContent = estaOnline ? "En línea" : "Desconectado";
+
+  info.appendChild(name);
+  info.appendChild(preview);
+
+  const statusDot = document.createElement("div");
+  statusDot.className = "chat-status-dot" + (estaOnline ? "" : " offline");
+
+  li.appendChild(avatar);
+  li.appendChild(info);
+  li.appendChild(statusDot);
+
+  li.addEventListener("click", () => {
+    if (!privateRooms.includes(roomId)) {
+      privateRooms.push(roomId);
+      savePrivateRooms();
+    }
+    switchRoom(roomId);
+  });
+
+  chatListEl.appendChild(li);
+}
+// ================= FIN NUEVA LÓGICA DE NAVEGACIÓN =================
+
 function switchRoom(room) {
   currentRoom = room;
-  if (!room.startsWith("priv:")) hidePrivados(); else showPrivados();
-  if (chatTitle) chatTitle.textContent = "ZummChat · " + roomLabel(room);
+  showChatView(); // Cambiar a la vista de chat
+
+  if (chatTitle) chatTitle.textContent = roomLabel(room);
   rendered.clear(); lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
-  updateActiveTab(); loadHistory(); cargarMensajeFijado();
+  loadHistory(); cargarMensajeFijado();
   setTimeout(saludarBienvenida, 1500);
 }
-function updateActiveTab() {
-  document.querySelectorAll(".room-btn").forEach(b => {
-    b.classList.toggle("active", b.dataset.room === currentRoom);
-  });
-  actualizarBotonesSilenciados();
-}
-document.querySelectorAll("#room-bar .room-btn").forEach(btn => {
-  if (!btn.dataset.room) return;
-  btn.addEventListener("click", () => switchRoom(btn.dataset.room));
-  let longPress = null;
-  btn.addEventListener("touchstart", () => {
-    longPress = setTimeout(() => {
-      const r = btn.dataset.room;
-      if (confirm("¿Silenciar '" + roomLabel(r) + "'?")) toggleSilenciar(r);
-    }, 700);
-  }, { passive: true });
-  btn.addEventListener("touchend", () => clearTimeout(longPress));
-  btn.addEventListener("touchmove", () => clearTimeout(longPress));
-});
+
 let privateRooms = JSON.parse(LS.getItem("zummchat_privrooms") || "[]");
 function savePrivateRooms() { LS.setItem("zummchat_privrooms", JSON.stringify(privateRooms)); }
-function createPrivateButton(room) {
-  if (!privRoomBar) return;
-  const btn = document.createElement("button");
-  btn.className = "room-btn priv"; btn.dataset.room = room;
-  const label = document.createElement("span");
-  label.textContent = roomLabel(room); btn.appendChild(label);
-  const close = document.createElement("button");
-  close.className = "close"; close.textContent = "✕";
-  close.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (!confirm("¿Eliminar?")) return;
-    privateRooms = privateRooms.filter(r => r !== room);
-    savePrivateRooms(); btn.remove();
-    if (currentRoom === room) switchRoom("general");
-  });
-  btn.appendChild(close);
-  btn.addEventListener("click", () => switchRoom(room));
-  privRoomBar.appendChild(btn);
-}
-privateRooms.forEach(r => createPrivateButton(r));
-hidePrivados();
+
 function openPrivateWith(otroNombre) {
   const otroLimpio = String(otroNombre || "").trim().substring(0, 20);
   if (!otroLimpio) return;
   if (otroLimpio.toLowerCase() === username.toLowerCase()) return;
   const nombres = [username, otroLimpio].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   const room = "priv:" + nombres[0] + "|" + nombres[1];
-  if (!privateRooms.includes(room)) { privateRooms.push(room); savePrivateRooms(); createPrivateButton(room); }
+  if (!privateRooms.includes(room)) { privateRooms.push(room); savePrivateRooms(); }
   switchRoom(room);
   if (usersPanel) usersPanel.classList.remove("show");
 }
-if (privateBtn) privateBtn.addEventListener("click", () => {
-  const otro = prompt("¿Con quién en privado?");
-  if (!otro || !otro.trim()) return;
-  openPrivateWith(otro);
-});
+
 if (shareBtn) shareBtn.addEventListener("click", async () => {
   cerrarPaneles();
   const url = location.href;
@@ -811,7 +886,7 @@ function avatarUrlDe(nombre) {
 }
 function renderMessage(m, esNuevo) {
   if (!m || !m.id || rendered.has(m.id)) return;
-  if (m.room !== currentRoom) return;
+  if (m.room !== currentRoom) return; // Solo renderizar si pertenece a la sala actual
   if (!messagesEl) return;
   if (m.username && bloqueados.has(m.username.toLowerCase())) return;
   rendered.add(m.id);
@@ -1026,6 +1101,7 @@ function removeMessageFromDOM(id) {
   if (el) el.remove();
 }
 async function loadHistory() {
+  if (!currentRoom) return;
   const { data, error } = await supabaseClient.from("zumm_messages")
     .select("id, text, username, created_at, room, file_url, file_name, file_type, edited_at, reactions, pinned")
     .eq("room", currentRoom)
@@ -1035,7 +1111,7 @@ async function loadHistory() {
   data.forEach(m => renderMessage(m, false));
 }
 async function sendMessage() {
-  if (!inputEl) return;
+  if (!inputEl || !currentRoom) return;
   const text = inputEl.value.trim();
   if (!text) return;
   inputEl.value = ""; enviarTypingStop();
@@ -1050,7 +1126,14 @@ if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") s
 supabaseClient
   .channel("zumm-messages-realtime")
   .on("postgres_changes", { event: "INSERT", schema: "public", table: "zumm_messages" },
-      payload => renderMessage(payload.new, true))
+      payload => {
+        const m = payload.new;
+        if (m.room === currentRoom) {
+          renderMessage(m, true);
+        } else if (!inChatView) {
+          renderChatList(); // Actualizar lista si estamos en el menú principal
+        }
+      })
   .on("postgres_changes", { event: "UPDATE", schema: "public", table: "zumm_messages" },
       payload => {
         const m = payload.new;
@@ -1079,6 +1162,7 @@ async function votarEncuesta(msgId, idx) {
 
 let typingTimeout = null, ultimoTypingEnviado = 0;
 function enviarTyping() {
+  if (!currentRoom) return;
   const ahora = Date.now();
   if (ahora - ultimoTypingEnviado < 2000) return;
   ultimoTypingEnviado = ahora;
@@ -1088,6 +1172,7 @@ function enviarTyping() {
   }, { onConflict: "username,room" }).then(() => {}).catch(() => {});
 }
 function enviarTypingStop() {
+  if (!currentRoom) return;
   supabaseClient.from("zumm_presence").upsert({
     username: username, room: currentRoom, last_seen: new Date().toISOString(),
     avatar_url: myAvatarUrl || null, typing_at: null
@@ -1110,7 +1195,7 @@ function actualizarIndicadorTyping(usuariosTyping) {
 }
 
 async function cargarMensajeFijado() {
-  if (!pinnedBar || !pinnedText) return;
+  if (!pinnedBar || !pinnedText || !currentRoom) return;
   const { data } = await supabaseClient.from("zumm_messages")
     .select("text, username, file_type")
     .eq("room", currentRoom).eq("pinned", true)
@@ -1607,6 +1692,7 @@ let presenceInterval = null, presenceRefreshInterval = null;
 let avataresPorUsuario = {};
 
 async function registrarPresencia() {
+  if (!currentRoom) return; // No registrar en la lista de chats
   await supabaseClient.from("zumm_presence").upsert({
     username: username, room: currentRoom,
     last_seen: new Date().toISOString(),
@@ -1617,24 +1703,42 @@ async function registrarPresencia() {
 async function leerPresencia() {
   try {
     const hace30s = new Date(Date.now() - 30000).toISOString();
+    // Traer presencia de TODOS los usuarios para la lista de chats
     const { data, error } = await supabaseClient.from("zumm_presence")
-      .select("username, last_seen, avatar_url, typing_at")
-      .eq("room", currentRoom).gte("last_seen", hace30s);
+      .select("username, room, last_seen, avatar_url, typing_at")
+      .gte("last_seen", hace30s);
     if (error) return;
-    usersOnline = (data || [])
+    
+    // Filtrar usuarios únicos
+    const usuariosUnicos = {};
+    (data || []).forEach(u => {
+      if (!usuariosUnicos[u.username] || new Date(u.last_seen) > new Date(usuariosUnicos[u.username].last_seen)) {
+        usuariosUnicos[u.username] = u;
+      }
+    });
+    
+    usersOnline = Object.values(usuariosUnicos)
       .map(u => u.username)
       .filter(u => u.toLowerCase() !== username.toLowerCase());
+      
     avataresPorUsuario = {};
-    (data || []).forEach(u => {
+    Object.values(usuariosUnicos).forEach(u => {
       if (u.avatar_url) avataresPorUsuario[u.username.toLowerCase()] = u.avatar_url;
     });
+    
+    // Typing indicator (solo para la sala actual)
     const ahora = Date.now();
     const escribiendo = (data || [])
-      .filter(u => u.username.toLowerCase() !== username.toLowerCase())
+      .filter(u => u.room === currentRoom && u.username.toLowerCase() !== username.toLowerCase())
       .filter(u => u.typing_at && (ahora - new Date(u.typing_at).getTime() < 5000))
       .map(u => u.username);
     actualizarIndicadorTyping(escribiendo);
     renderUserList();
+    
+    // Si estamos en la lista de chats, actualizarla para reflejar quién está en línea
+    if (!inChatView) {
+      renderChatList();
+    }
   } catch (e) {}
 }
 
@@ -1776,7 +1880,7 @@ if (profileSaveBtn) profileSaveBtn.addEventListener("click", async () => {
   LS.setItem("zummchat_bio", myBio);
   LS.setItem("zummchat_status", myStatus);
   await supabaseClient.from("zumm_presence").upsert({
-    username: username, room: currentRoom,
+    username: username, room: currentRoom || "general",
     last_seen: new Date().toISOString(), avatar_url: myAvatarUrl || null,
     bio: myBio, status_text: myStatus
   }, { onConflict: "username,room" });
@@ -1798,7 +1902,7 @@ if (avatarInput) avatarInput.addEventListener("change", async () => {
     LS.setItem("zummchat_avatar", myAvatarUrl);
     mostrarAvatarPropio();
     await supabaseClient.from("zumm_presence").upsert({
-      username: username, room: currentRoom,
+      username: username, room: currentRoom || "general",
       last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
       bio: myBio, status_text: myStatus
     }, { onConflict: "username,room" });
@@ -1819,7 +1923,7 @@ if (changeNameBtn) changeNameBtn.addEventListener("click", async () => {
   actualizarNombreEnUI();
   await supabaseClient.from("zumm_presence").delete().eq("username", viejo);
   await supabaseClient.from("zumm_presence").upsert({
-    username: username, room: currentRoom,
+    username: username, room: currentRoom || "general",
     last_seen: new Date().toISOString(), avatar_url: myAvatarUrl,
     bio: myBio, status_text: myStatus
   }, { onConflict: "username,room" });
@@ -1860,6 +1964,7 @@ if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
   gStatTop.textContent = "..."; gStatFiles.textContent = "...";
   gStatVoice.textContent = "..."; gStatFirst.textContent = "...";
   gStatRanking.innerHTML = "<p style='text-align:center;color:var(--text-dim);font-size:13px;'>Cargando...</p>";
+  if (!currentRoom) { alert("Selecciona un chat primero."); return; }
   const { data } = await supabaseClient.from("zumm_messages").select("username, created_at, file_type").eq("room", currentRoom);
   if (!data || data.length === 0) {
     gStatTotal.textContent = "0"; gStatUsers.textContent = "0";
@@ -2217,17 +2322,16 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 
-if (chatTitle) chatTitle.textContent = "ZummChat · General";
-updateActiveTab();
-loadHistory();
+// ================= INICIALIZACIÓN =================
+// En lugar de abrir "general" por defecto, mostramos la lista de chats
+showChatList();
+
 iniciarPresencia();
 leerSenales();
 cargarListaCamaras();
 actualizarBotonAbajo();
-cargarMensajeFijado();
-cargarFavoritos();
 cargarBloqueados();
 cargarContactos();
-setTimeout(saludarBienvenida, 3000);
+// loadHistory() y cargarMensajeFijado() se llaman dentro de switchRoom cuando el usuario entra a un chat
 
 // © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

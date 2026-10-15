@@ -383,7 +383,6 @@ function mostrarNotificacion(remitente, texto, room) {
 
 // ================= NUEVAS FUNCIONES DE NOTIFICACIÓN DE CONEXIÓN =================
 function mostrarNotificacionConexion(nombreUsuario) {
-  // Evitar notificar si el chat está silenciado
   const roomPrivado = "priv:" + nombreUsuario;
   if (chatEstaSilenciado(roomPrivado)) return;
   
@@ -723,6 +722,7 @@ function crearItemChat(nombreUsuario, roomId) {
 function switchRoom(room) {
   currentRoom = room;
   showChatView();
+  registrarPresencia(); // NUEVO: Registro inmediato al entrar a una sala
 
   if (chatTitle) chatTitle.textContent = roomLabel(room);
   rendered.clear(); lastDateKey = "";
@@ -1730,8 +1730,8 @@ function openImageModal(url) {
 
 // ================= PRESENCIA Y NOTIFICACIONES DE CONEXIÓN =================
 let usersOnline = [];
-let usuariosConocidos = new Set(); // Para detectar quién se conecta
-let primeraCargaPresencia = true;  // Para no notificar al abrir la app
+let usuariosConocidos = new Set();
+let primeraCargaPresencia = true;
 let presenceInterval = null, presenceRefreshInterval = null;
 let avataresPorUsuario = {};
 
@@ -1763,8 +1763,7 @@ async function leerPresencia() {
       .map(u => u.username)
       .filter(u => u.toLowerCase() !== username.toLowerCase());
     
-    // ================= DETECCIÓN DE USUARIOS NUEVOS =================
-    // Solo notificamos si: NO es la primera carga, la app está oculta, y el sonido está activo
+    // DETECCIÓN DE USUARIOS NUEVOS
     if (!primeraCargaPresencia && document.hidden && sonidoActivo) {
       nuevaLista.forEach(u => {
         const yaEstaba = usuariosConocidos.has(u.toLowerCase());
@@ -1778,7 +1777,6 @@ async function leerPresencia() {
     
     usuariosConocidos = new Set(nuevaLista.map(u => u.toLowerCase()));
     primeraCargaPresencia = false;
-    // ================================================================
     
     usersOnline = nuevaLista;
       
@@ -1811,7 +1809,37 @@ supabaseClient
   .on("postgres_changes", { event: "*", schema: "public", table: "zumm_presence" },
       () => { leerPresencia(); })
   .subscribe();
-// ================= FIN PRESENCIA =================
+
+// ================= PING DE PRESENCIA EN EVENTOS CLAVE =================
+// Registrar presencia cuando la app vuelve a estar visible
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    registrarPresencia();
+    leerPresencia();
+  }
+});
+
+// Registrar presencia al recuperar el foco
+window.addEventListener("focus", () => {
+  registrarPresencia();
+  leerPresencia();
+});
+
+// Registrar presencia al primer toque o click del usuario
+document.body.addEventListener("touchstart", () => {
+  registrarPresencia();
+}, { once: true, passive: true });
+document.body.addEventListener("click", () => {
+  registrarPresencia();
+}, { once: true });
+
+// Registrar presencia cada 15 segundos si el usuario está activo
+setInterval(() => {
+  if (!document.hidden && document.hasFocus()) {
+    registrarPresencia();
+  }
+}, 15000);
+// ================= FIN PING DE PRESENCIA =================
 
 function updateUsersBtn() {
   if (usersBtn) {
@@ -1852,6 +1880,7 @@ function renderUserList() {
 if (usersBtn) usersBtn.addEventListener("click", () => {
   cerrarPaneles();
   if (usersPanel) usersPanel.classList.add("show");
+  registrarPresencia(); // NUEVO: Registrar antes de leer
   leerPresencia();
 });
 if (usersPanelClose) usersPanelClose.addEventListener("click", () => {

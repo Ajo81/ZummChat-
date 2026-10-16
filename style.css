@@ -129,6 +129,18 @@ html, body {
   50%      { box-shadow: 0 0 0 8px transparent; }
 }
 
+/* ================= BOTÓN ELIMINAR GRUPO ================= */
+#deleteGroupBtn {
+  background: var(--bg-header); color: #ff5252;
+  border: 1px solid #ff5252; border-radius: 8px;
+  width: 40px; height: 40px;
+  font-size: 18px; cursor: pointer; font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; padding: 0;
+}
+#deleteGroupBtn:active { transform: scale(.94); background: #ff5252; color: #fff; }
+
+/* ================= LISTA DE CHATS ================= */
 #chat-list-container {
   flex: 1;
   overflow-y: auto;
@@ -227,107 +239,61 @@ html, body {
   background: transparent; border: none; color: var(--text-dim);
   font-size: 22px; cursor: pointer; padding: 4px 8px;
 }
-#configGrid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-}
+#configGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .config-item {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 8px;
-  cursor: pointer;
-  display: flex; flex-direction: column;
-  align-items: center; gap: 6px;
-  transition: all .2s;
-  color: var(--text);
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 8px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: all .2s; color: var(--text);
 }
-.config-item:active {
-  transform: scale(.95);
-  border-color: var(--accent);
-  background: var(--bg);
-}
+.config-item:active { transform: scale(.95); border-color: var(--accent); background: var(--bg); }
 .config-icon { font-size: 26px; line-height: 1; }
 .config-label { font-size: 12px; font-weight: bold; color: var(--text-dim); }
 
 #attachMenu {
-  position: fixed;
-  bottom: 80px; left: 12px;
-  background: var(--bg-secondary);
-  border: 2px solid var(--accent);
-  border-radius: 14px;
-  padding: 8px;
-  z-index: 9996;
-  display: none;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  min-width: 160px;
+  position: fixed; bottom: 80px; left: 12px;
+  background: var(--bg-secondary); border: 2px solid var(--accent);
+  border-radius: 14px; padding: 8px; z-index: 9996;
+  display: none; flex-direction: column; gap: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5); min-width: 160px;
 }
 #attachMenu.show { display: flex; }
 .attach-item {
-  background: transparent; border: none;
-  color: var(--text); font-size: 15px;
-  cursor: pointer; padding: 12px 16px;
-  text-align: left; border-radius: 8px;
-  font-weight: bold;
+  background: transparent; border: none; color: var(--text);
+  font-size: 15px; cursor: pointer; padding: 12px 16px;
+  text-align: left; border-radius: 8px; font-weight: bold;
   display: flex; align-items: center; gap: 10px;
 }
 .attach-item:active { background: var(--bg-card); }
 .attach-item span { font-size: 20px; }
 
 #searchBar {
-  display: none;
-  background: var(--bg-card);
-  border: 1px solid var(--accent);
-  border-radius: 10px;
-  padding: 8px; margin-bottom: 8px;
-  gap: 8px; align-items: center;
+  display: none; background: var(--bg-card);
+  border: 1px solid var(--accent); border-radius: 10px;
+  padding: 8px; margin-bottom: 8px; gap: 8px; align-items: center;
   flex-shrink: 0;
 }
 #searchBar.show { display: flex; }
 #searchInput {
-  flex: 1;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--text);
-  font-size: 14px;
+  flex: 1; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 14px;
 }
 #searchInput:focus { outline: 2px solid var(--accent); }
-#searchClose {
-  background: transparent; border: none; color: var(--text-dim);
-  font-size: 18px; cursor: pointer; padding: 4px 8px;
-}
+#searchClose { background: transparent; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px 8px; }
 
 .msg.highlight { animation: highlight-msg 2s ease; }
-@keyframes highlight-msg {
-  0% { background: rgba(255, 255, 0, 0.4); }
-  100% { background: var(--bg-card); }
-}
+@keyframes highlight-msg { 0% { background: rgba(255, 255, 0, 0.4); } 100% { background: var(--bg-card); } }
 
 #pinnedBar {
-  display: none;
-  background: var(--bg-card);
-  border: 1px solid var(--accent);
-  border-left: 4px solid var(--accent);
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  font-size: 13px; color: var(--text);
-  align-items: center; gap: 8px;
+  display: none; background: var(--bg-card);
+  border: 1px solid var(--accent); border-left: 4px solid var(--accent);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 8px;
+  font-size: 13px; color: var(--text); align-items: center; gap: 8px;
   flex-shrink: 0;
 }
 #pinnedBar.show { display: flex; }
-#pinnedText {
-  flex: 1; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
-}
-#unpinBtn {
-  background: transparent; border: none;
-  color: var(--text-dim); font-size: 16px;
-  cursor: pointer; padding: 2px 6px;
-}
+#pinnedText { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#unpinBtn { background: transparent; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; padding: 2px 6px; }
 
 #room-bar { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; scrollbar-width: none; flex-shrink: 0; }
 #room-bar::-webkit-scrollbar { display: none; }
@@ -368,25 +334,17 @@ html, body {
 }
 
 #messages {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: var(--bg-secondary);
-  padding: 12px;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  position: relative;
-  margin-bottom: 6px;
+  background: var(--bg-secondary); padding: 12px;
+  border-radius: 10px; display: flex; flex-direction: column;
+  gap: 10px; position: relative; margin-bottom: 6px;
 }
 .msg {
   background: var(--bg-card); padding: 10px 12px; border-radius: 12px;
   border-left: 3px solid var(--accent); word-wrap: break-word;
   display: flex; gap: 10px; align-items: flex-start;
-  cursor: pointer; transition: background .15s;
-  position: relative;
+  cursor: pointer; transition: background .15s; position: relative;
 }
 .msg:active { background: var(--border-light); }
 .msg.pinned { border-left: 3px solid #ffb74d; box-shadow: 0 0 0 1px #ffb74d inset; }
@@ -416,6 +374,14 @@ html, body {
 .msg-edited { color: var(--text-muted); font-size: 10px; font-style: italic; }
 .msg-body { font-size: 15px; line-height: 1.4; word-wrap: break-word; }
 .msg-body a.auto-link { color: var(--accent); text-decoration: underline; word-break: break-all; }
+
+/* ================= STICKER GRANDE EN EL CHAT ================= */
+.msg-sticker {
+  font-size: 72px !important;
+  line-height: 1.15;
+  padding: 6px 0;
+  letter-spacing: 2px;
+}
 
 .poll-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 6px; }
 .poll-question { color: var(--accent); font-weight: bold; font-size: 15px; margin-bottom: 10px; word-break: break-word; }
@@ -458,6 +424,24 @@ html, body {
 #emoji-bar::-webkit-scrollbar { display: none; }
 #emoji-bar button { background: transparent; border: none; font-size: 24px; cursor: pointer; padding: 4px 6px; border-radius: 6px; flex-shrink: 0; }
 
+/* ================= PANEL DE STICKERS ================= */
+#sticker-bar {
+  display: none; gap: 8px; overflow-x: auto;
+  background: var(--bg-card); border-radius: 10px;
+  padding: 10px; margin-bottom: 6px;
+  scrollbar-width: none; flex-shrink: 0;
+  min-height: 70px; align-items: center;
+}
+#sticker-bar.show { display: flex; }
+#sticker-bar::-webkit-scrollbar { display: none; }
+#sticker-bar button {
+  background: transparent; border: none;
+  font-size: 42px;
+  cursor: pointer; padding: 4px 8px; border-radius: 8px; flex-shrink: 0;
+  transition: transform .15s;
+}
+#sticker-bar button:active { transform: scale(1.3); }
+
 #typingIndicator { display: none; color: var(--accent); font-size: 12px; font-style: italic; padding: 4px 10px; margin-bottom: 4px; animation: fade-in-typing 0.3s ease; flex-shrink: 0; }
 #typingIndicator.show { display: block; }
 @keyframes fade-in-typing { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -475,7 +459,7 @@ html, body {
 #scrollDownBtn:active { transform: scale(.9); }
 
 #input-area { display: flex; gap: 6px; margin-bottom: 4px; flex-shrink: 0; }
-#emojiBtn, #attachBtn {
+#emojiBtn, #attachBtn, #stickerBtn {
   background: var(--bg-card); color: var(--accent);
   border: 1px solid var(--border); border-radius: 8px;
   width: 42px; height: 42px; font-size: 20px; cursor: pointer;

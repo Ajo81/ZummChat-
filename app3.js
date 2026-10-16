@@ -2393,4 +2393,27 @@ if (callBtn) callBtn.addEventListener("click", () => {
   if (!target || !target.trim()) return;
   startCall(target.trim(), false);
 });
-if (videoBtn)
+if (videoBtn) videoBtn.addEventListener("click", () => {
+  if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
+    const partes = currentRoom.replace("priv:", "").split("|");
+    const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase());
+    if (otro) { startCall(otro, true); return; }
+  }
+  if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
+  const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
+  if (!target || !target.trim()) return;
+  startCall(target.trim(), true);
+});
+
+clearInterval(signalsCheckInterval);
+signalsCheckInterval = setInterval(leerSenales, 1500);
+
+showChatList();
+iniciarPresencia();
+leerSenales();
+cargarListaCamaras();
+actualizarBotonAbajo();
+cargarBloqueados();
+cargarContactos();
+
+// © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

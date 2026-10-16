@@ -1,11 +1,7 @@
 <!DOCTYPE html>
 <!--
-  ============================================================
-  ZummChat - App de mensajería con llamadas y videollamadas
-  Creado por: José Yudier Arencibia Ajo
-  GitHub: https://github.com/Ajo81/ZummChat-
-  Año: 2026 - Todos los derechos reservados.
-  ============================================================
+  ZummChat - App de mensajería
+  Creado por: José Yudier Arencibia Ajo - © 2026
 -->
 <html lang="es">
 <head>
@@ -13,8 +9,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#00ff66">
   <meta name="author" content="José Yudier Arencibia Ajo">
-  <meta name="creator" content="José Yudier Arencibia Ajo">
-  <meta name="copyright" content="José Yudier Arencibia Ajo - 2026">
   <meta name="description" content="Chat con llamadas, videollamadas y notas de voz.">
   <title>ZummChat</title>
   <link rel="manifest" href="manifest.json">
@@ -22,8 +16,7 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=100">
 </head>
 <body>
 
@@ -63,31 +56,25 @@
         <input type="text" id="searchInput" placeholder="Buscar en este chat..." autocomplete="off">
         <button id="searchClose" type="button">✕</button>
       </div>
-
       <div id="filterBar">
         <span id="filterBarText">🔎 Filtrando: ...</span>
         <button id="filterBarClear" type="button">✕</button>
       </div>
-
       <div id="selectionBar">
         <button id="selectionCancelBtn" type="button" title="Cancelar">✕</button>
         <span id="selectionCount">0 seleccionados</span>
         <button id="selectionForwardBtn" type="button" title="Reenviar">🔁</button>
         <button id="selectionDeleteBtn" type="button" title="Borrar">🗑️</button>
       </div>
-
       <div id="pinnedBar">
         <span id="pinnedText">📌 Mensaje fijado</span>
         <button id="unpinBtn" type="button" title="Quitar">✕</button>
       </div>
-
       <div id="messages"></div>
       <div id="typingIndicator"></div>
       <button id="scrollDownBtn" type="button" title="Ir al último mensaje">⬇️</button>
-
       <div id="emoji-bar"></div>
       <div id="sticker-bar"></div>
-
       <div id="reply-bar">
         <div id="reply-content">
           <div id="reply-author">Nombre</div>
@@ -95,7 +82,6 @@
         </div>
         <button id="replyCancelBtn" type="button">✕</button>
       </div>
-
       <div id="input-area">
         <button id="emojiBtn" type="button" title="Emojis">😀</button>
         <button id="stickerBtn" type="button" title="Stickers">🧩</button>
@@ -105,7 +91,6 @@
         <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
         <button id="sendBtn" type="button">Enviar</button>
       </div>
-
       <div id="recordingPanel">
         <div id="recordingIndicator">🔴 Grabando... <span id="recordingTime">0:00</span></div>
         <div id="recordingActions">
@@ -434,7 +419,6 @@
     </div>
   </div>
 
-  <!-- ==================== GALERÍA ESTILO WHATSAPP ==================== -->
   <div id="galleryModal">
     <div class="gallery-header">
       <button id="galleryCloseBtn" type="button">⬅️</button>
@@ -469,7 +453,6 @@
     <div id="viewerCounter">1 / 1</div>
   </div>
 
-  <!-- ==================== ESTADOS / HISTORIAS ==================== -->
   <div id="estadoViewer">
     <div class="estado-progress"><div class="estado-progress-bar" id="estadoProgressBar"></div></div>
     <div class="estado-viewer-header">
@@ -492,7 +475,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="matrix.js"></script>
   <script src="app3.js"></script>
-  <script src="app4.js"></script>
+  <script src="app4.js?v=100"></script>
   <script>
     try {
       if ("serviceWorker" in navigator) {

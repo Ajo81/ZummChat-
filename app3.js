@@ -6,7 +6,7 @@
 // ============================================================
 
 const SUPABASE_URL = "https://biqjwbopvjyovxmmutly.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpcWp3Ym9wdmp5b3Z4bW11dGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg0ODQsImV4cCI6MjEwMzEwMzYyNDQ4NH0.q7IdjNy_OPDpPOJNUJ3FkxDm91LjJPmEP0pFu9CD4dA";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpcWp3Ym9wdmp5b3Z4bW11dGx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNDg0ODQsImV4cCI6MjEwMzYyNDQ4NH0.q7IdjNy_OPDpPOJNUJ3FkxDm91LjJPmEP0pFu9CD4dA";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -277,7 +277,7 @@ let chatParaWallpaper = null;
 let modoSeleccion = false;
 let mensajesSeleccionados = new Set();
 let filtroUsuarioActual = null;
-let filtroUsuarioModo = null; // "solo" o "excepto"
+let filtroUsuarioModo = null;
 
 function limpiarNombre(texto) {
   if (!texto) return "user";
@@ -289,7 +289,6 @@ function limpiarNombre(texto) {
 function getLastRead(room) { return LS.getItem("zummchat_lastread_" + room) || ""; }
 function setLastRead(room) { if (!room) return; LS.setItem("zummchat_lastread_" + room, new Date().toISOString()); }
 
-// ================= CHATS FIJADOS =================
 let chatsFijados = JSON.parse(LS.getItem("zummchat_fijados") || "[]");
 function guardarFijados() { LS.setItem("zummchat_fijados", JSON.stringify(chatsFijados)); }
 function estaFijado(room) { return chatsFijados.includes(room); }
@@ -328,7 +327,6 @@ function quitarSilencio(room) {
   guardarSilenciados(); renderChatList();
 }
 
-// ================= DND =================
 function dndEstaActivo() {
   const hasta = LS.getItem("zummchat_dnd_until");
   if (!hasta) return false;
@@ -341,7 +339,6 @@ function actualizarIndicadorDnd() { if (!dndIndicator) return; dndIndicator.styl
 function actualizarBotonDnd() { if (!dndBtn) return; if (dndEstaActivo()) dndBtn.classList.add("activo"); else dndBtn.classList.remove("activo"); }
 setInterval(() => { actualizarIndicadorDnd(); actualizarBotonDnd(); }, 30000);
 
-// ================= FONDOS =================
 const WALLPAPER_COLORS = [
   { id: "default", value: "var(--bg-secondary)", nombre: "Por defecto" },
   { id: "azul", value: "#0a1929", nombre: "Azul" },
@@ -749,7 +746,6 @@ function compartirEnlace() {
 if (shareBtn) shareBtn.addEventListener("click", compartirEnlace);
 if (shareHomeBtn) shareHomeBtn.addEventListener("click", compartirEnlace);
 
-// ================= NAVEGACIÓN =================
 function showChatList() {
   inChatView = false;
   currentRoom = null;
@@ -774,7 +770,6 @@ function showChatView() {
 }
 if (backBtn) backBtn.addEventListener("click", showChatList);
 
-// ================= INFO CHAT =================
 async function getInfoChat(room) {
   try {
     const { data } = await supabaseClient.from("zumm_messages").select("created_at, username, text, file_type, file_url").eq("room", room).order("created_at", { ascending: false }).limit(1);
@@ -929,7 +924,6 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   chatListEl.appendChild(li);
 }
 
-// ================= OPCIONES DEL CHAT =================
 function abrirOpcionesChat(roomId, nombreVisible) {
   chatOpcionesActual = { room: roomId, nombre: nombreVisible };
   if (chatOptionsTitle) chatOptionsTitle.textContent = nombreVisible;
@@ -962,7 +956,6 @@ if (optExportBtn) optExportBtn.addEventListener("click", () => {
   exportarChat(room, nombre);
 });
 
-// ================= EXPORTAR CHAT =================
 async function exportarChat(room, nombreVisible) {
   try {
     const { data, error } = await supabaseClient.from("zumm_messages")
@@ -970,7 +963,6 @@ async function exportarChat(room, nombreVisible) {
       .eq("room", room).order("created_at", { ascending: true }).limit(2000);
     if (error) { alert("Error: " + error.message); return; }
     if (!data || data.length === 0) { alert("Este chat no tiene mensajes."); return; }
-
     let contenido = "═══════════════════════════════════════\n";
     contenido += "   ZummChat - Exportación de chat\n";
     contenido += "═══════════════════════════════════════\n\n";
@@ -979,58 +971,40 @@ async function exportarChat(room, nombreVisible) {
     contenido += "Fecha: " + new Date().toLocaleString() + "\n";
     contenido += "Total de mensajes: " + data.length + "\n\n";
     contenido += "───────────────────────────────────────\n\n";
-
     data.forEach(m => {
       const fecha = new Date(m.created_at);
-      const fechaStr = String(fecha.getDate()).padStart(2, "0") + "/" +
-                       String(fecha.getMonth() + 1).padStart(2, "0") + "/" +
-                       fecha.getFullYear() + " " +
-                       String(fecha.getHours()).padStart(2, "0") + ":" +
-                       String(fecha.getMinutes()).padStart(2, "0");
+      const fechaStr = String(fecha.getDate()).padStart(2, "0") + "/" + String(fecha.getMonth() + 1).padStart(2, "0") + "/" + fecha.getFullYear() + " " + String(fecha.getHours()).padStart(2, "0") + ":" + String(fecha.getMinutes()).padStart(2, "0");
       let texto = m.text || "";
       texto = texto.replace(/^\[REPLY:[^\]]+\]\s*/i, "[↩️ Responde a un mensaje]\n");
       texto = texto.replace(/^\[FORWARD\]\s*/i, "[🔁 Reenviado] ");
       const stickerMatch = texto.match(/^\[STICKER\](.+)\[\/STICKER\]$/);
       if (stickerMatch) texto = "[🧩 Sticker: " + stickerMatch[1] + "]";
-
       const tipo = m.file_type || "";
       if (tipo.startsWith("audio/")) texto += " [🎤 Nota de voz]";
       else if (tipo.startsWith("location/")) texto += " [📍 Ubicación: " + (m.file_url || "") + "]";
       else if (tipo.startsWith("poll/")) texto += " [📊 Encuesta]";
       else if (m.file_url) texto += " [📎 Archivo: " + (m.file_name || "") + "]";
-
       contenido += "[" + fechaStr + "] " + (m.username || "Anónimo") + ":\n" + texto + "\n\n";
     });
-
     contenido += "───────────────────────────────────────\n";
     contenido += "Fin del chat. Exportado desde ZummChat © 2026\n";
-
     const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
     const nombreArchivo = "ZummChat_" + limpiarNombre(nombreVisible) + "_" + Date.now() + ".txt";
-
-    // Intentar descargar
     if (navigator.share && navigator.canShare) {
       try {
         const file = new File([blob], nombreArchivo, { type: "text/plain" });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Chat exportado" });
-          return;
-        }
+        if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Chat exportado" }); return; }
       } catch (e) {}
     }
-    // Fallback: descarga
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = nombreArchivo;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     alert("✅ Chat exportado como " + nombreArchivo);
   } catch (e) { alert("Error al exportar: " + e.message); }
 }
 
-// ================= MUTE TIMER =================
 if (muteCancelBtn) muteCancelBtn.addEventListener("click", () => { muteTimerModal.classList.remove("show"); chatParaSilenciar = null; });
 if (muteTimerModal) muteTimerModal.addEventListener("click", (e) => { if (e.target === muteTimerModal) { muteTimerModal.classList.remove("show"); chatParaSilenciar = null; } });
 if (mute8hBtn) mute8hBtn.addEventListener("click", () => { if (chatParaSilenciar) { silenciarPor(chatParaSilenciar, 8 * 60 * 60 * 1000); alert("🔕 Silenciado 8 horas"); } muteTimerModal.classList.remove("show"); chatParaSilenciar = null; });
@@ -1038,7 +1012,6 @@ if (mute1wBtn) mute1wBtn.addEventListener("click", () => { if (chatParaSilenciar
 if (muteForeverBtn) muteForeverBtn.addEventListener("click", () => { if (chatParaSilenciar) { silenciarPor(chatParaSilenciar, 0); alert("🔕 Silenciado para siempre"); } muteTimerModal.classList.remove("show"); chatParaSilenciar = null; });
 if (muteOffBtn) muteOffBtn.addEventListener("click", () => { if (chatParaSilenciar) { quitarSilencio(chatParaSilenciar); alert("🔔 Sonido activado"); } muteTimerModal.classList.remove("show"); chatParaSilenciar = null; });
 
-// ================= WALLPAPER =================
 function abrirModalWallpaper() {
   if (!wallpaperModal || !wallpaperColors) return;
   wallpaperColors.innerHTML = "";
@@ -1078,7 +1051,6 @@ if (wallpaperInput) wallpaperInput.addEventListener("change", async () => {
   finally { wallpaperInput.value = ""; }
 });
 
-// ================= DND =================
 if (dndBtn) dndBtn.addEventListener("click", () => {
   cerrarPaneles();
   if (dndEstaActivo()) { if (confirm("¿Desactivar modo no molestar?")) { desactivarDnd(); alert("🔔 Notificaciones activadas"); } }
@@ -1091,7 +1063,6 @@ if (dnd2hBtn) dnd2hBtn.addEventListener("click", () => { activarDnd(2 * 60 * 60 
 if (dnd8hBtn) dnd8hBtn.addEventListener("click", () => { activarDnd(8 * 60 * 60 * 1000); alert("🌙 No molestar 8h"); dndModal.classList.remove("show"); });
 if (dndOffBtn) dndOffBtn.addEventListener("click", () => { desactivarDnd(); alert("🔔 Notificaciones activadas"); dndModal.classList.remove("show"); });
 
-// ================= MODO SELECCIÓN =================
 function entrarModoSeleccion() {
   modoSeleccion = true;
   mensajesSeleccionados.clear();
@@ -1099,10 +1070,7 @@ function entrarModoSeleccion() {
   if (replyBar) replyBar.classList.remove("show");
   actualizarContadorSeleccion();
   document.querySelectorAll(".msg").forEach(el => el.classList.add("modo-seleccion"));
-  // Actualizar listeners
-  document.querySelectorAll(".msg").forEach(el => {
-    el.addEventListener("click", clickEnMensajeSeleccion, true);
-  });
+  document.querySelectorAll(".msg").forEach(el => { el.addEventListener("click", clickEnMensajeSeleccion, true); });
 }
 function salirModoSeleccion() {
   modoSeleccion = false;
@@ -1125,10 +1093,7 @@ function clickEnMensajeSeleccion(e) {
   if (mensajesSeleccionados.size === 0) salirModoSeleccion();
 }
 function actualizarContadorSeleccion() {
-  if (selectionCount) {
-    const n = mensajesSeleccionados.size;
-    selectionCount.textContent = n + " seleccionado" + (n === 1 ? "" : "s");
-  }
+  if (selectionCount) { const n = mensajesSeleccionados.size; selectionCount.textContent = n + " seleccionado" + (n === 1 ? "" : "s"); }
 }
 if (selectionCancelBtn) selectionCancelBtn.addEventListener("click", salirModoSeleccion);
 if (selectionDeleteBtn) selectionDeleteBtn.addEventListener("click", async () => {
@@ -1136,19 +1101,14 @@ if (selectionDeleteBtn) selectionDeleteBtn.addEventListener("click", async () =>
   if (n === 0) return;
   if (!confirm("¿Borrar " + n + " mensaje" + (n === 1 ? "" : "s") + "?")) return;
   try {
-    // Solo se pueden borrar los propios, pero intentamos todos
-    for (const id of mensajesSeleccionados) {
-      await supabaseClient.from("zumm_messages").delete().eq("id", id);
-    }
-    salirModoSeleccion();
-    rendered.clear();
+    for (const id of mensajesSeleccionados) { await supabaseClient.from("zumm_messages").delete().eq("id", id); }
+    salirModoSeleccion(); rendered.clear();
     if (messagesEl) messagesEl.innerHTML = "";
     loadHistory();
   } catch (e) { alert("Error: " + e.message); }
 });
 if (selectionForwardBtn) selectionForwardBtn.addEventListener("click", async () => {
   if (mensajesSeleccionados.size === 0) return;
-  // Reenviar el primero para simplificar (o podríamos reenviar todos)
   const primerId = Array.from(mensajesSeleccionados)[0];
   const { data: msg } = await supabaseClient.from("zumm_messages").select("*").eq("id", primerId).single();
   if (!msg) { alert("Error al cargar mensaje"); return; }
@@ -1157,14 +1117,12 @@ if (selectionForwardBtn) selectionForwardBtn.addEventListener("click", async () 
   abrirMenuReenvio(msg);
 });
 
-// ================= FILTRO POR USUARIO =================
 async function abrirFiltroUsuarios() {
   if (!filterModal || !filterList) return;
   filterList.innerHTML = "";
   if (!currentRoom) return;
   try {
-    const { data } = await supabaseClient.from("zumm_messages")
-      .select("username").eq("room", currentRoom).limit(2000);
+    const { data } = await supabaseClient.from("zumm_messages").select("username").eq("room", currentRoom).limit(2000);
     if (!data) { alert("Error al cargar usuarios"); return; }
     const conteo = {};
     data.forEach(m => { const u = m.username || "Anónimo"; conteo[u] = (conteo[u] || 0) + 1; });
@@ -1197,7 +1155,6 @@ function aplicarFiltroUsuario(nombre) {
   if (filterBarText) filterBarText.textContent = "🔎 Mostrando solo mensajes de: " + nombre;
   if (filterBar) filterBar.classList.add("show");
   if (filterBtn) filterBtn.classList.add("filtro-activo");
-  // Aplicar al DOM
   document.querySelectorAll(".msg").forEach(el => {
     const nameEl = el.querySelector(".msg-name");
     if (nameEl) {
@@ -1218,7 +1175,6 @@ if (filterClearBtn) filterClearBtn.addEventListener("click", () => { limpiarFilt
 if (filterCloseBtn) filterCloseBtn.addEventListener("click", () => filterModal.classList.remove("show"));
 if (filterModal) filterModal.addEventListener("click", (e) => { if (e.target === filterModal) filterModal.classList.remove("show"); });
 
-// ================= REENVIAR =================
 async function abrirMenuReenvio(m) {
   if (!forwardModal || !forwardList) return;
   mensajeParaReenviar = m;
@@ -1278,7 +1234,6 @@ async function reenviarA(roomDestino) {
 if (forwardCancelBtn) forwardCancelBtn.addEventListener("click", () => { forwardModal.classList.remove("show"); mensajeParaReenviar = null; });
 if (forwardModal) forwardModal.addEventListener("click", (e) => { if (e.target === forwardModal) { forwardModal.classList.remove("show"); mensajeParaReenviar = null; } });
 
-// ================= SWITCH ROOM =================
 function switchRoom(room) {
   currentRoom = room;
   showChatView();
@@ -1311,7 +1266,6 @@ function openPrivateWith(otroNombre) {
   if (usersPanel) usersPanel.classList.remove("show");
 }
 
-// ================= ELIMINAR GRUPO =================
 async function actualizarBotonEliminarGrupo() {
   if (!deleteGroupBtn) return;
   if (!currentRoom || !currentRoom.startsWith("grupo:")) { deleteGroupBtn.style.display = "none"; return; }
@@ -1336,7 +1290,6 @@ if (deleteGroupBtn) deleteGroupBtn.addEventListener("click", async () => {
   } catch (e) { alert("Error: " + e.message); }
 });
 
-// ================= STICKERS =================
 const STICKERS = ["😂","😍","🥰","😎","🤩","😱","🤔","😴","🤗","😇","🥳","🤯","🤪","😏","😬","🙄","😒","😤","🤬","😭","❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","💖","🔥","⭐","✨","🎉","🎊","🎁","🌈","⚡","💯","👏","👍","👎","🙏","💪","👋","🤝","✌️","🤞","👊","✊","🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🦁","🍕","🍔","🍟","🌮","🍩","🍰","🍫","🍿","🍎","🍉","⚽","🏀","🎮","🎯","🎸","🎤","🚀","🏆","👑","💎"];
 if (stickerBar) STICKERS.forEach(s => {
   const b = document.createElement("button");
@@ -1370,7 +1323,6 @@ if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
   if (emojiBar) emojiBar.classList.toggle("show");
 });
 
-// ================= SUBIR ARCHIVOS =================
 async function subirYEnviarArchivo(file, tipo) {
   if (!file) return;
   if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert("Máx " + MAX_SIZE_MB + " MB"); return; }
@@ -1472,7 +1424,6 @@ async function detenerGrabacion(enviar) {
 if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
 if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
 
-// ================= REPLY =================
 function construirTextoConReply(textoReal) {
   if (!replyTo) return textoReal;
   const autor = replyTo.username || "Alguien";
@@ -1795,12 +1746,10 @@ function renderMessage(m, esNuevo) {
   messagesEl.appendChild(div);
   scrollToBottom();
 
-  // Si estamos en modo selección, añadir listener
   if (modoSeleccion && !esBot) {
     div.classList.add("modo-seleccion");
     div.addEventListener("click", clickEnMensajeSeleccion, true);
   }
-  // Si hay filtro activo, aplicarlo
   if (filtroUsuarioActual) {
     const nombreMsg = (m.username || "").trim();
     div.style.display = (nombreMsg === filtroUsuarioActual) ? "flex" : "none";
@@ -1974,7 +1923,6 @@ if (menuSelectBtn) menuSelectBtn.addEventListener("click", () => {
   if (!mensajeMenuActual) return;
   const m = mensajeMenuActual; cerrarMenu();
   entrarModoSeleccion();
-  // Marcar el mensaje actual
   const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
   if (el) { el.classList.add("seleccionado"); mensajesSeleccionados.add(m.id); actualizarContadorSeleccion(); }
 });
@@ -2766,7 +2714,6 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 
-// ================= INICIALIZACIÓN =================
 actualizarIndicadorDnd();
 actualizarBotonDnd();
 showChatList();

@@ -5,7 +5,7 @@
 // Año: 2026 - Todos los derechos reservados.
 // ============================================================
 
-const CACHE = "zummchat-v61";
+const CACHE = "zummchat-v62";
 const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
                 "./manifest.json", "./logo.png", "./icon.png"];
 

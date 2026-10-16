@@ -39,6 +39,7 @@
       <span id="chat-title">ZummChat · Chats</span>
       <div id="header-buttons">
         <button id="dndIndicator" type="button" title="Modo no molestar activo" style="display:none;">🌙</button>
+        <button id="filterBtn" type="button" title="Filtrar por usuario" style="display:none;">🔎</button>
         <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
@@ -60,6 +61,18 @@
       <div id="searchBar">
         <input type="text" id="searchInput" placeholder="Buscar en este chat..." autocomplete="off">
         <button id="searchClose" type="button">✕</button>
+      </div>
+
+      <div id="filterBar">
+        <span id="filterBarText">🔎 Filtrando: ...</span>
+        <button id="filterBarClear" type="button">✕</button>
+      </div>
+
+      <div id="selectionBar">
+        <button id="selectionCancelBtn" type="button" title="Cancelar">✕</button>
+        <span id="selectionCount">0 seleccionados</span>
+        <button id="selectionForwardBtn" type="button" title="Reenviar">🔁</button>
+        <button id="selectionDeleteBtn" type="button" title="Borrar">🗑️</button>
       </div>
 
       <div id="pinnedBar">
@@ -190,6 +203,7 @@
   </div>
 
   <div id="msgMenu">
+    <button id="menuSelectBtn" type="button">☑️ Seleccionar</button>
     <button id="menuReplyBtn" type="button">↩️ Responder</button>
     <button id="menuForwardBtn" type="button">🔁 Reenviar</button>
     <button id="menuFavBtn" type="button">⭐ Favorito</button>
@@ -206,6 +220,7 @@
       <button id="optArchiveChatBtn" type="button">📥 Archivar</button>
       <button id="optWallpaperBtn" type="button">🖼️ Fondo del chat</button>
       <button id="optMuteChatBtn" type="button">🔕 Silenciar</button>
+      <button id="optExportBtn" type="button">📤 Exportar chat</button>
       <button id="optCancelBtn" type="button">❌ Cancelar</button>
     </div>
   </div>
@@ -249,9 +264,19 @@
 
   <div id="forwardModal">
     <div class="fav-content">
-      <h3>🔁 Reenviar a...</h3>
+      <h3 id="forwardTitle">🔁 Reenviar a...</h3>
       <ul id="forwardList"></ul>
       <button id="forwardCancelBtn" type="button">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="filterModal">
+    <div class="fav-content">
+      <h3>🔎 Filtrar por usuario</h3>
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px;">Ver solo los mensajes de...</p>
+      <ul id="filterList"></ul>
+      <button id="filterClearBtn" type="button" style="width:100%;margin-top:8px;padding:10px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;font-weight:bold;font-size:13px;cursor:pointer;">Ver todos</button>
+      <button id="filterCloseBtn" type="button">Cerrar</button>
     </div>
   </div>
 

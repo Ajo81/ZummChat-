@@ -24,6 +24,8 @@ const sendBtn         = document.getElementById("sendBtn");
 const chatTitle       = document.getElementById("chat-title");
 const emojiBtn        = document.getElementById("emojiBtn");
 const emojiBar        = document.getElementById("emoji-bar");
+const stickerBtn      = document.getElementById("stickerBtn");
+const stickerBar      = document.getElementById("sticker-bar");
 const attachBtn       = document.getElementById("attachBtn");
 const attachMenu      = document.getElementById("attachMenu");
 const menuFileBtn     = document.getElementById("menuFileBtn");
@@ -35,6 +37,7 @@ const cameraInput     = document.getElementById("cameraInput");
 const usersBtn        = document.getElementById("usersBtn");
 const callBtn         = document.getElementById("callBtn");
 const videoBtn        = document.getElementById("videoBtn");
+const deleteGroupBtn  = document.getElementById("deleteGroupBtn");
 const configBtn       = document.getElementById("configBtn");
 const configPanel     = document.getElementById("configPanel");
 const configPanelClose = document.getElementById("configPanelClose");
@@ -215,7 +218,7 @@ let myStatus = LS.getItem("zummchat_status") || "";
 let currentRoom = "general";
 let inChatView = false;
 
-// Función para limpiar nombres (sin acentos, sin ñ, sin símbolos)
+// Limpiar nombres para Supabase (sin acentos, ñ, símbolos)
 function limpiarNombre(texto) {
   if (!texto) return "user";
   return String(texto).toLowerCase()
@@ -587,6 +590,7 @@ let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
 function guardarGrupos() { LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados)); }
 function guardarGruposOcultos() { LS.setItem("zummchat_grupos_ocultos", JSON.stringify(gruposOcultos)); }
 
+// ================= CREAR GRUPO CON CONTRASEÑA =================
 if (newGroupBtn) newGroupBtn.addEventListener("click", async () => {
   const nombre = prompt("Nombre del grupo:");
   if (!nombre || !nombre.trim()) return;
@@ -607,6 +611,7 @@ if (newGroupBtn) newGroupBtn.addEventListener("click", async () => {
   }
 });
 
+// ================= UNIRSE A GRUPO =================
 if (joinGroupBtn) joinGroupBtn.addEventListener("click", async () => {
   const nombre = prompt("Nombre del grupo al que quieres unirte:");
   if (!nombre || !nombre.trim()) return;
@@ -629,6 +634,7 @@ if (joinGroupBtn) joinGroupBtn.addEventListener("click", async () => {
   setTimeout(() => alert("✅ Te uniste al grupo '" + limpio + "'"), 300);
 });
 
+// ================= COMPARTIR ENLACE =================
 function compartirEnlace() {
   const url = location.href;
   const datos = { title: "ZummChat", text: "¡Únete a mi chat ZummChat! 🐦💬", url: url };
@@ -642,6 +648,7 @@ function compartirEnlace() {
 if (shareBtn) shareBtn.addEventListener("click", compartirEnlace);
 if (shareHomeBtn) shareHomeBtn.addEventListener("click", compartirEnlace);
 
+// ================= NAVEGACIÓN =================
 function showChatList() {
   inChatView = false;
   currentRoom = null;
@@ -650,6 +657,7 @@ function showChatList() {
   if (chatView) chatView.style.display = "none";
   if (backBtn) backBtn.style.display = "none";
   if (searchBar) searchBar.classList.remove("show");
+  if (deleteGroupBtn) deleteGroupBtn.style.display = "none";
   renderChatList();
 }
 
@@ -761,6 +769,7 @@ function switchRoom(room) {
   rendered.clear(); lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
   loadHistory(); cargarMensajeFijado();
+  actualizarBotonEliminarGrupo();
   setTimeout(saludarBienvenida, 1500);
 }
 
@@ -778,6 +787,82 @@ function openPrivateWith(otroNombre) {
   if (usersPanel) usersPanel.classList.remove("show");
 }
 
+// ================= ELIMINAR GRUPO (SOLO CREADOR) =================
+async function actualizarBotonEliminarGrupo() {
+  if (!deleteGroupBtn) return;
+  if (!currentRoom || !currentRoom.startsWith("grupo:")) {
+    deleteGroupBtn.style.display = "none";
+    return;
+  }
+  const nombreGrupo = currentRoom.replace("grupo:", "");
+  try {
+    const { data: grupo } = await supabaseClient.from("zumm_grupos").select("creador").eq("nombre", nombreGrupo).maybeSingle();
+    if (grupo && grupo.creador && grupo.creador.toLowerCase() === username.toLowerCase()) {
+      deleteGroupBtn.style.display = "flex";
+    } else {
+      deleteGroupBtn.style.display = "none";
+    }
+  } catch (e) {
+    deleteGroupBtn.style.display = "none";
+  }
+}
+
+if (deleteGroupBtn) deleteGroupBtn.addEventListener("click", async () => {
+  if (!currentRoom || !currentRoom.startsWith("grupo:")) return;
+  const nombreGrupo = currentRoom.replace("grupo:", "");
+  if (!confirm("⚠️ ¿Eliminar el grupo '" + nombreGrupo + "'?\n\nSe borrará para TODOS y no se puede deshacer.")) return;
+  try {
+    await supabaseClient.from("zumm_grupos").delete().eq("nombre", nombreGrupo);
+    await supabaseClient.from("zumm_messages").delete().eq("room", "grupo:" + nombreGrupo);
+    gruposPersonalizados = gruposPersonalizados.filter(g => g !== nombreGrupo);
+    guardarGrupos();
+    alert("✅ Grupo eliminado");
+    showChatList();
+  } catch (e) {
+    alert("Error al eliminar: " + e.message);
+  }
+});
+
+// ================= STICKERS =================
+const STICKERS = [
+  "😂","😍","🥰","😎","🤩","😱","🤔","😴","🤗","😇",
+  "🥳","🤯","🤪","😏","😬","🙄","😒","😤","🤬","😭",
+  "❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","💖",
+  "🔥","⭐","✨","🎉","🎊","🎁","🌈","⚡","💯","👏",
+  "👍","👎","🙏","💪","👋","🤝","✌️","🤞","👊","✊",
+  "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🦁",
+  "🍕","🍔","🍟","🌮","🍩","🍰","🍫","🍿","🍎","🍉",
+  "⚽","🏀","🎮","🎯","🎸","🎤","🚀","🏆","👑","💎"
+];
+
+if (stickerBar) STICKERS.forEach(s => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = s;
+  b.addEventListener("click", () => {
+    if (stickerBar) stickerBar.classList.remove("show");
+    enviarSticker(s);
+  });
+  stickerBar.appendChild(b);
+});
+
+async function enviarSticker(sticker) {
+  if (!currentRoom) return;
+  const texto = "[STICKER]" + sticker + "[/STICKER]";
+  const { data, error } = await supabaseClient.from("zumm_messages")
+    .insert([{ text: texto, username: username, room: currentRoom }])
+    .select().single();
+  if (error) { alert("Error: " + error.message); return; }
+  renderMessage(data, false);
+}
+
+if (stickerBtn) stickerBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (emojiBar) emojiBar.classList.remove("show");
+  if (stickerBar) stickerBar.classList.toggle("show");
+});
+// ================= FIN STICKERS =================
+
 const EMOJIS = ["😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢","😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜","👍","👎","👏","🙏","💪","✌️","🤝","👋","🖐️","✋","❤️","💔","💚","💙","💜","🧡","💛","🖤","🤍","💯","🔥","⭐","✨","🎉","🎊","🎁","🌈","☀️","🌙","⚡","🐦","🐶","🐱","🌸","🌺","🍀","🍕","🍔","☕","🍺","⚽","🏀","🎮","🎵","🎶","📱","💻","📷","🚀","🏆"];
 if (emojiBar) EMOJIS.forEach(e => {
   const b = document.createElement("button");
@@ -787,6 +872,7 @@ if (emojiBar) EMOJIS.forEach(e => {
 });
 if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
   e.stopPropagation();
+  if (stickerBar) stickerBar.classList.remove("show");
   if (emojiBar) emojiBar.classList.toggle("show");
 });
 
@@ -954,6 +1040,7 @@ function renderMessage(m, esNuevo) {
       else if (tipo.startsWith("location/")) textoNotif = "📍 Ubicación";
       else if (tipo.startsWith("poll/")) textoNotif = "📊 Encuesta";
       else if (m.file_url) textoNotif = "📎 Archivo";
+      else if (m.text && m.text.startsWith("[STICKER]")) textoNotif = "🧩 Sticker";
       else textoNotif = m.text || "Nuevo mensaje";
       mostrarNotificacion(m.username || "Alguien", textoNotif, m.room);
     }
@@ -1032,9 +1119,17 @@ function renderMessage(m, esNuevo) {
     box.appendChild(info);
     body.appendChild(box);
   } else if (m.text) {
-    const txt = document.createElement("div");
-    txt.appendChild(linkify(m.text));
-    body.appendChild(txt);
+    const stickerMatch = m.text.match(/^\[STICKER\](.+)\[\/STICKER\]$/);
+    if (stickerMatch) {
+      const stickerEl = document.createElement("div");
+      stickerEl.className = "msg-sticker";
+      stickerEl.textContent = stickerMatch[1];
+      body.appendChild(stickerEl);
+    } else {
+      const txt = document.createElement("div");
+      txt.appendChild(linkify(m.text));
+      body.appendChild(txt);
+    }
   }
   if (m.file_url && !pollData) {
     const tipo = m.file_type || "";
@@ -1274,6 +1369,7 @@ function abrirEditorMensaje(m) {
   if (!editModal || !editInput) return;
   if ((m.username || "").toLowerCase() !== username.toLowerCase()) { alert("Solo los tuyos."); return; }
   if (m.file_type && m.file_type.startsWith("poll/")) { alert("No puedes editar una encuesta."); return; }
+  if (m.text && m.text.startsWith("[STICKER]")) { alert("No puedes editar un sticker."); return; }
   mensajeEditando = m;
   editInput.value = m.text || "";
   editModal.classList.add("show");
@@ -1296,7 +1392,8 @@ function mostrarMenuMensaje(m, x, y) {
   mensajeMenuActual = m;
   const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
   const esPoll = m.file_type && m.file_type.startsWith("poll/");
-  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esPoll ? "block" : "none";
+  const esSticker = m.text && m.text.startsWith("[STICKER]");
+  if (menuEditBtn) menuEditBtn.style.display = esMio && m.text && !esPoll && !esSticker ? "block" : "none";
   if (menuDeleteBtn) menuDeleteBtn.style.display = esMio ? "block" : "none";
   if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
   if (menuFavBtn) menuFavBtn.textContent = favoritosIds.has(m.id) ? "⭐ Quitar fav" : "⭐ Favorito";
@@ -1360,6 +1457,7 @@ if (menuFavBtn) menuFavBtn.addEventListener("click", async () => {
     if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
     if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
     if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+    if (m.text && m.text.startsWith("[STICKER]")) preview = "🧩 Sticker";
     if (preview.length > 60) preview = preview.substring(0, 60) + "...";
     await supabaseClient.from("zumm_favoritos").insert([{ username: username, mensaje_id: m.id, room: currentRoom, preview: (m.username || "?") + ": " + preview }]);
     favoritosIds.add(m.id); alert("⭐ Guardado");
@@ -1733,12 +1831,10 @@ function renderSoundsList() {
     soundsList.appendChild(li);
   });
 }
-if (soundsBtn) {
-  soundsBtn.addEventListener("click", () => {
-    cerrarPaneles();
-    if (soundsModal) { renderSoundsList(); soundsModal.classList.add("show"); }
-  });
-}
+if (soundsBtn) soundsBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (soundsModal) { renderSoundsList(); soundsModal.classList.add("show"); }
+});
 if (soundsCloseBtn) soundsCloseBtn.addEventListener("click", () => { if (soundsModal) soundsModal.classList.remove("show"); });
 if (soundsModal) soundsModal.addEventListener("click", (e) => { if (e.target === soundsModal) soundsModal.classList.remove("show"); });
 
@@ -1931,14 +2027,12 @@ if (profileSaveBtn) profileSaveBtn.addEventListener("click", async () => {
   alert("✅ Perfil actualizado");
 });
 
-// ================= SUBIR AVATAR (con nombre limpio para Samsung/Supabase) =================
 if (avatarInput) avatarInput.addEventListener("change", async () => {
   const file = avatarInput.files[0]; if (!file) return;
   if (file.size > 2 * 1024 * 1024) { alert("Máx 2 MB."); avatarInput.value = ""; return; }
   userMeAvatar.textContent = "⏳";
   try {
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-    // Limpiar nombre del usuario: quitar acentos, ñ, espacios y símbolos
     const nombreLimpio = limpiarNombre(username);
     const nombreArchivo = "avatar_" + nombreLimpio + "_" + Date.now() + "." + ext;
     const { error: upErr } = await supabaseClient.storage.from("archivos").upload(nombreArchivo, file, { contentType: file.type || "image/jpeg", upsert: true });
@@ -2299,27 +2393,4 @@ if (callBtn) callBtn.addEventListener("click", () => {
   if (!target || !target.trim()) return;
   startCall(target.trim(), false);
 });
-if (videoBtn) videoBtn.addEventListener("click", () => {
-  if (inChatView && currentRoom && currentRoom.startsWith("priv:")) {
-    const partes = currentRoom.replace("priv:", "").split("|");
-    const otro = partes.find(n => n.toLowerCase() !== username.toLowerCase());
-    if (otro) { startCall(otro, true); return; }
-  }
-  if (usersOnline.length === 0) { alert("No hay usuarios en línea."); return; }
-  const target = usersOnline.length === 1 ? usersOnline[0] : prompt("¿A quién videollamar?\nEn línea: " + usersOnline.join(", "));
-  if (!target || !target.trim()) return;
-  startCall(target.trim(), true);
-});
-
-clearInterval(signalsCheckInterval);
-signalsCheckInterval = setInterval(leerSenales, 1500);
-
-showChatList();
-iniciarPresencia();
-leerSenales();
-cargarListaCamaras();
-actualizarBotonAbajo();
-cargarBloqueados();
-cargarContactos();
-
-// © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.
+if (videoBtn)

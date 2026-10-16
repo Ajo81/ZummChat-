@@ -1143,3 +1143,81 @@ body.theme-light .msg.mio .link-preview, body.theme-light .link-preview { backgr
   font-size: 12px;
   font-style: italic;
 }
+/* ============================================================
+   TABS DE MEDIA unificadas (Emoji / Sticker / GIF)
+   ============================================================ */
+#mediaTabs {
+  display: none;
+  gap: 4px;
+  padding: 6px 8px 0 8px;
+  margin-bottom: 0;
+  background: var(--bg-card);
+  border-radius: 10px 10px 0 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#mediaTabs.show { display: flex; }
+#mediaTabs button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 9px 6px;
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+}
+#mediaTabs button.active {
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+#mediaTabs button.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px; left: 8px; right: 8px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* Fusionar emoji-bar y sticker-bar visualmente con las tabs */
+#emoji-bar {
+  border-radius: 0 0 10px 10px !important;
+  margin-top: 0 !important;
+}
+#sticker-bar {
+  border-radius: 0 0 10px 10px !important;
+  margin-top: 0 !important;
+}
+
+/* Ocultar botones viejos */
+#gifBtn { display: none !important; }
+#stickerBtn { display: none !important; }
+
+/* Botón emoji ahora abre las tabs */
+#emojiBtn {
+  background: var(--bg-card);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 42px; height: 42px;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; padding: 0;
+  transition: all .2s;
+}
+#emojiBtn.activo {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* Input más grande */
+#messageInput {
+  font-size: 16px !important;
+  padding: 13px !important;
+}

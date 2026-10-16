@@ -1221,3 +1221,391 @@ body.theme-light .msg.mio .link-preview, body.theme-light .link-preview { backgr
   font-size: 16px !important;
   padding: 13px !important;
 }
+/* ============================================================
+   NIVEL MEDIO - Álbum, Música, Transcripción, Llamadas grupales
+   ============================================================ */
+
+/* ============ ÁLBUM DE FOTOS ============ */
+.msg-album {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+}
+.msg-album.cols-1 { grid-template-columns: 1fr; }
+.msg-album.cols-2 { grid-template-columns: 1fr 1fr; }
+.msg-album.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.msg-album img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  cursor: pointer;
+  display: block;
+  border-radius: 4px;
+}
+.msg-album.cols-1 img {
+  aspect-ratio: auto;
+  max-height: 300px;
+}
+
+/* ============ MÚSICA COMPARTIDA ============ */
+.msg-music {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid #ff0066;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+}
+.msg-music .music-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  animation: musicBounce 1s ease-in-out infinite;
+}
+@keyframes musicBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.msg-music .music-info {
+  flex: 1;
+  min-width: 0;
+}
+.msg-music .music-title {
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-music .music-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-music .music-play-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.msg-music .music-play-btn.playing {
+  background: #ff0066;
+  color: #fff;
+}
+
+/* Reproductor flotante */
+#musicFloatingPlayer {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 2px solid #ff0066;
+  border-radius: 30px;
+  padding: 8px 16px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(255, 0, 102, 0.4);
+  max-width: 92vw;
+}
+#musicFloatingPlayer.show { display: flex; }
+#musicFloatingPlayer .mfp-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+#musicFloatingPlayer button {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+/* YouTube embed dentro del mensaje (oculto, solo audio) */
+.msg-music iframe.yt-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============ TRANSCRIPCIÓN DE VOZ ============ */
+#recordingTranscript {
+  color: var(--accent);
+  font-size: 13px;
+  font-style: italic;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  text-align: left;
+  background: rgba(0,255,102,0.08);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  max-height: 60px;
+  overflow-y: auto;
+}
+.msg .voice-transcript {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border-left: 2px solid var(--accent);
+  line-height: 1.3;
+  word-wrap: break-word;
+}
+
+/* ============ BOTÓN LLAMADA GRUPAL ============ */
+#groupCallBtn {
+  background: var(--bg-header);
+  color: #ff0066;
+  border: 1px solid #ff0066;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all .2s;
+}
+#groupCallBtn:active {
+  transform: scale(.94);
+  background: #ff0066;
+  color: #fff;
+}
+
+/* ============ OVERLAY LLAMADA GRUPAL ============ */
+#groupCallOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 10060;
+  flex-direction: column;
+}
+#groupCallOverlay.show { display: flex; }
+
+.gc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.7);
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+.gc-header span {
+  flex: 1;
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 15px;
+}
+.gc-header button {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 16px;
+  cursor: pointer;
+}
+#gcLeaveBtn {
+  background: #ff5252 !important;
+}
+
+#gcGrid {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  align-content: center;
+  justify-content: center;
+}
+#gcGrid.count-1 { grid-template-columns: 1fr; }
+#gcGrid.count-2 { grid-template-columns: 1fr 1fr; }
+#gcGrid.count-3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+#gcGrid.count-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+.gc-tile {
+  position: relative;
+  background: #1a1a1a;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border: 2px solid #333;
+}
+.gc-tile.speaking {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0,255,102,.5);
+}
+.gc-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gc-tile .gc-avatar {
+  font-size: 48px;
+  font-weight: bold;
+  color: #000;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+}
+.gc-tile .gc-name {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: rgba(0,0,0,.7);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+.gc-tile .gc-muted {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255,82,82,.9);
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gc-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.7);
+  flex-shrink: 0;
+}
+.gc-actions button {
+  padding: 12px 20px;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  background: var(--bg-card);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.gc-actions button.muted {
+  background: #ff5252;
+  color: #fff;
+  border-color: #ff5252;
+}
+
+/* ============ INVITACIÓN LLAMADA GRUPAL ============ */
+#groupCallIncoming {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.97);
+  z-index: 10061;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+#groupCallIncoming.show { display: flex; }
+
+/* ============ MODAL AÑADIR A LLAMADA ============ */
+#gcAddPeopleModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 10062;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+#gcAddPeopleModal.show { display: flex; }
+#gcAddList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  flex: 1;
+}
+#gcAddList li {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#gcAddList li::before {
+  content: "🟢";
+  font-size: 12px;
+}
+#gcAddCloseBtn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+}

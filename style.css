@@ -321,7 +321,6 @@ html, body {
 #searchInput:focus { outline: 2px solid var(--accent); }
 #searchClose { background: transparent; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px 8px; }
 
-/* ================= FILTER BAR ================= */
 #filterBar {
   display: none;
   background: rgba(0,255,102,0.1);
@@ -348,7 +347,6 @@ html, body {
   cursor: pointer; padding: 2px 6px; font-weight: bold;
 }
 
-/* ================= SELECTION BAR ================= */
 #selectionBar {
   display: none;
   background: var(--bg-card);
@@ -391,7 +389,6 @@ html, body {
   color: var(--text-dim) !important;
 }
 
-/* Modo selección: mensajes con checkbox */
 .msg.modo-seleccion {
   cursor: pointer;
   padding-left: 42px;
@@ -1026,3 +1023,153 @@ html, body {
 #soundsList li .snd-play:active { background: var(--accent); color: var(--bg); }
 #soundsList li .snd-check { color: var(--accent); font-size: 20px; font-weight: bold; }
 #soundsCloseBtn { display: block; width: 100%; margin-top: 16px; padding: 12px; background: var(--accent); color: var(--bg); border: none; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; }
+
+/* ============ GALERÍA ESTILO WHATSAPP ============ */
+#galleryModal {
+  display: none; position: fixed; inset: 0;
+  background: var(--bg); z-index: 10010;
+  flex-direction: column;
+}
+#galleryModal.show { display: flex; }
+
+.gallery-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; background: var(--bg-header);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.gallery-header button {
+  background: transparent; border: none; color: var(--accent);
+  font-size: 20px; cursor: pointer; padding: 6px 10px;
+}
+#galleryTitle {
+  flex: 1; color: var(--accent); font-weight: bold;
+  font-size: 16px; text-align: center;
+}
+
+.gallery-tabs {
+  display: flex; gap: 4px; overflow-x: auto;
+  padding: 10px 12px; background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+  scrollbar-width: none;
+}
+.gallery-tabs::-webkit-scrollbar { display: none; }
+.gallery-tabs button {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); padding: 8px 14px;
+  border-radius: 20px; font-size: 13px; font-weight: bold;
+  cursor: pointer; white-space: nowrap; transition: all .2s;
+}
+.gallery-tabs button.active {
+  background: var(--accent); color: var(--bg);
+  border-color: var(--accent);
+}
+
+#galleryContent {
+  flex: 1; overflow-y: auto; padding: 12px;
+  background: var(--bg-secondary);
+}
+
+.gallery-date-sep {
+  color: var(--accent); font-size: 12px; font-weight: bold;
+  letter-spacing: 1px; margin: 14px 0 8px 0;
+  text-align: center; opacity: .8;
+}
+.gallery-date-sep::before, .gallery-date-sep::after {
+  content: " ─── "; color: var(--border);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px; margin-bottom: 8px;
+}
+.gallery-item {
+  aspect-ratio: 1; border-radius: 6px;
+  overflow: hidden; cursor: pointer;
+  background: var(--bg-card); position: relative;
+  transition: transform .15s;
+}
+.gallery-item:active { transform: scale(.96); }
+.gallery-item img,
+.gallery-item video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.gallery-item .item-badge {
+  position: absolute; bottom: 4px; right: 4px;
+  background: rgba(0,0,0,.7); color: #fff;
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+}
+
+.gallery-list { display: flex; flex-direction: column; gap: 6px; }
+.gallery-list-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-card); border-radius: 10px;
+  padding: 12px; cursor: pointer; transition: background .15s;
+  border-left: 3px solid var(--accent);
+}
+.gallery-list-item:active { background: var(--border-light); }
+.gallery-list-item .gl-icon { font-size: 26px; flex-shrink: 0; }
+.gallery-list-item .gl-info { flex: 1; min-width: 0; }
+.gallery-list-item .gl-name {
+  font-size: 14px; font-weight: bold; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gallery-list-item .gl-meta {
+  font-size: 11px; color: var(--text-dim); margin-top: 2px;
+}
+
+#mediaViewer {
+  display: none; position: fixed; inset: 0;
+  background: #000; z-index: 10011;
+  flex-direction: column; justify-content: center; align-items: center;
+}
+#mediaViewer.show { display: flex; }
+
+#viewerStage {
+  flex: 1; width: 100%; display: flex;
+  align-items: center; justify-content: center;
+  padding: 20px; overflow: hidden;
+}
+#viewerStage img,
+#viewerStage video {
+  max-width: 100%; max-height: 100%;
+  border-radius: 6px; object-fit: contain;
+}
+
+#viewerCloseBtn {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,255,255,.15); color: #fff;
+  border: none; border-radius: 50%; width: 42px; height: 42px;
+  font-size: 20px; cursor: pointer; z-index: 2;
+}
+#viewerPrevBtn, #viewerNextBtn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,.15); color: #fff;
+  border: none; border-radius: 50%; width: 46px; height: 46px;
+  font-size: 26px; cursor: pointer; z-index: 2;
+}
+#viewerPrevBtn { left: 12px; }
+#viewerNextBtn { right: 12px; }
+#viewerPrevBtn:disabled, #viewerNextBtn:disabled { opacity: .2; }
+
+.viewer-actions {
+  position: absolute; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 14px;
+  background: rgba(0,0,0,.6); padding: 10px 18px;
+  border-radius: 30px;
+}
+.viewer-actions button {
+  background: transparent; border: none; color: #fff;
+  font-size: 22px; cursor: pointer; padding: 4px 8px;
+  border-radius: 50%; transition: transform .15s;
+}
+.viewer-actions button:active { transform: scale(1.2); }
+
+#viewerCounter {
+  position: absolute; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  color: #fff; font-size: 13px; opacity: .85;
+  background: rgba(0,0,0,.5); padding: 4px 12px;
+  border-radius: 12px;
+}

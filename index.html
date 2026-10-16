@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=401">
+  <link rel="stylesheet" href="style.css?v=500">
 </head>
 <body>
 
@@ -32,6 +32,7 @@
         <button id="usersBtn" type="button" title="Usuarios">👥</button>
         <button id="callBtn" type="button" title="Llamada">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
+        <button id="groupCallBtn" type="button" title="Llamada grupal">👥📞</button>
         <button id="deleteGroupBtn" type="button" title="Eliminar grupo" style="display:none;">🗑️</button>
         <button id="configBtn" type="button" title="Configuración">⚙️</button>
       </div>
@@ -73,16 +74,13 @@
       <div id="messages"></div>
       <div id="typingIndicator"></div>
       <button id="scrollDownBtn" type="button">⬇️</button>
-
       <div id="mediaTabs">
         <button data-tab="emoji" class="active">😀 Emojis</button>
         <button data-tab="sticker">🧩 Stickers</button>
         <button data-tab="gif">🎬 GIFs</button>
       </div>
-
       <div id="emoji-bar"></div>
       <div id="sticker-bar"></div>
-
       <div id="reply-bar">
         <div id="reply-content">
           <div id="reply-author">Nombre</div>
@@ -91,15 +89,16 @@
         <button id="replyCancelBtn" type="button">✕</button>
       </div>
       <div id="input-area">
-        <button id="emojiBtn" type="button" title="Emojis, stickers y GIFs">😀</button>
+        <button id="emojiBtn" type="button" title="Emojis">😀</button>
         <button id="attachBtn" type="button" title="Adjuntar">📎</button>
-        <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" style="display:none">
+        <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" multiple style="display:none">
         <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
         <input type="text" id="messageInput" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off">
         <button id="sendBtn" type="button">Enviar</button>
       </div>
       <div id="recordingPanel">
         <div id="recordingIndicator">🔴 Grabando... <span id="recordingTime">0:00</span></div>
+        <div id="recordingTranscript" style="display:none;"></div>
         <div id="recordingActions">
           <button id="cancelRecBtn" type="button">❌ Cancelar</button>
           <button id="stopRecBtn" type="button">✅ Enviar</button>
@@ -142,6 +141,7 @@
     <button class="attach-item" id="menuCameraBtn" type="button"><span>📷</span> Cámara</button>
     <button class="attach-item" id="menuLocationBtn" type="button"><span>📍</span> Ubicación</button>
     <button class="attach-item" id="menuVoiceBtn" type="button"><span>🎤</span> Nota de voz</button>
+    <button class="attach-item" id="menuMusicBtn" type="button"><span>🎵</span> Música</button>
   </div>
 
   <div id="usersPanel">
@@ -626,14 +626,64 @@
     </div>
   </div>
 
+  <!-- ============ NIVEL MEDIO ============ -->
+  <div id="musicModal">
+    <div class="edit-content">
+      <h3>🎵 Compartir música</h3>
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px;">Pega un link de YouTube, SoundCloud o audio directo</p>
+      <input type="text" id="musicUrl" placeholder="https://youtube.com/watch?v=..." style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
+      <input type="text" id="musicTitle" placeholder="Título (opcional)" maxlength="60" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;">
+      <div class="edit-actions">
+        <button id="musicCancelBtn" type="button">Cancelar</button>
+        <button id="musicSendBtn" type="button">Compartir</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="groupCallOverlay">
+    <div class="gc-header">
+      <span id="gcTitle">Llamada grupal</span>
+      <button id="gcMinBtn" type="button">➖</button>
+      <button id="gcLeaveBtn" type="button">❌ Salir</button>
+    </div>
+    <div id="gcGrid"></div>
+    <div class="gc-actions">
+      <button id="gcMuteBtn" type="button">🎤 Mic</button>
+      <button id="gcCamBtn" type="button">📹 Cám</button>
+      <button id="gcAddBtn" type="button">➕ Añadir</button>
+    </div>
+  </div>
+
+  <div id="groupCallIncoming">
+    <div class="incoming-content">
+      <div class="incoming-avatar">📞</div>
+      <div class="incoming-name" id="gcIncomingName">Alguien</div>
+      <div class="incoming-text" id="gcIncomingText">Llamada grupal...</div>
+      <div class="incoming-actions">
+        <button id="gcRejectBtn" type="button">❌</button>
+        <button id="gcAcceptBtn" type="button">✅</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gcAddPeopleModal">
+    <div class="fav-content">
+      <h3>➕ Añadir a la llamada</h3>
+      <ul id="gcAddList"></ul>
+      <p id="gcAddEmpty" style="display:none">No hay más usuarios en línea</p>
+      <button id="gcAddCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
   <input type="file" id="estadoInput" accept="image/*" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="matrix.js"></script>
   <script src="app3.js"></script>
-  <script src="app4.js?v=401"></script>
-  <script src="app5.js?v=401"></script>
-  <script src="app6.js?v=401"></script>
+  <script src="app4.js?v=500"></script>
+  <script src="app5.js?v=500"></script>
+  <script src="app6.js?v=500"></script>
+  <script src="app7.js?v=500"></script>
   <script>
     try {
       if ("serviceWorker" in navigator) {

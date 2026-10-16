@@ -431,7 +431,6 @@ html, body {
 }
 .msg.modo-seleccion.seleccionado {
   background: rgba(0,255,102,0.15);
-  border-left-color: var(--accent);
 }
 
 .msg.highlight { animation: highlight-msg 2s ease; }
@@ -1184,3 +1183,166 @@ html, body {
   background: rgba(0,0,0,.5); padding: 4px 12px;
   border-radius: 12px;
 }
+
+/* ============================================================
+   MEJORAS ESTILO WHATSAPP - BURBUJAS
+   ============================================================ */
+
+.msg {
+  background: var(--bg-card);
+  border-left: none !important;
+  border-radius: 14px;
+  padding: 6px 10px 4px 10px;
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  cursor: pointer;
+  transition: transform .2s ease, background .15s;
+  position: relative;
+  max-width: 82%;
+  align-self: flex-start;
+  margin-left: 0;
+  margin-right: auto;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.15);
+  word-wrap: break-word;
+  touch-action: pan-y;
+}
+.msg.mio {
+  align-self: flex-end;
+  margin-left: auto;
+  margin-right: 0;
+  background: #005c4b;
+  color: #e9edef;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 4px;
+}
+body.theme-light .msg.mio {
+  background: #d9fdd3;
+  color: #111;
+}
+.msg.bot-msg {
+  background: linear-gradient(135deg, rgba(0,255,102,0.12), rgba(0,255,102,0.03));
+  border: 1px dashed var(--accent) !important;
+  align-self: flex-start;
+  margin-left: 0;
+}
+.msg.pinned { border: 1px solid #ffb74d !important; box-shadow: 0 0 0 1px #ffb74d inset; }
+.msg.favorite { border: 1px solid #ffd700 !important; }
+.msg.hot { border: 1px solid #ff5252 !important; box-shadow: 0 0 12px rgba(255,82,82,0.3); }
+
+.msg .avatar { display: none; }
+.msg.otro .avatar { display: flex; width: 30px; height: 30px; font-size: 13px; }
+
+.msg-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.msg-header { margin-bottom: 2px; display: block; }
+.msg.mio .msg-header { display: none; }
+.msg-name { font-weight: bold; font-size: 12px; }
+
+.msg-body {
+  font-size: 15px;
+  line-height: 1.35;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  margin-bottom: 0;
+}
+
+.msg-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+  line-height: 1;
+}
+.msg.otro .msg-footer { color: var(--text-muted); }
+body.theme-light .msg.mio .msg-footer { color: rgba(0,0,0,0.5); }
+.msg-time { font-size: 10px; color: inherit; }
+.msg-edited { font-size: 9px; font-style: italic; color: inherit; opacity: .8; }
+.msg-checks {
+  font-size: 13px;
+  letter-spacing: -4px;
+  margin-left: 2px;
+  font-weight: bold;
+  color: rgba(255,255,255,0.6);
+}
+.msg-checks.leido { color: #53bdeb; }
+body.theme-light .msg.mio .msg-checks { color: rgba(0,0,0,0.4); }
+body.theme-light .msg.mio .msg-checks.leido { color: #53bdeb; }
+
+/* --- Swipe para responder --- */
+.swipe-indicator {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%) scale(.4);
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity .15s, transform .15s;
+  pointer-events: none;
+}
+.msg.swiping .swipe-indicator { opacity: 1; transform: translateY(-50%) scale(1); }
+.msg.swipe-ready { background: var(--accent) !important; color: var(--bg) !important; }
+
+/* --- Corazón de doble toque --- */
+@keyframes heartPop {
+  0% { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+  40% { transform: translate(-50%,-50%) scale(1.4); opacity: 1; }
+  70% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1.2); opacity: 0; }
+}
+.double-tap-heart {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 60px;
+  pointer-events: none;
+  animation: heartPop .8s ease-out forwards;
+  z-index: 100;
+}
+
+/* --- Burbuja "escribiendo..." --- */
+.msg.typing-bubble {
+  background: var(--bg-card);
+  align-self: flex-start;
+  padding: 10px 16px;
+  max-width: 80px;
+}
+.typing-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  margin: 0 2px;
+  animation: typingBounce 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: .2s; }
+.typing-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* --- Reply quote --- */
+.msg .reply-quote {
+  background: rgba(0,0,0,.18);
+  border-left: 3px solid var(--accent);
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+body.theme-light .msg.mio .reply-quote { background: rgba(0,0,0,.08); }
+.msg .reply-quote-author { color: var(--accent); font-weight: bold; font-size: 11px; }
+.msg .reply-quote-text { color: inherit; opacity: .85; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- Ocultar indicador viejo --- */
+#typingIndicator { display: none !important; }

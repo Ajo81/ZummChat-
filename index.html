@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=200">
+  <link rel="stylesheet" href="style.css?v=300">
 </head>
 <body>
 
@@ -26,6 +26,7 @@
       <button id="backBtn" type="button" title="Volver" style="display:none;">⬅️</button>
       <span id="chat-title">ZummChat · Chats</span>
       <div id="header-buttons">
+        <button id="globalSearchBtn" type="button" title="Buscar en todo">🔍</button>
         <button id="dndIndicator" type="button" title="No molestar" style="display:none;">🌙</button>
         <button id="filterBtn" type="button" title="Filtrar" style="display:none;">🔎</button>
         <button id="usersBtn" type="button" title="Usuarios">👥</button>
@@ -304,6 +305,7 @@
   <div id="statsModal">
     <div class="stats-content">
       <h3>📊 Tus estadísticas</h3>
+      <div id="statsChart"></div>
       <div class="stat-item"><span class="stat-label">💬 Mensajes totales</span><span class="stat-value" id="statTotalMsgs">...</span></div>
       <div class="stat-item"><span class="stat-label">📁 Archivos enviados</span><span class="stat-value" id="statFiles">...</span></div>
       <div class="stat-item"><span class="stat-label">🎤 Notas de voz</span><span class="stat-value" id="statVoice">...</span></div>
@@ -491,12 +493,73 @@
     </div>
   </div>
 
+  <!-- ============ FASE 2: EDITOR DE IMAGEN ============ -->
+  <div id="imageEditorModal">
+    <div class="ie-header">
+      <button id="ieCancelBtn" type="button">✕</button>
+      <span>Editor de imagen</span>
+      <button id="ieSendBtn" type="button">Enviar ➤</button>
+    </div>
+    <div class="ie-stage">
+      <canvas id="ieCanvas"></canvas>
+    </div>
+    <div class="ie-filters" id="ieFilters">
+      <button data-f="none" class="active">Original</button>
+      <button data-f="grayscale(100%)">B/N</button>
+      <button data-f="sepia(80%)">Sepia</button>
+      <button data-f="saturate(180%) contrast(110%)">Vivo</button>
+      <button data-f="contrast(140%) brightness(90%)">Drama</button>
+      <button data-f="hue-rotate(180deg)">Frío</button>
+      <button data-f="hue-rotate(-30deg) saturate(140%)">Cálido</button>
+      <button data-f="blur(3px)">Difuso</button>
+      <button data-f="invert(100%)">Invertir</button>
+    </div>
+    <div class="ie-tools">
+      <button id="ieRotateBtn" type="button">🔄 Rotar</button>
+      <button id="ieTextBtn" type="button">📝 Texto</button>
+      <button id="ieCropBtn" type="button">✂️ Recortar</button>
+    </div>
+    <div id="ieTextPanel" style="display:none;">
+      <input type="text" id="ieTextInput" placeholder="Escribe algo..." maxlength="60">
+      <div class="ie-text-controls">
+        <input type="color" id="ieTextColor" value="#ffffff">
+        <input type="range" id="ieTextSize" min="14" max="72" value="28">
+        <select id="ieTextPos">
+          <option value="bottom">Abajo</option>
+          <option value="top">Arriba</option>
+          <option value="center">Centro</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FASE 2: BÚSQUEDA GLOBAL ============ -->
+  <div id="globalSearchModal">
+    <div class="gs-header">
+      <button id="gsCloseBtn" type="button">⬅️</button>
+      <input type="text" id="gsInput" placeholder="🔍 Buscar en todos los chats..." autocomplete="off">
+    </div>
+    <div id="gsResults"></div>
+    <p id="gsEmpty" style="display:none;text-align:center;color:var(--text-muted);font-style:italic;padding:20px;">Escribe algo para buscar...</p>
+  </div>
+
+  <!-- ============ FASE 2: VISOR PDF ============ -->
+  <div id="pdfViewerModal">
+    <div class="pdf-header">
+      <button id="pdfCloseBtn" type="button">✕</button>
+      <span id="pdfTitle">PDF</span>
+      <a id="pdfDownloadBtn" download target="_blank">⬇️</a>
+    </div>
+    <iframe id="pdfFrame" src="" title="PDF"></iframe>
+  </div>
+
   <input type="file" id="estadoInput" accept="image/*" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="matrix.js"></script>
   <script src="app3.js"></script>
-  <script src="app4.js?v=200"></script>
+  <script src="app4.js?v=300"></script>
+  <script src="app5.js?v=300"></script>
   <script>
     try {
       if ("serviceWorker" in navigator) {

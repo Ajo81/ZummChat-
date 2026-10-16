@@ -73,7 +73,7 @@ html, body {
 }
 @keyframes textoPulso {
   0%, 100% { text-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent); }
-  50%      { text-shadow: 0 0 16px var(--accent), 0 0 0 32px var(--accent); }
+  50%      { text-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent); }
 }
 
 #chat-container {
@@ -109,7 +109,7 @@ html, body {
 }
 #header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
 
-#usersBtn, #callBtn, #videoBtn, #configBtn {
+#usersBtn, #callBtn, #videoBtn, #configBtn, #filterBtn {
   background: var(--bg-header); color: var(--accent);
   border: 1px solid var(--accent); border-radius: 8px;
   width: 40px; height: 40px;
@@ -117,8 +117,11 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   transition: all .2s; padding: 0;
 }
-#usersBtn:active, #callBtn:active, #videoBtn:active, #configBtn:active {
+#usersBtn:active, #callBtn:active, #videoBtn:active, #configBtn:active, #filterBtn:active {
   transform: scale(.94); background: var(--accent); color: var(--bg);
+}
+#filterBtn.filtro-activo {
+  background: var(--accent); color: var(--bg);
 }
 #usersBtn.has-users {
   background: var(--accent); color: var(--bg);
@@ -139,7 +142,6 @@ html, body {
 }
 #deleteGroupBtn:active { transform: scale(.94); background: #ff5252; color: #fff; }
 
-/* ================= INDICADOR MODO NO MOLESTAR ================= */
 #dndIndicator {
   background: #6a4fb8; color: #fff;
   border: 1px solid #a380ff; border-radius: 8px;
@@ -319,6 +321,111 @@ html, body {
 #searchInput:focus { outline: 2px solid var(--accent); }
 #searchClose { background: transparent; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px 8px; }
 
+/* ================= FILTER BAR ================= */
+#filterBar {
+  display: none;
+  background: rgba(0,255,102,0.1);
+  border: 1px solid var(--accent);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--accent);
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#filterBar.show { display: flex; }
+#filterBarText {
+  flex: 1; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  font-weight: bold;
+}
+#filterBarClear {
+  background: transparent; border: none;
+  color: var(--accent); font-size: 18px;
+  cursor: pointer; padding: 2px 6px; font-weight: bold;
+}
+
+/* ================= SELECTION BAR ================= */
+#selectionBar {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#selectionBar.show { display: flex; }
+#selectionCount {
+  flex: 1;
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+}
+#selectionBar button {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 8px;
+  width: 40px; height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: all .2s;
+}
+#selectionBar button:active { transform: scale(.9); }
+#selectionDeleteBtn {
+  border-color: #ff5252 !important;
+  color: #ff5252 !important;
+}
+#selectionCancelBtn {
+  border-color: var(--text-dim) !important;
+  color: var(--text-dim) !important;
+}
+
+/* Modo selección: mensajes con checkbox */
+.msg.modo-seleccion {
+  cursor: pointer;
+  padding-left: 42px;
+}
+.msg.modo-seleccion::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--text-dim);
+  background: transparent;
+  transition: all .15s;
+}
+.msg.modo-seleccion.seleccionado::before {
+  content: "✓";
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+}
+.msg.modo-seleccion.seleccionado {
+  background: rgba(0,255,102,0.15);
+  border-left-color: var(--accent);
+}
+
 .msg.highlight { animation: highlight-msg 2s ease; }
 @keyframes highlight-msg { 0% { background: rgba(255, 255, 0, 0.4); } 100% { background: var(--bg-card); } }
 
@@ -332,44 +439,6 @@ html, body {
 #pinnedBar.show { display: flex; }
 #pinnedText { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #unpinBtn { background: transparent; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; padding: 2px 6px; }
-
-#room-bar { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; scrollbar-width: none; flex-shrink: 0; }
-#room-bar::-webkit-scrollbar { display: none; }
-.room-btn {
-  background: var(--bg-card); color: var(--text-dim);
-  border: 1px solid var(--border); border-radius: 20px;
-  padding: 6px 14px; font-size: 13px; font-weight: bold;
-  cursor: pointer; white-space: nowrap; flex-shrink: 0;
-}
-.room-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-.room-btn.muted-room { opacity: 0.5; }
-.room-btn.muted-room::after { content: " 🔕"; font-size: 10px; }
-.room-btn-add {
-  background: var(--bg-card); color: var(--accent);
-  border: 1px dashed var(--accent); border-radius: 20px;
-  padding: 6px 12px; font-size: 14px; font-weight: bold;
-  cursor: pointer; flex-shrink: 0;
-}
-.room-btn-add:active { background: var(--accent); color: var(--bg); }
-
-#priv-section { border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); padding: 6px 0; margin-bottom: 8px; flex-shrink: 0; }
-#priv-bar { margin-bottom: 6px; }
-#privateBtn {
-  background: var(--bg-card); color: #ffb74d;
-  border: 1px solid #ffb74d; border-radius: 8px;
-  padding: 6px 12px; font-size: 13px; font-weight: bold; cursor: pointer;
-}
-#privateBtn:active { transform: scale(.97); background: #ffb74d; color: #000; }
-#priv-room-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-#priv-room-bar::-webkit-scrollbar { display: none; }
-.room-btn.priv { border-color: #ffb74d; color: #ffb74d; padding-right: 8px; display: flex; align-items: center; gap: 6px; }
-.room-btn.priv.active { background: #ffb74d; color: #000; }
-.room-btn.priv .close {
-  background: rgba(0,0,0,0.3); border: none; color: inherit;
-  border-radius: 50%; width: 18px; height: 18px; font-size: 12px;
-  line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; font-weight: bold;
-}
 
 #messages {
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
@@ -652,15 +721,15 @@ html, body {
 #editCancelBtn, #reminderCancelBtn, #pollCancelBtn { background: var(--bg-card); color: var(--text); }
 #editSaveBtn, #reminderSaveBtn, #pollSaveBtn { background: var(--accent); color: var(--bg); }
 
-#msgMenu { display: none; position: fixed; background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 10px; padding: 6px; z-index: 10003; box-shadow: 0 4px 16px rgba(0,0,0,0.6); flex-direction: column; gap: 4px; min-width: 150px; }
+#msgMenu { display: none; position: fixed; background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 10px; padding: 6px; z-index: 10003; box-shadow: 0 4px 16px rgba(0,0,0,0.6); flex-direction: column; gap: 4px; min-width: 160px; }
 #msgMenu.show { display: flex; }
 #msgMenu button { background: transparent; border: none; color: var(--text); padding: 10px 14px; text-align: left; font-size: 14px; cursor: pointer; border-radius: 6px; font-weight: bold; }
 #msgMenu button:active { background: var(--bg-card); }
 #menuDeleteBtn { color: #ff5252; }
 #menuReplyBtn { color: var(--accent); }
 #menuForwardBtn { color: #4fc3f7; }
+#menuSelectBtn { color: #ffd700; }
 
-/* ================= CHAT OPTIONS MODAL ================= */
 #chatOptionsModal {
   display: none;
   position: fixed; inset: 0;
@@ -710,7 +779,6 @@ html, body {
   margin-top: 8px;
 }
 
-/* ================= MUTE TIMER MODAL ================= */
 #muteTimerModal {
   display: none;
   position: fixed; inset: 0;
@@ -729,7 +797,6 @@ html, body {
 #muteForeverBtn { border-color: #ff5252 !important; color: #ff5252 !important; }
 #muteOffBtn { border-color: var(--accent) !important; color: var(--accent) !important; }
 
-/* ================= WALLPAPER MODAL ================= */
 #wallpaperModal {
   display: none;
   position: fixed; inset: 0;
@@ -824,7 +891,6 @@ html, body {
   cursor: pointer;
 }
 
-/* ================= DND MODAL ================= */
 #dndModal {
   display: none;
   position: fixed; inset: 0;
@@ -842,8 +908,7 @@ html, body {
 }
 #dndOffBtn { border-color: var(--accent) !important; color: var(--accent) !important; }
 
-/* ================= FORWARD MODAL ================= */
-#forwardModal {
+#forwardModal, #filterModal {
   display: none;
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.9);
@@ -851,15 +916,15 @@ html, body {
   justify-content: center; align-items: center;
   padding: 20px;
 }
-#forwardModal.show { display: flex; }
-#forwardList {
+#forwardModal.show, #filterModal.show { display: flex; }
+#forwardList, #filterList {
   list-style: none;
   padding: 0; margin: 0;
   overflow-y: auto; flex: 1;
   display: flex; flex-direction: column; gap: 8px;
   max-height: 50vh;
 }
-#forwardList li {
+#forwardList li, #filterList li {
   background: var(--bg-card);
   border-left: 3px solid var(--accent);
   border-radius: 8px;
@@ -867,16 +932,25 @@ html, body {
   cursor: pointer;
   font-size: 14px;
   transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-#forwardList li:active {
+#forwardList li:active, #filterList li:active {
   background: var(--bg-secondary);
   transform: scale(.98);
 }
-#forwardCancelBtn {
+#forwardCancelBtn, #filterCloseBtn {
   display: block; width: 100%; margin-top: 16px;
   padding: 12px; background: var(--bg-card); color: var(--text);
   border: 1px solid var(--border); border-radius: 10px;
   font-weight: bold; font-size: 15px; cursor: pointer;
+}
+.filter-user-count {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 13px;
 }
 
 #reactionPicker { display: none; position: fixed; background: var(--bg-secondary); border: 2px solid var(--accent); border-radius: 30px; padding: 8px 12px; z-index: 10004; box-shadow: 0 4px 16px rgba(0,0,0,0.6); gap: 8px; }

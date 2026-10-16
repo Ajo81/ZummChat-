@@ -219,6 +219,7 @@
       <button id="optPinChatBtn" type="button">📌 Fijar arriba</button>
       <button id="optArchiveChatBtn" type="button">📥 Archivar</button>
       <button id="optWallpaperBtn" type="button">🖼️ Fondo del chat</button>
+      <button id="optGalleryBtn" type="button">🖼️ Ver medios</button>
       <button id="optMuteChatBtn" type="button">🔕 Silenciar</button>
       <button id="optExportBtn" type="button">📤 Exportar chat</button>
       <button id="optCancelBtn" type="button">❌ Cancelar</button>
@@ -430,6 +431,37 @@
       <p id="contactsEmpty" style="display:none">No tienes contactos aún.</p>
       <button id="contactsCloseBtn" type="button">Cerrar</button>
     </div>
+  </div>
+
+  <!-- ==================== GALERÍA ESTILO WHATSAPP ==================== -->
+  <div id="galleryModal">
+    <div class="gallery-header">
+      <button id="galleryCloseBtn" type="button">⬅️</button>
+      <span id="galleryTitle">Medios del chat</span>
+      <button id="galleryJumpBtn" type="button" title="Ir al último">⬇️</button>
+    </div>
+    <div class="gallery-tabs" id="galleryTabs">
+      <button data-tab="image" class="active">📷 Fotos</button>
+      <button data-tab="video">🎬 Videos</button>
+      <button data-tab="audio">🎤 Audio</button>
+      <button data-tab="doc">📄 Docs</button>
+      <button data-tab="link">🔗 Links</button>
+    </div>
+    <div id="galleryContent"></div>
+    <p id="galleryEmpty" style="display:none;text-align:center;color:var(--text-muted);font-style:italic;padding:20px;">No hay medios en esta categoría.</p>
+  </div>
+
+  <div id="mediaViewer">
+    <button id="viewerCloseBtn" type="button">✕</button>
+    <button id="viewerPrevBtn" type="button">‹</button>
+    <button id="viewerNextBtn" type="button">›</button>
+    <div id="viewerStage"></div>
+    <div class="viewer-actions">
+      <button id="viewerDownloadBtn" type="button" title="Descargar">⬇️</button>
+      <button id="viewerShareBtn" type="button" title="Compartir">📤</button>
+      <button id="viewerJumpBtn" type="button" title="Ir al mensaje">💬</button>
+    </div>
+    <div id="viewerCounter">1 / 1</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>

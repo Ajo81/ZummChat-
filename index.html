@@ -39,6 +39,7 @@
       <span id="chat-title">ZummChat · Chats</span>
       <div id="header-buttons">
         <button id="dndIndicator" type="button" title="Modo no molestar activo" style="display:none;">🌙</button>
+        <button id="globalSearchBtn" type="button" title="Buscar en todos los chats">🔍</button>
         <button id="filterBtn" type="button" title="Filtrar por usuario" style="display:none;">🔎</button>
         <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
@@ -95,7 +96,20 @@
         <button id="replyCancelBtn" type="button">✕</button>
       </div>
 
+      <div id="quickRepliesBar">
+        <button data-reply="Ok 👍" type="button">Ok 👍</button>
+        <button data-reply="Voy en camino" type="button">Voy en camino</button>
+        <button data-reply="Estoy ocupado" type="button">Estoy ocupado</button>
+        <button data-reply="Gracias 🙏" type="button">Gracias 🙏</button>
+        <button data-reply="¿Qué haces?" type="button">¿Qué haces?</button>
+        <button data-reply="Después te escribo" type="button">Después te escribo</button>
+        <button data-reply="Jajaja 😂" type="button">Jajaja 😂</button>
+        <button data-reply="Buenos días ☀️" type="button">Buenos días ☀️</button>
+        <button data-reply="Buenas noches 🌙" type="button">Buenas noches 🌙</button>
+      </div>
+
       <div id="input-area">
+        <button id="quickRepliesBtn" type="button" title="Respuestas rápidas">⚡</button>
         <button id="emojiBtn" type="button" title="Emojis">😀</button>
         <button id="stickerBtn" type="button" title="Stickers">🧩</button>
         <button id="attachBtn" type="button" title="Adjuntar">📎</button>
@@ -148,6 +162,7 @@
     <button class="attach-item" id="menuCameraBtn" type="button"><span>📷</span> Cámara</button>
     <button class="attach-item" id="menuLocationBtn" type="button"><span>📍</span> Ubicación</button>
     <button class="attach-item" id="menuVoiceBtn" type="button"><span>🎤</span> Nota de voz</button>
+    <button class="attach-item" id="menuContactBtn" type="button"><span>📇</span> Contacto</button>
   </div>
 
   <div id="usersPanel">
@@ -277,6 +292,26 @@
       <ul id="filterList"></ul>
       <button id="filterClearBtn" type="button" style="width:100%;margin-top:8px;padding:10px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;font-weight:bold;font-size:13px;cursor:pointer;">Ver todos</button>
       <button id="filterCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="globalSearchModal">
+    <div class="fav-content">
+      <h3>🔍 Buscar en todos los chats</h3>
+      <input type="text" id="globalSearchInput" placeholder="Escribe para buscar..." autocomplete="off">
+      <p style="text-align:center;color:var(--text-dim);font-size:11px;margin:8px 0;">Mínimo 2 caracteres</p>
+      <div id="globalSearchResults"></div>
+      <button id="globalSearchCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="sendContactModal">
+    <div class="fav-content">
+      <h3>📇 Enviar contacto</h3>
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px;">Elige un contacto para compartir</p>
+      <ul id="sendContactList"></ul>
+      <p id="sendContactEmpty" style="display:none">No tienes contactos aún.</p>
+      <button id="sendContactCloseBtn" type="button">Cerrar</button>
     </div>
   </div>
 

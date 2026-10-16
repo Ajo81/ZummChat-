@@ -38,6 +38,7 @@
       <button id="backBtn" type="button" title="Volver" style="display:none;">⬅️</button>
       <span id="chat-title">ZummChat · Chats</span>
       <div id="header-buttons">
+        <button id="dndIndicator" type="button" title="Modo no molestar activo" style="display:none;">🌙</button>
         <button id="usersBtn" type="button" title="Usuarios en línea">👥</button>
         <button id="callBtn" type="button" title="Llamada de voz">📞</button>
         <button id="videoBtn" type="button" title="Videollamada">📹</button>
@@ -116,6 +117,7 @@
       <button class="config-item" id="searchBtn" type="button"><span class="config-icon">🔍</span><span class="config-label">Buscar</span></button>
       <button class="config-item" id="soundBtn" type="button"><span class="config-icon" id="soundIcon">🔔</span><span class="config-label">Sonido</span></button>
       <button class="config-item" id="soundsBtn" type="button"><span class="config-icon">🎵</span><span class="config-label">Sonidos</span></button>
+      <button class="config-item" id="dndBtn" type="button"><span class="config-icon">🌙</span><span class="config-label">No molestar</span></button>
       <button class="config-item" id="statsBtn" type="button"><span class="config-icon">📊</span><span class="config-label">Mis stats</span></button>
       <button class="config-item" id="groupStatsBtn" type="button"><span class="config-icon">📈</span><span class="config-label">Stats grupo</span></button>
       <button class="config-item" id="favBtn" type="button"><span class="config-icon">⭐</span><span class="config-label">Favoritos</span></button>
@@ -202,8 +204,46 @@
       <h3 id="chatOptionsTitle">Opciones del chat</h3>
       <button id="optPinChatBtn" type="button">📌 Fijar arriba</button>
       <button id="optArchiveChatBtn" type="button">📥 Archivar</button>
+      <button id="optWallpaperBtn" type="button">🖼️ Fondo del chat</button>
       <button id="optMuteChatBtn" type="button">🔕 Silenciar</button>
       <button id="optCancelBtn" type="button">❌ Cancelar</button>
+    </div>
+  </div>
+
+  <div id="muteTimerModal">
+    <div class="chat-options-content">
+      <h3>🔕 Silenciar por...</h3>
+      <button id="mute8hBtn" type="button">⏰ 8 horas</button>
+      <button id="mute1wBtn" type="button">📅 1 semana</button>
+      <button id="muteForeverBtn" type="button">🔕 Para siempre</button>
+      <button id="muteOffBtn" type="button">🔔 Activar sonido</button>
+      <button id="muteCancelBtn" type="button">❌ Cancelar</button>
+    </div>
+  </div>
+
+  <div id="wallpaperModal">
+    <div class="wallpaper-content">
+      <h3>🖼️ Fondo del chat</h3>
+      <p class="wallpaper-tip">Elige un color o sube una imagen</p>
+      <div class="wallpaper-colors" id="wallpaperColors"></div>
+      <div class="wallpaper-actions">
+        <button id="wallpaperImageBtn" type="button">📷 Subir imagen</button>
+        <button id="wallpaperRemoveBtn" type="button">🗑️ Quitar fondo</button>
+      </div>
+      <button id="wallpaperCancelBtn" type="button" class="wallpaper-cancel">Cerrar</button>
+    </div>
+  </div>
+  <input type="file" id="wallpaperInput" accept="image/*" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
+
+  <div id="dndModal">
+    <div class="chat-options-content">
+      <h3>🌙 Modo no molestar</h3>
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px;">Silencia TODAS las notificaciones</p>
+      <button id="dnd30mBtn" type="button">⏰ 30 minutos</button>
+      <button id="dnd2hBtn" type="button">⏰ 2 horas</button>
+      <button id="dnd8hBtn" type="button">⏰ 8 horas</button>
+      <button id="dndOffBtn" type="button">🔔 Desactivar</button>
+      <button id="dndCancelBtn" type="button">❌ Cancelar</button>
     </div>
   </div>
 

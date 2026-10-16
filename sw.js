@@ -1,6 +1,6 @@
 // ZummChat - Service Worker - © 2026 José Yudier Arencibia Ajo
-const CACHE = "zummchat-v200";
-const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./app4.js",
+const CACHE = "zummchat-v300";
+const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./app4.js", "./app5.js",
                 "./matrix.js", "./manifest.json", "./logo.png", "./icon.png"];
 
 self.addEventListener("install", e => {

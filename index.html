@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="style.css?v=400">
+  <link rel="stylesheet" href="style.css?v=401">
 </head>
 <body>
 
@@ -73,8 +73,16 @@
       <div id="messages"></div>
       <div id="typingIndicator"></div>
       <button id="scrollDownBtn" type="button">⬇️</button>
+
+      <div id="mediaTabs">
+        <button data-tab="emoji" class="active">😀 Emojis</button>
+        <button data-tab="sticker">🧩 Stickers</button>
+        <button data-tab="gif">🎬 GIFs</button>
+      </div>
+
       <div id="emoji-bar"></div>
       <div id="sticker-bar"></div>
+
       <div id="reply-bar">
         <div id="reply-content">
           <div id="reply-author">Nombre</div>
@@ -83,9 +91,7 @@
         <button id="replyCancelBtn" type="button">✕</button>
       </div>
       <div id="input-area">
-        <button id="emojiBtn" type="button" title="Emojis">😀</button>
-        <button id="stickerBtn" type="button" title="Stickers">🧩</button>
-        <button id="gifBtn" type="button" title="GIFs">🎬</button>
+        <button id="emojiBtn" type="button" title="Emojis, stickers y GIFs">😀</button>
         <button id="attachBtn" type="button" title="Adjuntar">📎</button>
         <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" style="display:none">
         <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
@@ -553,17 +559,6 @@
     <iframe id="pdfFrame" src="" title="PDF"></iframe>
   </div>
 
-  <!-- ============ FASE 3: GIFs, Traducción, Stickers, Canales ============ -->
-  <div id="gifPickerModal">
-    <div class="gif-header">
-      <button id="gifCloseBtn" type="button">✕</button>
-      <input type="text" id="gifSearchInput" placeholder="🔍 Buscar GIFs..." autocomplete="off">
-    </div>
-    <div id="gifResults">
-      <p style="text-align:center;color:var(--text-dim);padding:20px;">Cargando GIFs...</p>
-    </div>
-  </div>
-
   <div id="translateModal">
     <div class="edit-content">
       <h3>🌐 Traducción</h3>
@@ -636,9 +631,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="matrix.js"></script>
   <script src="app3.js"></script>
-  <script src="app4.js?v=400"></script>
-  <script src="app5.js?v=400"></script>
-  <script src="app6.js?v=400"></script>
+  <script src="app4.js?v=401"></script>
+  <script src="app5.js?v=401"></script>
+  <script src="app6.js?v=401"></script>
   <script>
     try {
       if ("serviceWorker" in navigator) {

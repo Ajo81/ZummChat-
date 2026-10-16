@@ -928,3 +928,218 @@ body.theme-light .msg.mio .link-preview, body.theme-light .link-preview { backgr
   font-size: 11px; color: var(--text-dim);
   margin-top: 2px;
 }
+/* ============================================================
+   FASE 3 - GIFs, Traducción, Stickers personalizados, Canales
+   ============================================================ */
+
+/* ============ BOTÓN GIF ============ */
+#gifBtn {
+  background: var(--bg-card); color: var(--accent);
+  border: 1px solid var(--border); border-radius: 8px;
+  width: 42px; height: 42px; font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; padding: 0;
+}
+
+/* ============ PICKER DE GIFs ============ */
+#gifPickerModal {
+  display: none; position: fixed; inset: 0;
+  background: var(--bg); z-index: 10050;
+  flex-direction: column;
+}
+#gifPickerModal.show { display: flex; }
+
+.gif-header {
+  display: flex; gap: 8px; padding: 12px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; align-items: center;
+}
+#gifCloseBtn {
+  background: transparent; border: none;
+  color: var(--accent); font-size: 22px;
+  cursor: pointer; padding: 4px 10px;
+}
+#gifSearchInput {
+  flex: 1; padding: 10px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 20px; color: var(--text);
+  font-size: 15px; outline: none;
+}
+#gifSearchInput:focus { border-color: var(--accent); }
+
+#gifResults {
+  flex: 1; overflow-y: auto; padding: 8px;
+  background: var(--bg-secondary);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  align-content: start;
+}
+.gif-item {
+  border-radius: 8px; overflow: hidden;
+  cursor: pointer; background: var(--bg-card);
+  aspect-ratio: 1;
+}
+.gif-item img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+
+/* ============ MENSAJE CON GIF ============ */
+.msg-gif {
+  max-width: 100%; border-radius: 10px;
+  display: block; margin-top: 4px;
+  cursor: pointer;
+}
+
+/* ============ MENSAJE CON STICKER PERSONALIZADO ============ */
+.msg-custom-sticker {
+  width: 140px; height: 140px;
+  object-fit: contain;
+  display: block;
+  margin: 4px 0;
+}
+
+/* ============ MODAL DE TRADUCCIÓN ============ */
+#translateModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 10050;
+  justify-content: center; align-items: center;
+  padding: 20px;
+}
+#translateModal.show { display: flex; }
+#translateModal .edit-content { max-width: 450px; }
+.translate-text {
+  background: var(--bg-card);
+  border-radius: 8px; padding: 10px 12px;
+  font-size: 14px; line-height: 1.4;
+  max-height: 120px; overflow-y: auto;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.translate-text.translated {
+  border-left: 3px solid var(--accent);
+  background: rgba(0,255,102,0.08);
+}
+.translate-sep {
+  text-align: center; color: var(--accent);
+  font-size: 20px; margin: 4px 0;
+}
+.translate-lang-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px; font-size: 13px;
+  color: var(--text-dim);
+}
+.translate-lang-row select {
+  flex: 1; padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text);
+  font-size: 14px;
+}
+
+/* ============ MENÚ TRADUCIR ============ */
+#menuTranslateBtn { color: #4fc3f7; }
+
+/* ============ GESTOR DE STICKERS ============ */
+#stickerManagerModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 10050;
+  justify-content: center; align-items: center;
+  padding: 20px;
+}
+#stickerManagerModal.show { display: flex; }
+
+#myStickersGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 4px;
+}
+.my-sticker-item {
+  aspect-ratio: 1;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.my-sticker-item img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+}
+.my-sticker-item .sticker-del {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: rgba(0,0,0,.6);
+  color: #ff5252; border: none;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#newStickerModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 10051;
+  justify-content: center; align-items: center;
+  padding: 20px;
+}
+#newStickerModal.show { display: flex; }
+#newStickerPreview img {
+  max-width: 100%; max-height: 120px;
+  border-radius: 8px; margin-top: 8px;
+}
+
+/* ============ CANALES ============ */
+#channelReadOnly {
+  background: rgba(255,183,77,.15);
+  border-left: 4px solid #ffb74d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #ffb74d;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+#newChannelModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 10052;
+  justify-content: center; align-items: center;
+  padding: 20px;
+}
+#newChannelModal.show { display: flex; }
+
+/* ============ CANAL EN LISTA ============ */
+.chat-item.canal-item .chat-avatar {
+  background: linear-gradient(135deg, #ff9800, #f57c00) !important;
+  color: #fff !important;
+}
+.chat-name .canal-badge {
+  color: #ff9800;
+  font-size: 11px;
+  margin-left: 6px;
+  font-weight: bold;
+}
+
+/* ============ AVISO SOLO LECTURA EN INPUT ============ */
+#input-area.readonly {
+  opacity: 0.5;
+  pointer-events: none;
+}
+#input-area.readonly::after {
+  content: "Solo el creador puede publicar";
+  color: #ffb74d;
+  font-size: 12px;
+  font-style: italic;
+}

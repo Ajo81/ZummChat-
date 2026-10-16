@@ -38,6 +38,7 @@ const usersBtn        = document.getElementById("usersBtn");
 const callBtn         = document.getElementById("callBtn");
 const videoBtn        = document.getElementById("videoBtn");
 const deleteGroupBtn  = document.getElementById("deleteGroupBtn");
+const dndIndicator    = document.getElementById("dndIndicator");
 const configBtn       = document.getElementById("configBtn");
 const configPanel     = document.getElementById("configPanel");
 const configPanelClose = document.getElementById("configPanelClose");
@@ -47,6 +48,7 @@ const searchBtn       = document.getElementById("searchBtn");
 const soundBtn        = document.getElementById("soundBtn");
 const soundIcon       = document.getElementById("soundIcon");
 const soundsBtn       = document.getElementById("soundsBtn");
+const dndBtn          = document.getElementById("dndBtn");
 const statsBtn        = document.getElementById("statsBtn");
 const groupStatsBtn   = document.getElementById("groupStatsBtn");
 const favBtn          = document.getElementById("favBtn");
@@ -85,8 +87,27 @@ const chatOptionsModal = document.getElementById("chatOptionsModal");
 const chatOptionsTitle = document.getElementById("chatOptionsTitle");
 const optPinChatBtn   = document.getElementById("optPinChatBtn");
 const optArchiveChatBtn = document.getElementById("optArchiveChatBtn");
+const optWallpaperBtn = document.getElementById("optWallpaperBtn");
 const optMuteChatBtn  = document.getElementById("optMuteChatBtn");
 const optCancelBtn    = document.getElementById("optCancelBtn");
+const muteTimerModal  = document.getElementById("muteTimerModal");
+const mute8hBtn       = document.getElementById("mute8hBtn");
+const mute1wBtn       = document.getElementById("mute1wBtn");
+const muteForeverBtn  = document.getElementById("muteForeverBtn");
+const muteOffBtn      = document.getElementById("muteOffBtn");
+const muteCancelBtn   = document.getElementById("muteCancelBtn");
+const wallpaperModal  = document.getElementById("wallpaperModal");
+const wallpaperColors = document.getElementById("wallpaperColors");
+const wallpaperImageBtn = document.getElementById("wallpaperImageBtn");
+const wallpaperRemoveBtn = document.getElementById("wallpaperRemoveBtn");
+const wallpaperCancelBtn = document.getElementById("wallpaperCancelBtn");
+const wallpaperInput  = document.getElementById("wallpaperInput");
+const dndModal        = document.getElementById("dndModal");
+const dnd30mBtn       = document.getElementById("dnd30mBtn");
+const dnd2hBtn        = document.getElementById("dnd2hBtn");
+const dnd8hBtn        = document.getElementById("dnd8hBtn");
+const dndOffBtn       = document.getElementById("dndOffBtn");
+const dndCancelBtn    = document.getElementById("dndCancelBtn");
 const forwardModal    = document.getElementById("forwardModal");
 const forwardList     = document.getElementById("forwardList");
 const forwardCancelBtn = document.getElementById("forwardCancelBtn");
@@ -235,6 +256,8 @@ let inChatView = false;
 let replyTo = null;
 let mensajeParaReenviar = null;
 let chatOpcionesActual = null;
+let chatParaSilenciar = null;
+let chatParaWallpaper = null;
 
 function limpiarNombre(texto) {
   if (!texto) return "user";
@@ -249,7 +272,7 @@ function setLastRead(room) {
   LS.setItem("zummchat_lastread_" + room, new Date().toISOString());
 }
 
-// ================= CHATS FIJADOS, ARCHIVADOS Y SILENCIADOS =================
+// ================= CHATS FIJADOS =================
 let chatsFijados = JSON.parse(LS.getItem("zummchat_fijados") || "[]");
 function guardarFijados() { LS.setItem("zummchat_fijados", JSON.stringify(chatsFijados)); }
 function estaFijado(room) { return chatsFijados.includes(room); }
@@ -265,37 +288,139 @@ function toggleFijar(room) {
   renderChatList();
 }
 
+// ================= CHATS ARCHIVADOS =================
 let chatsArchivados = JSON.parse(LS.getItem("zummchat_archivados") || "[]");
 function guardarArchivados() { LS.setItem("zummchat_archivados", JSON.stringify(chatsArchivados)); }
-function estaArchivado(room) {
-  if (!chatsArchivados.includes(room)) return false;
-  // Si llegó un mensaje nuevo tras archivarlo, ya no está "realmente" archivado
-  const archTime = LS.getItem("zummchat_archived_time_" + room);
-  if (!archTime) return true;
-  return true;
-}
-function toggleArchivar(room, silencioso) {
+function estaArchivado(room) { return chatsArchivados.includes(room); }
+function toggleArchivar(room) {
   if (chatsArchivados.includes(room)) {
     chatsArchivados = chatsArchivados.filter(r => r !== room);
     LS.removeItem("zummchat_archived_time_" + room);
-    if (!silencioso) alert("📥 Chat desarchivado");
+    alert("📥 Chat desarchivado");
   } else {
     chatsArchivados.push(room);
     LS.setItem("zummchat_archived_time_" + room, new Date().toISOString());
-    if (!silencioso) alert("📥 Chat archivado");
+    alert("📥 Chat archivado");
   }
   guardarArchivados();
-  if (!silencioso) renderChatList();
+  renderChatList();
 }
 
+// ================= SILENCIAR CON TIEMPO =================
 let chatsSilenciados = JSON.parse(LS.getItem("zummchat_silenciados") || "[]");
 function guardarSilenciados() { LS.setItem("zummchat_silenciados", JSON.stringify(chatsSilenciados)); }
-function chatEstaSilenciado(room) { return chatsSilenciados.includes(room); }
-function toggleSilenciar(room, silencioso) {
-  if (chatsSilenciados.includes(room)) { chatsSilenciados = chatsSilenciados.filter(r => r !== room); if (!silencioso) alert("🔔 ACTIVADAS"); }
-  else { chatsSilenciados.push(room); if (!silencioso) alert("🔕 SILENCIADO"); }
+function chatEstaSilenciado(room) {
+  if (!chatsSilenciados.includes(room)) return false;
+  // Verificar si expiró
+  const expira = LS.getItem("zummchat_silenced_until_" + room);
+  if (expira) {
+    if (Date.now() > parseInt(expira)) {
+      // Expirado: quitar
+      chatsSilenciados = chatsSilenciados.filter(r => r !== room);
+      LS.removeItem("zummchat_silenced_until_" + room);
+      guardarSilenciados();
+      return false;
+    }
+  }
+  return true;
+}
+function silenciarPor(room, ms) {
+  if (!chatsSilenciados.includes(room)) chatsSilenciados.push(room);
+  if (ms > 0) {
+    LS.setItem("zummchat_silenced_until_" + room, String(Date.now() + ms));
+  } else {
+    LS.removeItem("zummchat_silenced_until_" + room);
+  }
   guardarSilenciados();
-  if (!silencioso) renderChatList();
+  renderChatList();
+}
+function quitarSilencio(room) {
+  chatsSilenciados = chatsSilenciados.filter(r => r !== room);
+  LS.removeItem("zummchat_silenced_until_" + room);
+  guardarSilenciados();
+  renderChatList();
+}
+
+// ================= MODO NO MOLESTAR =================
+function dndEstaActivo() {
+  const hasta = LS.getItem("zummchat_dnd_until");
+  if (!hasta) return false;
+  if (Date.now() > parseInt(hasta)) {
+    LS.removeItem("zummchat_dnd_until");
+    return false;
+  }
+  return true;
+}
+function activarDnd(ms) {
+  LS.setItem("zummchat_dnd_until", String(Date.now() + ms));
+  actualizarIndicadorDnd();
+  actualizarBotonDnd();
+}
+function desactivarDnd() {
+  LS.removeItem("zummchat_dnd_until");
+  actualizarIndicadorDnd();
+  actualizarBotonDnd();
+}
+function actualizarIndicadorDnd() {
+  if (!dndIndicator) return;
+  dndIndicator.style.display = dndEstaActivo() ? "flex" : "none";
+}
+function actualizarBotonDnd() {
+  if (!dndBtn) return;
+  if (dndEstaActivo()) dndBtn.classList.add("activo");
+  else dndBtn.classList.remove("activo");
+}
+setInterval(() => { actualizarIndicadorDnd(); actualizarBotonDnd(); }, 30000);
+
+// ================= FONDOS DE CHAT =================
+const WALLPAPER_COLORS = [
+  { id: "default", value: "var(--bg-secondary)", nombre: "Por defecto" },
+  { id: "azul", value: "#0a1929", nombre: "Azul" },
+  { id: "verde", value: "#0a1f0a", nombre: "Verde" },
+  { id: "rojo", value: "#1f0a0a", nombre: "Rojo" },
+  { id: "morado", value: "#150a29", nombre: "Morado" },
+  { id: "rosa", value: "#290a1f", nombre: "Rosa" },
+  { id: "gris", value: "#1a1a1a", nombre: "Gris" },
+  { id: "crema", value: "#2a2418", nombre: "Crema" }
+];
+function getWallpaper(room) {
+  if (!room) return null;
+  const tipo = LS.getItem("zummchat_wallpaper_tipo_" + room);
+  if (!tipo) return null;
+  if (tipo === "color") {
+    return { tipo: "color", value: LS.getItem("zummchat_wallpaper_value_" + room) };
+  } else if (tipo === "imagen") {
+    return { tipo: "imagen", value: LS.getItem("zummchat_wallpaper_value_" + room) };
+  }
+  return null;
+}
+function aplicarWallpaper(room) {
+  if (!messagesEl) return;
+  const wp = getWallpaper(room);
+  if (!wp) {
+    messagesEl.style.backgroundImage = "";
+    messagesEl.style.background = "var(--bg-secondary)";
+    return;
+  }
+  if (wp.tipo === "color") {
+    messagesEl.style.backgroundImage = "";
+    messagesEl.style.background = wp.value;
+  } else if (wp.tipo === "imagen") {
+    messagesEl.style.background = "var(--bg-secondary)";
+    messagesEl.style.backgroundImage = "url(" + wp.value + ")";
+  }
+}
+function setWallpaperColor(room, valor) {
+  LS.setItem("zummchat_wallpaper_tipo_" + room, "color");
+  LS.setItem("zummchat_wallpaper_value_" + room, valor);
+}
+function setWallpaperImagen(room, url) {
+  LS.setItem("zummchat_wallpaper_tipo_" + room, "imagen");
+  LS.setItem("zummchat_wallpaper_value_" + room, url);
+}
+function quitarWallpaper(room) {
+  LS.removeItem("zummchat_wallpaper_tipo_" + room);
+  LS.removeItem("zummchat_wallpaper_value_" + room);
 }
 
 let bloqueados = new Set();
@@ -392,6 +517,7 @@ let sonidoActual = LS.getItem("zummchat_tono") || "clasico";
 
 function reproducirSonidoInsistente() {
   if (!sonidoActivo) return;
+  if (dndEstaActivo()) return;
   const sonido = SONIDOS_DISPONIBLES.find(s => s.id === sonidoActual) || SONIDOS_DISPONIBLES[0];
   initAudio();
   if (sonido.notas.length > 0 && audioCtx) {
@@ -464,6 +590,7 @@ let tituloParpadeando = false;
 const TITULO_BASE = "ZummChat";
 function mostrarNotificacion(remitente, texto, room) {
   if (room && chatEstaSilenciado(room)) return;
+  if (dndEstaActivo()) return;
   if (remitente === BOT_NAME) return;
   try {
     if ("Notification" in window && Notification.permission === "granted") {
@@ -489,6 +616,7 @@ function mostrarNotificacion(remitente, texto, room) {
 function mostrarNotificacionConexion(nombreUsuario) {
   const roomPrivado = "priv:" + nombreUsuario;
   if (chatEstaSilenciado(roomPrivado)) return;
+  if (dndEstaActivo()) return;
   try {
     if ("Notification" in window && Notification.permission === "granted") {
       const n = new Notification("🟢 " + nombreUsuario + " se conectó", {
@@ -503,6 +631,7 @@ function mostrarNotificacionConexion(nombreUsuario) {
 }
 
 function reproducirSonidoConexion() {
+  if (dndEstaActivo()) return;
   initAudio(); if (!audioCtx) return;
   try {
     const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -699,6 +828,7 @@ function showChatList() {
   if (backBtn) backBtn.style.display = "none";
   if (searchBar) searchBar.classList.remove("show");
   if (deleteGroupBtn) deleteGroupBtn.style.display = "none";
+  if (messagesEl) { messagesEl.style.backgroundImage = ""; messagesEl.style.background = "var(--bg-secondary)"; }
   ocultarReplyBar();
   renderChatList();
 }
@@ -712,23 +842,19 @@ function showChatView() {
 
 if (backBtn) backBtn.addEventListener("click", showChatList);
 
-// ================= INFO ÚLTIMO MENSAJE + NO LEÍDOS =================
+// ================= INFO CHAT =================
 async function getInfoChat(room) {
   try {
     const { data } = await supabaseClient.from("zumm_messages")
       .select("created_at, username, text, file_type, file_url")
-      .eq("room", room)
-      .order("created_at", { ascending: false })
-      .limit(1);
+      .eq("room", room).order("created_at", { ascending: false }).limit(1);
     const ultimo = data && data[0] ? data[0] : null;
     let noLeidos = 0;
     const lastRead = getLastRead(room);
     if (lastRead) {
       const { count } = await supabaseClient.from("zumm_messages")
         .select("*", { count: "exact", head: true })
-        .eq("room", room)
-        .gt("created_at", lastRead)
-        .neq("username", username);
+        .eq("room", room).gt("created_at", lastRead).neq("username", username);
       noLeidos = count || 0;
     }
     return { ultimo, noLeidos };
@@ -739,8 +865,7 @@ function formatHoraCorta(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   const ahora = new Date();
-  const mismoDia = d.toDateString() === ahora.toDateString();
-  if (mismoDia) return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  if (d.toDateString() === ahora.toDateString()) return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
   const ayer = new Date(ahora); ayer.setDate(ahora.getDate() - 1);
   if (d.toDateString() === ayer.toDateString()) return "Ayer";
   const dd = String(d.getDate()).padStart(2, "0");
@@ -799,21 +924,15 @@ async function renderChatList() {
     });
 
     const promesas = [];
-    todosGrupos.forEach(room => {
-      promesas.push(getInfoChat(room).then(info => ({ tipo: "grupo", room, info })));
-    });
-    privados.forEach(p => {
-      promesas.push(getInfoChat(p.room).then(info => ({ tipo: "priv", room: p.room, otro: p.otro, info })));
-    });
+    todosGrupos.forEach(room => { promesas.push(getInfoChat(room).then(info => ({ tipo: "grupo", room, info }))); });
+    privados.forEach(p => { promesas.push(getInfoChat(p.room).then(info => ({ tipo: "priv", room: p.room, otro: p.otro, info }))); });
     const resultados = await Promise.all(promesas);
 
-    // Separar fijados, archivados y normales
     const fijados = [];
     const normales = [];
     resultados.forEach(r => {
       if (estaFijado(r.room)) fijados.push(r);
       else if (estaArchivado(r.room)) {
-        // ¿Llegó mensaje nuevo DESPUÉS de archivarlo? → desarchivar automáticamente
         const archTime = LS.getItem("zummchat_archived_time_" + r.room);
         const lastMsgTime = r.info && r.info.ultimo ? r.info.ultimo.created_at : null;
         if (archTime && lastMsgTime && new Date(lastMsgTime) > new Date(archTime)) {
@@ -822,23 +941,13 @@ async function renderChatList() {
           guardarArchivados();
           normales.push(r);
         }
-        // Si no, se queda archivado (no lo añadimos a la lista)
       } else normales.push(r);
     });
 
-    fijados.forEach(r => {
-      if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info);
-      else crearItemChat(r.otro, r.room, "priv", r.info);
-    });
-    normales.forEach(r => {
-      if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info);
-      else crearItemChat(r.otro, r.room, "priv", r.info);
-    });
-  } catch (e) {
-    console.error("Error renderChatList:", e);
-  } finally {
-    renderizandoLista = false;
-  }
+    fijados.forEach(r => { if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info); else crearItemChat(r.otro, r.room, "priv", r.info); });
+    normales.forEach(r => { if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info); else crearItemChat(r.otro, r.room, "priv", r.info); });
+  } catch (e) { console.error("Error renderChatList:", e); }
+  finally { renderizandoLista = false; }
 }
 
 function crearItemChat(nombreUsuario, roomId, tipo, info) {
@@ -849,6 +958,7 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   const urlAvatar = !esGrupo ? (avataresPorUsuario[nombreUsuario.toLowerCase()] || "") : "";
 
   if (estaFijado(roomId)) li.classList.add("pinned");
+  if (chatEstaSilenciado(roomId)) li.classList.add("muted-chat");
 
   const avatar = document.createElement("div");
   avatar.className = "chat-avatar";
@@ -868,12 +978,8 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   const name = document.createElement("div");
   name.className = "chat-name";
   name.textContent = nombreUsuario;
-  if (estaFijado(roomId)) {
-    const pin = document.createElement("span");
-    pin.className = "pin-icon";
-    pin.textContent = " 📌";
-    name.appendChild(pin);
-  }
+  if (estaFijado(roomId)) { const pin = document.createElement("span"); pin.className = "pin-icon"; pin.textContent = " 📌"; name.appendChild(pin); }
+  if (chatEstaSilenciado(roomId)) { const mI = document.createElement("span"); mI.className = "mute-icon"; mI.textContent = " 🔕"; name.appendChild(mI); }
   const preview = document.createElement("div");
   preview.className = "chat-preview";
   if (info && info.ultimo) preview.textContent = previewUltimoMsg(info.ultimo);
@@ -904,16 +1010,11 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   li.appendChild(infoEl);
   li.appendChild(right);
 
-  // Click normal: abrir chat
   li.addEventListener("click", () => {
-    if (!esGrupo && !privateRooms.includes(roomId)) {
-      privateRooms.push(roomId);
-      savePrivateRooms();
-    }
+    if (!esGrupo && !privateRooms.includes(roomId)) { privateRooms.push(roomId); savePrivateRooms(); }
     switchRoom(roomId);
   });
 
-  // Long press: opciones del chat
   let longPressTimer = null;
   li.addEventListener("touchstart", (e) => {
     longPressTimer = setTimeout(() => {
@@ -931,7 +1032,7 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   chatListEl.appendChild(li);
 }
 
-// ================= OPCIONES DEL CHAT (long press) =================
+// ================= OPCIONES DEL CHAT =================
 function abrirOpcionesChat(roomId, nombreVisible) {
   chatOpcionesActual = { room: roomId, nombre: nombreVisible };
   if (chatOptionsTitle) chatOptionsTitle.textContent = nombreVisible;
@@ -940,36 +1041,118 @@ function abrirOpcionesChat(roomId, nombreVisible) {
   if (optMuteChatBtn) optMuteChatBtn.textContent = chatEstaSilenciado(roomId) ? "🔔 Activar sonido" : "🔕 Silenciar";
   if (chatOptionsModal) chatOptionsModal.classList.add("show");
 }
-if (optCancelBtn) optCancelBtn.addEventListener("click", () => {
-  if (chatOptionsModal) chatOptionsModal.classList.remove("show");
-  chatOpcionesActual = null;
-});
-if (chatOptionsModal) chatOptionsModal.addEventListener("click", (e) => {
-  if (e.target === chatOptionsModal) {
-    chatOptionsModal.classList.remove("show");
-    chatOpcionesActual = null;
-  }
-});
+if (optCancelBtn) optCancelBtn.addEventListener("click", () => { chatOptionsModal.classList.remove("show"); chatOpcionesActual = null; });
+if (chatOptionsModal) chatOptionsModal.addEventListener("click", (e) => { if (e.target === chatOptionsModal) { chatOptionsModal.classList.remove("show"); chatOpcionesActual = null; } });
 if (optPinChatBtn) optPinChatBtn.addEventListener("click", () => {
   if (!chatOpcionesActual) return;
   toggleFijar(chatOpcionesActual.room);
-  chatOptionsModal.classList.remove("show");
-  chatOpcionesActual = null;
+  chatOptionsModal.classList.remove("show"); chatOpcionesActual = null;
 });
 if (optArchiveChatBtn) optArchiveChatBtn.addEventListener("click", () => {
   if (!chatOpcionesActual) return;
   toggleArchivar(chatOpcionesActual.room);
-  chatOptionsModal.classList.remove("show");
-  chatOpcionesActual = null;
+  chatOptionsModal.classList.remove("show"); chatOpcionesActual = null;
 });
 if (optMuteChatBtn) optMuteChatBtn.addEventListener("click", () => {
   if (!chatOpcionesActual) return;
-  toggleSilenciar(chatOpcionesActual.room);
-  chatOptionsModal.classList.remove("show");
-  chatOpcionesActual = null;
+  chatParaSilenciar = chatOpcionesActual.room;
+  chatOptionsModal.classList.remove("show"); chatOpcionesActual = null;
+  if (muteTimerModal) muteTimerModal.classList.add("show");
+});
+if (optWallpaperBtn) optWallpaperBtn.addEventListener("click", () => {
+  if (!chatOpcionesActual) return;
+  chatParaWallpaper = chatOpcionesActual.room;
+  chatOptionsModal.classList.remove("show"); chatOpcionesActual = null;
+  abrirModalWallpaper();
 });
 
-// ================= REENVIAR MENSAJES =================
+// ================= MUTE TIMER =================
+if (muteCancelBtn) muteCancelBtn.addEventListener("click", () => { muteTimerModal.classList.remove("show"); chatParaSilenciar = null; });
+if (muteTimerModal) muteTimerModal.addEventListener("click", (e) => { if (e.target === muteTimerModal) { muteTimerModal.classList.remove("show"); chatParaSilenciar = null; } });
+if (mute8hBtn) mute8hBtn.addEventListener("click", () => {
+  if (chatParaSilenciar) { silenciarPor(chatParaSilenciar, 8 * 60 * 60 * 1000); alert("🔕 Silenciado por 8 horas"); }
+  muteTimerModal.classList.remove("show"); chatParaSilenciar = null;
+});
+if (mute1wBtn) mute1wBtn.addEventListener("click", () => {
+  if (chatParaSilenciar) { silenciarPor(chatParaSilenciar, 7 * 24 * 60 * 60 * 1000); alert("🔕 Silenciado por 1 semana"); }
+  muteTimerModal.classList.remove("show"); chatParaSilenciar = null;
+});
+if (muteForeverBtn) muteForeverBtn.addEventListener("click", () => {
+  if (chatParaSilenciar) { silenciarPor(chatParaSilenciar, 0); alert("🔕 Silenciado para siempre"); }
+  muteTimerModal.classList.remove("show"); chatParaSilenciar = null;
+});
+if (muteOffBtn) muteOffBtn.addEventListener("click", () => {
+  if (chatParaSilenciar) { quitarSilencio(chatParaSilenciar); alert("🔔 Sonido activado"); }
+  muteTimerModal.classList.remove("show"); chatParaSilenciar = null;
+});
+
+// ================= WALLPAPER =================
+function abrirModalWallpaper() {
+  if (!wallpaperModal || !wallpaperColors) return;
+  wallpaperColors.innerHTML = "";
+  const actual = getWallpaper(chatParaWallpaper);
+  WALLPAPER_COLORS.forEach(col => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.style.background = col.value;
+    btn.title = col.nombre;
+    if (actual && actual.tipo === "color" && actual.value === col.value) btn.classList.add("selected");
+    btn.addEventListener("click", () => {
+      setWallpaperColor(chatParaWallpaper, col.value);
+      aplicarWallpaper(currentRoom);
+      abrirModalWallpaper();
+    });
+    wallpaperColors.appendChild(btn);
+  });
+  wallpaperModal.classList.add("show");
+}
+if (wallpaperCancelBtn) wallpaperCancelBtn.addEventListener("click", () => { wallpaperModal.classList.remove("show"); chatParaWallpaper = null; });
+if (wallpaperModal) wallpaperModal.addEventListener("click", (e) => { if (e.target === wallpaperModal) { wallpaperModal.classList.remove("show"); chatParaWallpaper = null; } });
+if (wallpaperImageBtn) wallpaperImageBtn.addEventListener("click", () => { if (wallpaperInput) wallpaperInput.click(); });
+if (wallpaperRemoveBtn) wallpaperRemoveBtn.addEventListener("click", () => {
+  if (chatParaWallpaper) {
+    quitarWallpaper(chatParaWallpaper);
+    aplicarWallpaper(currentRoom);
+    alert("🗑️ Fondo eliminado");
+  }
+  wallpaperModal.classList.remove("show"); chatParaWallpaper = null;
+});
+if (wallpaperInput) wallpaperInput.addEventListener("change", async () => {
+  const file = wallpaperInput.files[0]; if (!file) return;
+  if (file.size > 3 * 1024 * 1024) { alert("Máx 3 MB."); wallpaperInput.value = ""; return; }
+  try {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const nombreLimpio = limpiarNombre(username);
+    const nombreArchivo = "wallpaper_" + nombreLimpio + "_" + Date.now() + "." + ext;
+    const { error: upErr } = await supabaseClient.storage.from("archivos").upload(nombreArchivo, file, { contentType: file.type || "image/jpeg" });
+    if (upErr) { alert("Error: " + upErr.message); wallpaperInput.value = ""; return; }
+    const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
+    setWallpaperImagen(chatParaWallpaper, urlData.publicUrl);
+    aplicarWallpaper(currentRoom);
+    alert("✅ Fondo aplicado");
+    wallpaperModal.classList.remove("show");
+    chatParaWallpaper = null;
+  } catch (e) { alert("Error: " + e.message); }
+  finally { wallpaperInput.value = ""; }
+});
+
+// ================= DND =================
+if (dndBtn) dndBtn.addEventListener("click", () => {
+  cerrarPaneles();
+  if (dndEstaActivo()) {
+    if (confirm("¿Desactivar modo no molestar?")) { desactivarDnd(); alert("🔔 Notificaciones activadas"); }
+  } else {
+    if (dndModal) dndModal.classList.add("show");
+  }
+});
+if (dndCancelBtn) dndCancelBtn.addEventListener("click", () => dndModal.classList.remove("show"));
+if (dndModal) dndModal.addEventListener("click", (e) => { if (e.target === dndModal) dndModal.classList.remove("show"); });
+if (dnd30mBtn) dnd30mBtn.addEventListener("click", () => { activarDnd(30 * 60 * 1000); alert("🌙 No molestar 30 minutos"); dndModal.classList.remove("show"); });
+if (dnd2hBtn) dnd2hBtn.addEventListener("click", () => { activarDnd(2 * 60 * 60 * 1000); alert("🌙 No molestar 2 horas"); dndModal.classList.remove("show"); });
+if (dnd8hBtn) dnd8hBtn.addEventListener("click", () => { activarDnd(8 * 60 * 60 * 1000); alert("🌙 No molestar 8 horas"); dndModal.classList.remove("show"); });
+if (dndOffBtn) dndOffBtn.addEventListener("click", () => { desactivarDnd(); alert("🔔 Notificaciones activadas"); dndModal.classList.remove("show"); });
+
+// ================= REENVIAR =================
 async function abrirMenuReenvio(m) {
   if (!forwardModal || !forwardList) return;
   mensajeParaReenviar = m;
@@ -985,7 +1168,6 @@ async function abrirMenuReenvio(m) {
     forwardList.appendChild(li);
   });
 
-  // Privados con chats guardados o usuarios en línea
   const usuariosMostrados = new Set();
   const miUserLower = username.toLowerCase();
   const agregarPrivado = (otro) => {
@@ -1016,23 +1198,16 @@ async function reenviarA(roomDestino) {
   mensajeParaReenviar = null;
 
   let texto = m.text || "";
-  // Quitar reply si lo tiene
   const extraido = extraerReply(texto);
   texto = extraido.textoReal || texto;
-  // Marcar como reenviado
   texto = "[FORWARD] " + texto;
 
-  const payload = {
-    text: texto,
-    username: username,
-    room: roomDestino
-  };
-  if (m.file_url && !m.file_type?.startsWith("poll/")) {
+  const payload = { text: texto, username: username, room: roomDestino };
+  if (m.file_url && !(m.file_type && m.file_type.startsWith("poll/"))) {
     payload.file_url = m.file_url;
     payload.file_name = m.file_name || "archivo";
     payload.file_type = m.file_type || "application/octet-stream";
   } else if (m.file_type && m.file_type.startsWith("poll/")) {
-    // Reenviar encuesta también
     payload.file_url = m.file_url;
     payload.file_name = m.file_name || "Encuesta";
     payload.file_type = m.file_type;
@@ -1042,18 +1217,10 @@ async function reenviarA(roomDestino) {
   if (error) { alert("No se pudo reenviar: " + error.message); return; }
   alert("✅ Reenviado a " + roomLabel(roomDestino));
 }
-if (forwardCancelBtn) forwardCancelBtn.addEventListener("click", () => {
-  forwardModal.classList.remove("show");
-  mensajeParaReenviar = null;
-});
-if (forwardModal) forwardModal.addEventListener("click", (e) => {
-  if (e.target === forwardModal) {
-    forwardModal.classList.remove("show");
-    mensajeParaReenviar = null;
-  }
-});
+if (forwardCancelBtn) forwardCancelBtn.addEventListener("click", () => { forwardModal.classList.remove("show"); mensajeParaReenviar = null; });
+if (forwardModal) forwardModal.addEventListener("click", (e) => { if (e.target === forwardModal) { forwardModal.classList.remove("show"); mensajeParaReenviar = null; } });
 
-// ================= CAMBIAR DE SALA =================
+// ================= SWITCH ROOM =================
 function switchRoom(room) {
   currentRoom = room;
   showChatView();
@@ -1063,6 +1230,7 @@ function switchRoom(room) {
   rendered.clear(); lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
   ocultarReplyBar();
+  aplicarWallpaper(room);
   loadHistory(); cargarMensajeFijado();
   actualizarBotonEliminarGrupo();
   setTimeout(saludarBienvenida, 1500);
@@ -1257,7 +1425,7 @@ async function detenerGrabacion(enviar) {
 if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
 if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
 
-// ================= RESPUESTAS (CITAR) =================
+// ================= REPLY =================
 function construirTextoConReply(textoReal) {
   if (!replyTo) return textoReal;
   const autor = replyTo.username || "Alguien";
@@ -1420,10 +1588,7 @@ function renderMessage(m, esNuevo) {
     body.appendChild(q);
   }
 
-  // Detectar reenvío
-  let esReenviado = false;
   if (textoParaMostrar && textoParaMostrar.startsWith("[FORWARD] ")) {
-    esReenviado = true;
     textoParaMostrar = textoParaMostrar.replace("[FORWARD] ", "");
     const fwd = document.createElement("div");
     fwd.className = "msg-forwarded";
@@ -1649,12 +1814,8 @@ supabaseClient
   .on("postgres_changes", { event: "INSERT", schema: "public", table: "zumm_messages" },
       payload => {
         const m = payload.new;
-        if (m.room === currentRoom) {
-          renderMessage(m, true);
-          setLastRead(currentRoom);
-        } else if (!inChatView) {
-          renderChatList();
-        }
+        if (m.room === currentRoom) { renderMessage(m, true); setLastRead(currentRoom); }
+        else if (!inChatView) renderChatList();
       })
   .on("postgres_changes", { event: "UPDATE", schema: "public", table: "zumm_messages" },
       payload => {
@@ -2273,8 +2434,7 @@ async function leerPresencia() {
     }
     usuariosConocidos = new Set(nuevaLista.map(u => u.toLowerCase()));
 
-    const listaCambio = nuevaLista.length !== usersOnline.length ||
-      nuevaLista.some((u, i) => u !== usersOnline[i]);
+    const listaCambio = nuevaLista.length !== usersOnline.length || nuevaLista.some((u, i) => u !== usersOnline[i]);
 
     primeraCargaPresencia = false;
     usersOnline = nuevaLista;
@@ -2807,6 +2967,9 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 
+// ================= INICIALIZACIÓN =================
+actualizarIndicadorDnd();
+actualizarBotonDnd();
 showChatList();
 iniciarPresencia();
 leerSenales();

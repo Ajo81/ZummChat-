@@ -65,6 +65,7 @@ const editInput       = document.getElementById("editInput");
 const editCancelBtn   = document.getElementById("editCancelBtn");
 const editSaveBtn     = document.getElementById("editSaveBtn");
 const msgMenu         = document.getElementById("msgMenu");
+const menuReplyBtn    = document.getElementById("menuReplyBtn");
 const menuFavBtn      = document.getElementById("menuFavBtn");
 const menuPinBtn      = document.getElementById("menuPinBtn");
 const menuCopyBtn     = document.getElementById("menuCopyBtn");
@@ -75,6 +76,10 @@ const typingIndicator = document.getElementById("typingIndicator");
 const pinnedBar       = document.getElementById("pinnedBar");
 const pinnedText      = document.getElementById("pinnedText");
 const unpinBtn        = document.getElementById("unpinBtn");
+const replyBar        = document.getElementById("reply-bar");
+const replyAuthor     = document.getElementById("reply-author");
+const replyPreview    = document.getElementById("reply-preview");
+const replyCancelBtn  = document.getElementById("replyCancelBtn");
 const statsModal      = document.getElementById("statsModal");
 const statsCloseBtn   = document.getElementById("statsCloseBtn");
 const statTotalMsgs   = document.getElementById("statTotalMsgs");
@@ -217,15 +222,22 @@ let myBio = LS.getItem("zummchat_bio") || "";
 let myStatus = LS.getItem("zummchat_status") || "";
 let currentRoom = "general";
 let inChatView = false;
+let replyTo = null;
 
-// Limpiar nombres para Supabase (sin acentos, ñ, símbolos)
 function limpiarNombre(texto) {
   if (!texto) return "user";
   return String(texto).toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ñ/g, "n")
-    .replace(/[^a-z0-9]/g, "") || "user";
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/ñ/g, "n").replace(/[^a-z0-9]/g, "") || "user";
+}
+
+// ================= ÚLTIMO LEÍDO =================
+function getLastRead(room) {
+  return LS.getItem("zummchat_lastread_" + room) || "";
+}
+function setLastRead(room) {
+  if (!room) return;
+  LS.setItem("zummchat_lastread_" + room, new Date().toISOString());
 }
 
 let bloqueados = new Set();
@@ -291,14 +303,10 @@ if (themeBtn) themeBtn.addEventListener("click", () => {
   aplicarTema();
 });
 const packsDisponibles = [
-  { id: "", nombre: "🎨 Verde (original)" },
-  { id: "neon", nombre: "💜 Neón" },
-  { id: "ocean", nombre: "🌊 Océano" },
-  { id: "sunset", nombre: "🌅 Atardecer" },
-  { id: "forest", nombre: "🌲 Bosque" },
-  { id: "rose", nombre: "🌸 Rosa" },
-  { id: "gold", nombre: "👑 Dorado" },
-  { id: "midnight", nombre: "🌌 Medianoche" },
+  { id: "", nombre: "🎨 Verde (original)" }, { id: "neon", nombre: "💜 Neón" },
+  { id: "ocean", nombre: "🌊 Océano" }, { id: "sunset", nombre: "🌅 Atardecer" },
+  { id: "forest", nombre: "🌲 Bosque" }, { id: "rose", nombre: "🌸 Rosa" },
+  { id: "gold", nombre: "👑 Dorado" }, { id: "midnight", nombre: "🌌 Medianoche" },
   { id: "matrix", nombre: "🟢 Matrix" }
 ];
 if (colorBtn) colorBtn.addEventListener("click", () => {
@@ -320,16 +328,16 @@ function initAudio() {
 }
 
 const SONIDOS_DISPONIBLES = [
-  { id: "clasico",    nombre: "🎵 Clásico",       notas: [880, 1100, 880],           gap: 350, tipo: "sine" },
-  { id: "suave",      nombre: "🌙 Suave",          notas: [600, 800],                 gap: 400, tipo: "sine" },
-  { id: "alegre",     nombre: "🎉 Alegre",         notas: [523, 659, 784, 1046],      gap: 150, tipo: "sine" },
-  { id: "grave",      nombre: "🎸 Grave",          notas: [440, 330, 220],            gap: 300, tipo: "triangle" },
-  { id: "campana",    nombre: "🔔 Campana",        notas: [1200, 1600, 1200],         gap: 200, tipo: "sine" },
-  { id: "susurro",    nombre: "🤫 Susurro",        notas: [1000, 1200],               gap: 250, tipo: "sine" },
-  { id: "urgente",    nombre: "🚨 Urgente",        notas: [900, 900, 900, 900],       gap: 120, tipo: "square" },
-  { id: "gotas",      nombre: "💧 Gotas",          notas: [700, 900, 700, 900],       gap: 180, tipo: "sine" },
-  { id: "cristal",    nombre: "💎 Cristal Zumm",   notas: [1046, 1318, 1568, 2093],   gap: 90,  tipo: "sine", eco: true },
-  { id: "silencioso", nombre: "🔕 Solo vibración", notas: [],                         gap: 0,   tipo: "sine" }
+  { id: "clasico", nombre: "🎵 Clásico", notas: [880, 1100, 880], gap: 350, tipo: "sine" },
+  { id: "suave", nombre: "🌙 Suave", notas: [600, 800], gap: 400, tipo: "sine" },
+  { id: "alegre", nombre: "🎉 Alegre", notas: [523, 659, 784, 1046], gap: 150, tipo: "sine" },
+  { id: "grave", nombre: "🎸 Grave", notas: [440, 330, 220], gap: 300, tipo: "triangle" },
+  { id: "campana", nombre: "🔔 Campana", notas: [1200, 1600, 1200], gap: 200, tipo: "sine" },
+  { id: "susurro", nombre: "🤫 Susurro", notas: [1000, 1200], gap: 250, tipo: "sine" },
+  { id: "urgente", nombre: "🚨 Urgente", notas: [900, 900, 900, 900], gap: 120, tipo: "square" },
+  { id: "gotas", nombre: "💧 Gotas", notas: [700, 900, 700, 900], gap: 180, tipo: "sine" },
+  { id: "cristal", nombre: "💎 Cristal Zumm", notas: [1046, 1318, 1568, 2093], gap: 90, tipo: "sine", eco: true },
+  { id: "silencioso", nombre: "🔕 Solo vibración", notas: [], gap: 0, tipo: "sine" }
 ];
 let sonidoActual = LS.getItem("zummchat_tono") || "clasico";
 
@@ -590,7 +598,6 @@ let gruposOcultos = JSON.parse(LS.getItem("zummchat_grupos_ocultos") || "[]");
 function guardarGrupos() { LS.setItem("zummchat_grupos", JSON.stringify(gruposPersonalizados)); }
 function guardarGruposOcultos() { LS.setItem("zummchat_grupos_ocultos", JSON.stringify(gruposOcultos)); }
 
-// ================= CREAR GRUPO CON CONTRASEÑA =================
 if (newGroupBtn) newGroupBtn.addEventListener("click", async () => {
   const nombre = prompt("Nombre del grupo:");
   if (!nombre || !nombre.trim()) return;
@@ -611,7 +618,6 @@ if (newGroupBtn) newGroupBtn.addEventListener("click", async () => {
   }
 });
 
-// ================= UNIRSE A GRUPO =================
 if (joinGroupBtn) joinGroupBtn.addEventListener("click", async () => {
   const nombre = prompt("Nombre del grupo al que quieres unirte:");
   if (!nombre || !nombre.trim()) return;
@@ -634,7 +640,6 @@ if (joinGroupBtn) joinGroupBtn.addEventListener("click", async () => {
   setTimeout(() => alert("✅ Te uniste al grupo '" + limpio + "'"), 300);
 });
 
-// ================= COMPARTIR ENLACE =================
 function compartirEnlace() {
   const url = location.href;
   const datos = { title: "ZummChat", text: "¡Únete a mi chat ZummChat! 🐦💬", url: url };
@@ -658,6 +663,7 @@ function showChatList() {
   if (backBtn) backBtn.style.display = "none";
   if (searchBar) searchBar.classList.remove("show");
   if (deleteGroupBtn) deleteGroupBtn.style.display = "none";
+  ocultarReplyBar();
   renderChatList();
 }
 
@@ -670,92 +676,159 @@ function showChatView() {
 
 if (backBtn) backBtn.addEventListener("click", showChatList);
 
-function renderChatList() {
+// ================= INFO ÚLTIMO MENSAJE + NO LEÍDOS =================
+async function getInfoChat(room) {
+  try {
+    const { data } = await supabaseClient.from("zumm_messages")
+      .select("created_at, username, text, file_type")
+      .eq("room", room)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const ultimo = data && data[0] ? data[0] : null;
+    let noLeidos = 0;
+    const lastRead = getLastRead(room);
+    if (lastRead) {
+      const { count } = await supabaseClient.from("zumm_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("room", room)
+        .gt("created_at", lastRead)
+        .neq("username", username);
+      noLeidos = count || 0;
+    }
+    return { ultimo, noLeidos };
+  } catch (e) { return { ultimo: null, noLeidos: 0 }; }
+}
+
+function formatHoraCorta(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const ahora = new Date();
+  const mismoDia = d.toDateString() === ahora.toDateString();
+  if (mismoDia) return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  const ayer = new Date(ahora); ayer.setDate(ahora.getDate() - 1);
+  if (d.toDateString() === ayer.toDateString()) return "Ayer";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return dd + "/" + mm;
+}
+
+function previewUltimoMsg(m) {
+  if (!m) return "Sin mensajes";
+  let texto = "";
+  const tipo = m.file_type || "";
+  if (m.text && m.text.startsWith("[STICKER]")) texto = "🧩 Sticker";
+  else if (tipo.startsWith("audio/")) texto = "🎤 Nota de voz";
+  else if (tipo.startsWith("location/")) texto = "📍 Ubicación";
+  else if (tipo.startsWith("poll/")) texto = "📊 Encuesta";
+  else if (m.file_url) texto = "📎 Archivo";
+  else texto = m.text || "";
+  // Quitar bloque de REPLY del preview
+  texto = texto.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
+  const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
+  if (esMio) texto = "Tú: " + texto;
+  return texto;
+}
+
+async function renderChatList() {
   if (!chatListEl) return;
   chatListEl.innerHTML = "";
   const gruposBase = ["general", "amigos", "familia", "trabajo"];
   const todosGrupos = [...gruposBase, ...gruposPersonalizados.filter(g => !gruposOcultos.includes(g)).map(g => "grupo:" + g)];
-  todosGrupos.forEach(room => {
-    const li = document.createElement("li");
-    li.className = "chat-item";
-    const avatar = document.createElement("div");
-    avatar.className = "chat-avatar";
-    avatar.style.background = "var(--accent)";
-    avatar.textContent = "👥";
-    const info = document.createElement("div");
-    info.className = "chat-info";
-    const name = document.createElement("div");
-    name.className = "chat-name";
-    name.textContent = roomLabel(room);
-    const preview = document.createElement("div");
-    preview.className = "chat-preview";
-    preview.textContent = "Grupo de chat";
-    info.appendChild(name);
-    info.appendChild(preview);
-    li.appendChild(avatar);
-    li.appendChild(info);
-    li.addEventListener("click", () => switchRoom(room));
-    chatListEl.appendChild(li);
-  });
+
+  const privados = [];
   const usuariosMostrados = new Set();
   const miUserLower = username.toLowerCase();
   privateRooms.forEach(room => {
     const partes = room.replace("priv:", "").split("|");
     const otro = partes.find(n => n.toLowerCase() !== miUserLower);
-    if (otro && !usuariosMostrados.has(otro.toLowerCase())) {
-      usuariosMostrados.add(otro.toLowerCase());
-      crearItemChat(otro, room);
-    }
+    if (otro && !usuariosMostrados.has(otro.toLowerCase())) { usuariosMostrados.add(otro.toLowerCase()); privados.push({ otro, room }); }
   });
   usersOnline.forEach(u => {
     if (u.toLowerCase() !== miUserLower && !usuariosMostrados.has(u.toLowerCase())) {
       usuariosMostrados.add(u.toLowerCase());
       const partes = [username, u].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-      const room = "priv:" + partes[0] + "|" + partes[1];
-      crearItemChat(u, room);
+      privados.push({ otro: u, room: "priv:" + partes[0] + "|" + partes[1] });
     }
   });
   misContactos.forEach(c => {
     if (c.toLowerCase() !== miUserLower && !usuariosMostrados.has(c.toLowerCase())) {
       usuariosMostrados.add(c.toLowerCase());
       const partes = [username, c].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-      const room = "priv:" + partes[0] + "|" + partes[1];
-      crearItemChat(c, room);
+      privados.push({ otro: c, room: "priv:" + partes[0] + "|" + partes[1] });
     }
   });
+
+  // Crear items con info
+  for (const room of todosGrupos) {
+    const info = await getInfoChat(room);
+    crearItemChat(roomLabel(room), room, "grupo", info);
+  }
+  for (const p of privados) {
+    const info = await getInfoChat(p.room);
+    crearItemChat(p.otro, p.room, "priv", info);
+  }
 }
 
-function crearItemChat(nombreUsuario, roomId) {
+function crearItemChat(nombreUsuario, roomId, tipo, info) {
   const li = document.createElement("li");
   li.className = "chat-item";
-  const estaOnline = usersOnline.some(u => u.toLowerCase() === nombreUsuario.toLowerCase());
-  const urlAvatar = avataresPorUsuario[nombreUsuario.toLowerCase()] || "";
+  const esGrupo = tipo === "grupo";
+  const estaOnline = !esGrupo && usersOnline.some(u => u.toLowerCase() === nombreUsuario.toLowerCase());
+  const urlAvatar = !esGrupo ? (avataresPorUsuario[nombreUsuario.toLowerCase()] || "") : "";
+
   const avatar = document.createElement("div");
   avatar.className = "chat-avatar";
-  if (urlAvatar) {
+  if (esGrupo) {
+    avatar.style.background = "var(--accent)";
+    avatar.textContent = "👥";
+  } else if (urlAvatar) {
     avatar.style.backgroundImage = "url(" + urlAvatar + ")";
     avatar.textContent = "";
   } else {
     avatar.style.background = colorForUser(nombreUsuario);
     avatar.textContent = avatarLetter(nombreUsuario);
   }
-  const info = document.createElement("div");
-  info.className = "chat-info";
+
+  const infoEl = document.createElement("div");
+  infoEl.className = "chat-info";
   const name = document.createElement("div");
   name.className = "chat-name";
   name.textContent = nombreUsuario;
   const preview = document.createElement("div");
   preview.className = "chat-preview";
-  preview.textContent = estaOnline ? "En línea" : "Desconectado";
-  info.appendChild(name);
-  info.appendChild(preview);
-  const statusDot = document.createElement("div");
-  statusDot.className = "chat-status-dot" + (estaOnline ? "" : " offline");
+  if (info && info.ultimo) preview.textContent = previewUltimoMsg(info.ultimo);
+  else preview.textContent = esGrupo ? "Grupo de chat" : (estaOnline ? "En línea" : "Desconectado");
+  infoEl.appendChild(name);
+  infoEl.appendChild(preview);
+
+  const right = document.createElement("div");
+  right.className = "chat-item-right";
+  if (info && info.ultimo) {
+    const timeEl = document.createElement("div");
+    timeEl.className = "chat-item-time" + (info.noLeidos > 0 ? " nuevo" : "");
+    timeEl.textContent = formatHoraCorta(info.ultimo.created_at);
+    right.appendChild(timeEl);
+  }
+  if (info && info.noLeidos > 0) {
+    const badge = document.createElement("div");
+    badge.className = "chat-unread-badge";
+    badge.textContent = info.noLeidos > 99 ? "99+" : info.noLeidos;
+    right.appendChild(badge);
+  } else if (!esGrupo) {
+    const dot = document.createElement("div");
+    dot.className = "chat-status-dot" + (estaOnline ? "" : " offline");
+    right.appendChild(dot);
+  }
+
   li.appendChild(avatar);
-  li.appendChild(info);
-  li.appendChild(statusDot);
+  li.appendChild(infoEl);
+  li.appendChild(right);
+
   li.addEventListener("click", () => {
-    if (!privateRooms.includes(roomId)) { privateRooms.push(roomId); savePrivateRooms(); }
+    if (!esGrupo && !privateRooms.includes(roomId)) {
+      privateRooms.push(roomId);
+      savePrivateRooms();
+    }
     switchRoom(roomId);
   });
   chatListEl.appendChild(li);
@@ -765,9 +838,11 @@ function switchRoom(room) {
   currentRoom = room;
   showChatView();
   registrarPresencia();
+  setLastRead(room);
   if (chatTitle) chatTitle.textContent = roomLabel(room);
   rendered.clear(); lastDateKey = "";
   if (messagesEl) messagesEl.innerHTML = "";
+  ocultarReplyBar();
   loadHistory(); cargarMensajeFijado();
   actualizarBotonEliminarGrupo();
   setTimeout(saludarBienvenida, 1500);
@@ -787,26 +862,17 @@ function openPrivateWith(otroNombre) {
   if (usersPanel) usersPanel.classList.remove("show");
 }
 
-// ================= ELIMINAR GRUPO (SOLO CREADOR) =================
+// ================= ELIMINAR GRUPO =================
 async function actualizarBotonEliminarGrupo() {
   if (!deleteGroupBtn) return;
-  if (!currentRoom || !currentRoom.startsWith("grupo:")) {
-    deleteGroupBtn.style.display = "none";
-    return;
-  }
+  if (!currentRoom || !currentRoom.startsWith("grupo:")) { deleteGroupBtn.style.display = "none"; return; }
   const nombreGrupo = currentRoom.replace("grupo:", "");
   try {
     const { data: grupo } = await supabaseClient.from("zumm_grupos").select("creador").eq("nombre", nombreGrupo).maybeSingle();
-    if (grupo && grupo.creador && grupo.creador.toLowerCase() === username.toLowerCase()) {
-      deleteGroupBtn.style.display = "flex";
-    } else {
-      deleteGroupBtn.style.display = "none";
-    }
-  } catch (e) {
-    deleteGroupBtn.style.display = "none";
-  }
+    if (grupo && grupo.creador && grupo.creador.toLowerCase() === username.toLowerCase()) deleteGroupBtn.style.display = "flex";
+    else deleteGroupBtn.style.display = "none";
+  } catch (e) { deleteGroupBtn.style.display = "none"; }
 }
-
 if (deleteGroupBtn) deleteGroupBtn.addEventListener("click", async () => {
   if (!currentRoom || !currentRoom.startsWith("grupo:")) return;
   const nombreGrupo = currentRoom.replace("grupo:", "");
@@ -818,50 +884,32 @@ if (deleteGroupBtn) deleteGroupBtn.addEventListener("click", async () => {
     guardarGrupos();
     alert("✅ Grupo eliminado");
     showChatList();
-  } catch (e) {
-    alert("Error al eliminar: " + e.message);
-  }
+  } catch (e) { alert("Error al eliminar: " + e.message); }
 });
 
 // ================= STICKERS =================
-const STICKERS = [
-  "😂","😍","🥰","😎","🤩","😱","🤔","😴","🤗","😇",
-  "🥳","🤯","🤪","😏","😬","🙄","😒","😤","🤬","😭",
-  "❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","💖",
-  "🔥","⭐","✨","🎉","🎊","🎁","🌈","⚡","💯","👏",
-  "👍","👎","🙏","💪","👋","🤝","✌️","🤞","👊","✊",
-  "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🦁",
-  "🍕","🍔","🍟","🌮","🍩","🍰","🍫","🍿","🍎","🍉",
-  "⚽","🏀","🎮","🎯","🎸","🎤","🚀","🏆","👑","💎"
-];
-
+const STICKERS = ["😂","😍","🥰","😎","🤩","😱","🤔","😴","🤗","😇","🥳","🤯","🤪","😏","😬","🙄","😒","😤","🤬","😭","❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","💖","🔥","⭐","✨","🎉","🎊","🎁","🌈","⚡","💯","👏","👍","👎","🙏","💪","👋","🤝","✌️","🤞","👊","✊","🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🦁","🍕","🍔","🍟","🌮","🍩","🍰","🍫","🍿","🍎","🍉","⚽","🏀","🎮","🎯","🎸","🎤","🚀","🏆","👑","💎"];
 if (stickerBar) STICKERS.forEach(s => {
   const b = document.createElement("button");
-  b.type = "button";
-  b.textContent = s;
+  b.type = "button"; b.textContent = s;
   b.addEventListener("click", () => {
     if (stickerBar) stickerBar.classList.remove("show");
     enviarSticker(s);
   });
   stickerBar.appendChild(b);
 });
-
 async function enviarSticker(sticker) {
   if (!currentRoom) return;
   const texto = "[STICKER]" + sticker + "[/STICKER]";
-  const { data, error } = await supabaseClient.from("zumm_messages")
-    .insert([{ text: texto, username: username, room: currentRoom }])
-    .select().single();
+  const { data, error } = await supabaseClient.from("zumm_messages").insert([{ text: texto, username: username, room: currentRoom }]).select().single();
   if (error) { alert("Error: " + error.message); return; }
   renderMessage(data, false);
 }
-
 if (stickerBtn) stickerBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   if (emojiBar) emojiBar.classList.remove("show");
   if (stickerBar) stickerBar.classList.toggle("show");
 });
-// ================= FIN STICKERS =================
 
 const EMOJIS = ["😀","😂","🤣","😊","😍","😘","😎","🤔","😅","😢","😭","😡","🥺","😴","🤗","😱","🤩","😇","🙃","😜","👍","👎","👏","🙏","💪","✌️","🤝","👋","🖐️","✋","❤️","💔","💚","💙","💜","🧡","💛","🖤","🤍","💯","🔥","⭐","✨","🎉","🎊","🎁","🌈","☀️","🌙","⚡","🐦","🐶","🐱","🌸","🌺","🍀","🍕","🍔","☕","🍺","⚽","🏀","🎮","🎵","🎶","📱","💻","📷","🚀","🏆"];
 if (emojiBar) EMOJIS.forEach(e => {
@@ -876,6 +924,7 @@ if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
   if (emojiBar) emojiBar.classList.toggle("show");
 });
 
+// ================= SUBIR ARCHIVOS =================
 async function subirYEnviarArchivo(file, tipo) {
   if (!file) return;
   if (file.size > MAX_SIZE_MB * 1024 * 1024) { alert("Máx " + MAX_SIZE_MB + " MB"); return; }
@@ -887,8 +936,10 @@ async function subirYEnviarArchivo(file, tipo) {
   const publicUrl = urlData.publicUrl;
   const texto = inputEl ? inputEl.value.trim() : "";
   if (inputEl) inputEl.value = "";
-  const { data, error } = await supabaseClient.from("zumm_messages").insert([{ text: texto || "", username: username, room: currentRoom, file_url: publicUrl, file_name: file.name, file_type: tipo || file.type || "application/octet-stream" }]).select().single();
+  const textoConReply = construirTextoConReply(texto || "");
+  const { data, error } = await supabaseClient.from("zumm_messages").insert([{ text: textoConReply, username: username, room: currentRoom, file_url: publicUrl, file_name: file.name, file_type: tipo || file.type || "application/octet-stream" }]).select().single();
   if (error) { alert("Error: " + error.message); return; }
+  ocultarReplyBar();
   renderMessage(data, false);
 }
 if (menuFileBtn) menuFileBtn.addEventListener("click", () => { cerrarPaneles(); fileInput.click(); });
@@ -986,6 +1037,53 @@ async function detenerGrabacion(enviar) {
 if (cancelRecBtn) cancelRecBtn.addEventListener("click", cancelarGrabacion);
 if (stopRecBtn) stopRecBtn.addEventListener("click", () => detenerGrabacion(true));
 
+// ================= RESPUESTAS (CITAR) =================
+function construirTextoConReply(textoReal) {
+  if (!replyTo) return textoReal;
+  const autor = replyTo.username || "Alguien";
+  let preview = replyTo.text || "";
+  if (replyTo.file_type && replyTo.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
+  else if (replyTo.file_type && replyTo.file_type.startsWith("location/")) preview = "📍 Ubicación";
+  else if (replyTo.file_type && replyTo.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+  else if (replyTo.text && replyTo.text.startsWith("[STICKER]")) preview = "🧩 Sticker";
+  else if (replyTo.file_url && !preview) preview = "📎 Archivo";
+  preview = preview.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
+  if (preview.length > 80) preview = preview.substring(0, 80) + "...";
+  preview = preview.replace(/\|/g, "¦");
+  return "[REPLY:" + autor + "|" + preview + "]\n\n" + textoReal;
+}
+
+function ocultarReplyBar() {
+  replyTo = null;
+  if (replyBar) replyBar.classList.remove("show");
+}
+
+function mostrarReplyBar(m) {
+  replyTo = m;
+  if (!replyBar) return;
+  const autor = (m.username || "").toLowerCase() === username.toLowerCase() ? "Tú" : (m.username || "Alguien");
+  if (replyAuthor) replyAuthor.textContent = autor;
+  let preview = m.text || "";
+  if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
+  else if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
+  else if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+  else if (m.text && m.text.startsWith("[STICKER]")) preview = "🧩 Sticker";
+  else if (m.file_url && !preview) preview = "📎 Archivo";
+  preview = preview.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
+  if (preview.length > 60) preview = preview.substring(0, 60) + "...";
+  if (replyPreview) replyPreview.textContent = preview;
+  replyBar.classList.add("show");
+  if (inputEl) inputEl.focus();
+}
+if (replyCancelBtn) replyCancelBtn.addEventListener("click", ocultarReplyBar);
+
+function extraerReply(texto) {
+  if (!texto) return { reply: null, textoReal: "" };
+  const match = texto.match(/^\[REPLY:([^|]+)\|([^\]]*)\]\s*([\s\S]*)$/);
+  if (!match) return { reply: null, textoReal: texto };
+  return { reply: { autor: match[1], preview: match[2] }, textoReal: match[3] };
+}
+
 let lastDateKey = "";
 function dateKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
 function dateLabel(d) {
@@ -1024,6 +1122,7 @@ function avatarUrlDe(nombre) {
   if (nombre.toLowerCase() === username.toLowerCase()) return myAvatarUrl;
   return avataresPorUsuario[(nombre || "").toLowerCase()] || "";
 }
+
 function renderMessage(m, esNuevo) {
   if (!m || !m.id || rendered.has(m.id)) return;
   if (m.room !== currentRoom) return;
@@ -1031,6 +1130,7 @@ function renderMessage(m, esNuevo) {
   if (m.username && bloqueados.has(m.username.toLowerCase())) return;
   rendered.add(m.id);
   const esBot = (m.username === BOT_NAME);
+
   if (esNuevo) {
     const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
     if (!esMio && !esBot) {
@@ -1042,9 +1142,11 @@ function renderMessage(m, esNuevo) {
       else if (m.file_url) textoNotif = "📎 Archivo";
       else if (m.text && m.text.startsWith("[STICKER]")) textoNotif = "🧩 Sticker";
       else textoNotif = m.text || "Nuevo mensaje";
+      textoNotif = textoNotif.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
       mostrarNotificacion(m.username || "Alguien", textoNotif, m.room);
     }
   }
+
   maybeAddDateSeparator(m.created_at);
   const div = document.createElement("div");
   div.className = "msg";
@@ -1054,6 +1156,7 @@ function renderMessage(m, esNuevo) {
   if (favoritosIds.has(m.id)) div.classList.add("favorite");
   const reacciones = (m.reactions || "").split(",").filter(x => x.trim());
   if (reacciones.length >= 3) div.classList.add("hot");
+
   const avatar = document.createElement("div");
   avatar.className = "avatar";
   const url = esBot ? "" : avatarUrlDe(m.username || "");
@@ -1061,6 +1164,7 @@ function renderMessage(m, esNuevo) {
   else if (esBot) { avatar.style.background = "var(--accent)"; avatar.textContent = "🤖"; }
   else { avatar.style.background = colorForUser(m.username); avatar.textContent = avatarLetter(m.username); }
   div.appendChild(avatar);
+
   const content = document.createElement("div");
   content.className = "msg-content";
   const header = document.createElement("div");
@@ -1081,8 +1185,27 @@ function renderMessage(m, esNuevo) {
     rightSide.appendChild(ed);
   }
   header.appendChild(nameEl); header.appendChild(rightSide);
+
   const body = document.createElement("div");
   body.className = "msg-body";
+
+  // Extraer reply embebido
+  const extraido = extraerReply(m.text || "");
+  const textoParaMostrar = extraido.textoReal;
+
+  if (extraido.reply) {
+    const q = document.createElement("div");
+    q.className = "reply-quote";
+    const qa = document.createElement("div");
+    qa.className = "reply-quote-author";
+    qa.textContent = extraido.reply.autor;
+    const qt = document.createElement("div");
+    qt.className = "reply-quote-text";
+    qt.textContent = extraido.reply.preview;
+    q.appendChild(qa); q.appendChild(qt);
+    body.appendChild(q);
+  }
+
   const pollData = parsePoll(m);
   if (pollData) {
     const box = document.createElement("div");
@@ -1118,8 +1241,8 @@ function renderMessage(m, esNuevo) {
     info.textContent = totalVotos + " voto" + (totalVotos === 1 ? "" : "s");
     box.appendChild(info);
     body.appendChild(box);
-  } else if (m.text) {
-    const stickerMatch = m.text.match(/^\[STICKER\](.+)\[\/STICKER\]$/);
+  } else if (textoParaMostrar) {
+    const stickerMatch = textoParaMostrar.match(/^\[STICKER\](.+)\[\/STICKER\]$/);
     if (stickerMatch) {
       const stickerEl = document.createElement("div");
       stickerEl.className = "msg-sticker";
@@ -1127,10 +1250,11 @@ function renderMessage(m, esNuevo) {
       body.appendChild(stickerEl);
     } else {
       const txt = document.createElement("div");
-      txt.appendChild(linkify(m.text));
+      txt.appendChild(linkify(textoParaMostrar));
       body.appendChild(txt);
     }
   }
+
   if (m.file_url && !pollData) {
     const tipo = m.file_type || "";
     if (tipo.startsWith("audio/")) {
@@ -1149,12 +1273,28 @@ function renderMessage(m, esNuevo) {
       }
       const duracion = document.createElement("span");
       duracion.className = "voice-duration"; duracion.textContent = "0:00";
+      // Botón velocidad
+      const speedBtn = document.createElement("button");
+      speedBtn.className = "voice-speed-btn";
+      speedBtn.type = "button";
+      speedBtn.textContent = "1x";
+      const velocidades = [1, 1.5, 2];
+      let velIdx = 0;
+      speedBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        velIdx = (velIdx + 1) % velocidades.length;
+        const v = velocidades[velIdx];
+        audio.playbackRate = v;
+        speedBtn.textContent = v + "x";
+        speedBtn.classList.toggle("rapido", v !== 1);
+      });
       audio.addEventListener("loadedmetadata", () => {
         if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
       });
       audio.addEventListener("timeupdate", () => {
         if (isFinite(audio.duration) && audio.duration > 0) {
-          duracion.textContent = formatearSegundos(Math.max(0, Math.round(audio.duration - audio.currentTime)));
+          const restante = Math.max(0, (audio.duration - audio.currentTime) / audio.playbackRate);
+          duracion.textContent = formatearSegundos(Math.round(restante));
         }
       });
       playBtn.addEventListener("click", (e) => {
@@ -1171,7 +1311,8 @@ function renderMessage(m, esNuevo) {
         if (isFinite(audio.duration)) duracion.textContent = formatearSegundos(Math.round(audio.duration));
       });
       voiceDiv.appendChild(playBtn); voiceDiv.appendChild(wave);
-      voiceDiv.appendChild(duracion); voiceDiv.appendChild(audio);
+      voiceDiv.appendChild(duracion); voiceDiv.appendChild(speedBtn);
+      voiceDiv.appendChild(audio);
       body.appendChild(voiceDiv);
     } else if (tipo.startsWith("location/")) {
       const a = document.createElement("a");
@@ -1201,8 +1342,10 @@ function renderMessage(m, esNuevo) {
       body.appendChild(a);
     }
   }
+
   content.appendChild(header);
   content.appendChild(body);
+
   if (reacciones.length > 0 && !pollData) {
     const bar = document.createElement("div");
     bar.className = "reactions-bar";
@@ -1225,7 +1368,9 @@ function renderMessage(m, esNuevo) {
     });
     content.appendChild(bar);
   }
+
   div.appendChild(content);
+
   if (!esBot) {
     let longPressTimer = null;
     div.addEventListener("touchstart", (e) => {
@@ -1241,9 +1386,11 @@ function renderMessage(m, esNuevo) {
       mostrarMenuMensaje(m, e.clientX, e.clientY);
     });
   }
+
   messagesEl.appendChild(div);
   scrollToBottom();
 }
+
 function removeMessageFromDOM(id) {
   rendered.delete(id);
   const el = messagesEl.querySelector('[data-msg-id="' + id + '"]');
@@ -1253,9 +1400,7 @@ async function loadHistory() {
   if (!currentRoom) return;
   const { data, error } = await supabaseClient.from("zumm_messages")
     .select("id, text, username, created_at, room, file_url, file_name, file_type, edited_at, reactions, pinned")
-    .eq("room", currentRoom)
-    .order("created_at", { ascending: true })
-    .limit(200);
+    .eq("room", currentRoom).order("created_at", { ascending: true }).limit(200);
   if (error) { console.error("ERROR:", error); return; }
   data.forEach(m => renderMessage(m, false));
 }
@@ -1264,21 +1409,28 @@ async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
   inputEl.value = ""; enviarTypingStop();
+  const textoFinal = construirTextoConReply(text);
   const { data, error } = await supabaseClient.from("zumm_messages")
-    .insert([{ text: text, username: username, room: currentRoom }])
+    .insert([{ text: textoFinal, username: username, room: currentRoom }])
     .select().single();
   if (error) { inputEl.value = text; alert("Error: " + error.message); return; }
+  ocultarReplyBar();
   renderMessage(data, false);
 }
 if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 if (inputEl) inputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+
 supabaseClient
   .channel("zumm-messages-realtime")
   .on("postgres_changes", { event: "INSERT", schema: "public", table: "zumm_messages" },
       payload => {
         const m = payload.new;
-        if (m.room === currentRoom) renderMessage(m, true);
-        else if (!inChatView) renderChatList();
+        if (m.room === currentRoom) {
+          renderMessage(m, true);
+          setLastRead(currentRoom);
+        } else if (!inChatView) {
+          renderChatList();
+        }
       })
   .on("postgres_changes", { event: "UPDATE", schema: "public", table: "zumm_messages" },
       payload => {
@@ -1370,8 +1522,9 @@ function abrirEditorMensaje(m) {
   if ((m.username || "").toLowerCase() !== username.toLowerCase()) { alert("Solo los tuyos."); return; }
   if (m.file_type && m.file_type.startsWith("poll/")) { alert("No puedes editar una encuesta."); return; }
   if (m.text && m.text.startsWith("[STICKER]")) { alert("No puedes editar un sticker."); return; }
+  const extraido = extraerReply(m.text || "");
   mensajeEditando = m;
-  editInput.value = m.text || "";
+  editInput.value = extraido.textoReal || "";
   editModal.classList.add("show");
   setTimeout(() => editInput.focus(), 100);
 }
@@ -1380,8 +1533,9 @@ if (editSaveBtn) editSaveBtn.addEventListener("click", async () => {
   if (!mensajeEditando || !editInput) return;
   const nuevoTexto = editInput.value.trim();
   if (!nuevoTexto) { alert("Vacío."); return; }
-  if (nuevoTexto === mensajeEditando.text) { editModal.classList.remove("show"); mensajeEditando = null; return; }
-  const { error } = await supabaseClient.from("zumm_messages").update({ text: nuevoTexto, edited_at: new Date().toISOString() }).eq("id", mensajeEditando.id);
+  const extraido = extraerReply(mensajeEditando.text || "");
+  const textoFinal = extraido.reply ? ("[REPLY:" + extraido.reply.autor + "|" + extraido.reply.preview + "]\n\n" + nuevoTexto) : nuevoTexto;
+  const { error } = await supabaseClient.from("zumm_messages").update({ text: textoFinal, edited_at: new Date().toISOString() }).eq("id", mensajeEditando.id);
   if (error) { alert("Error: " + error.message); return; }
   editModal.classList.remove("show"); mensajeEditando = null;
 });
@@ -1398,7 +1552,7 @@ function mostrarMenuMensaje(m, x, y) {
   if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
   if (menuFavBtn) menuFavBtn.textContent = favoritosIds.has(m.id) ? "⭐ Quitar fav" : "⭐ Favorito";
   msgMenu.classList.add("show");
-  const ancho = 180, alto = 260;
+  const ancho = 180, alto = 300;
   const xFinal = Math.min(x, window.innerWidth - ancho - 10);
   const yFinal = Math.min(y, window.innerHeight - alto - 10);
   msgMenu.style.left = Math.max(10, xFinal) + "px";
@@ -1412,6 +1566,11 @@ document.addEventListener("touchstart", (e) => {
   if (msgMenu && msgMenu.classList.contains("show") && !msgMenu.contains(e.target)) cerrarMenu();
   if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) reactionPicker.classList.remove("show");
 });
+if (menuReplyBtn) menuReplyBtn.addEventListener("click", () => {
+  if (!mensajeMenuActual) return;
+  const m = mensajeMenuActual; cerrarMenu();
+  mostrarReplyBar(m);
+});
 if (menuPinBtn) menuPinBtn.addEventListener("click", async () => {
   if (!mensajeMenuActual) return;
   const m = mensajeMenuActual; const nuevo = !m.pinned;
@@ -1422,7 +1581,8 @@ if (menuPinBtn) menuPinBtn.addEventListener("click", async () => {
 });
 if (menuCopyBtn) menuCopyBtn.addEventListener("click", async () => {
   if (!mensajeMenuActual) return;
-  try { await navigator.clipboard.writeText(mensajeMenuActual.text || ""); alert("📋 Copiado"); }
+  const extraido = extraerReply(mensajeMenuActual.text || "");
+  try { await navigator.clipboard.writeText(extraido.textoReal || ""); alert("📋 Copiado"); }
   catch (e) { alert("No se pudo copiar."); }
   cerrarMenu();
 });
@@ -1458,6 +1618,7 @@ if (menuFavBtn) menuFavBtn.addEventListener("click", async () => {
     if (m.file_type && m.file_type.startsWith("location/")) preview = "📍 Ubicación";
     if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
     if (m.text && m.text.startsWith("[STICKER]")) preview = "🧩 Sticker";
+    preview = preview.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
     if (preview.length > 60) preview = preview.substring(0, 60) + "...";
     await supabaseClient.from("zumm_favoritos").insert([{ username: username, mensaje_id: m.id, room: currentRoom, preview: (m.username || "?") + ": " + preview }]);
     favoritosIds.add(m.id); alert("⭐ Guardado");
@@ -1530,6 +1691,7 @@ if (highlightBtn) highlightBtn.addEventListener("click", async () => {
     let preview = m.text || "📎";
     if (m.file_type && m.file_type.startsWith("audio/")) preview = "🎤 Nota de voz";
     if (m.file_type && m.file_type.startsWith("poll/")) preview = "📊 Encuesta";
+    preview = preview.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
     if (preview.length > 100) preview = preview.substring(0, 100) + "...";
     texto.textContent = preview;
     li.appendChild(texto);
@@ -2146,6 +2308,7 @@ if (groupStatsBtn) groupStatsBtn.addEventListener("click", async () => {
 });
 if (groupStatsCloseBtn) groupStatsCloseBtn.addEventListener("click", () => groupStatsModal.classList.remove("show"));
 
+// ================= LLAMADAS =================
 let pc = null, localStream = null, activeCall = null, incomingCall = null;
 let iceQueue = [], inviteTimer = null, ringTimeout = null, muted = false;
 let signalsLastId = 0, signalsCheckInterval = null;
@@ -2285,8 +2448,7 @@ function createPeer() {
 }
 async function crearOferta() {
   try {
-    createPeer();
-    attachLocalPreview();
+    createPeer(); attachLocalPreview();
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);

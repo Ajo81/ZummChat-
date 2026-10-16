@@ -54,6 +54,7 @@
         <button id="joinGroupBtn" type="button" class="new-chat-btn">🔑 Unirse</button>
         <button id="shareHomeBtn" type="button" class="new-chat-btn">📤 Compartir</button>
       </div>
+      <div id="estadosBar"></div>
       <ul id="chat-list"></ul>
     </div>
 
@@ -447,6 +448,10 @@
       <button data-tab="doc">📄 Docs</button>
       <button data-tab="link">🔗 Links</button>
     </div>
+    <div class="gallery-search-row">
+      <input type="text" id="gallerySearch" placeholder="🔎 Buscar en medios..." autocomplete="off">
+      <button id="gallerySearchClear" type="button">✕</button>
+    </div>
     <div id="galleryContent"></div>
     <p id="galleryEmpty" style="display:none;text-align:center;color:var(--text-muted);font-style:italic;padding:20px;">No hay medios en esta categoría.</p>
   </div>
@@ -463,6 +468,26 @@
     </div>
     <div id="viewerCounter">1 / 1</div>
   </div>
+
+  <!-- ==================== ESTADOS / HISTORIAS ==================== -->
+  <div id="estadoViewer">
+    <div class="estado-progress"><div class="estado-progress-bar" id="estadoProgressBar"></div></div>
+    <div class="estado-viewer-header">
+      <div id="estadoViewerAvatar"></div>
+      <div class="estado-viewer-info">
+        <div id="estadoViewerNombre"></div>
+        <div id="estadoViewerTime"></div>
+      </div>
+      <button id="estadoViewerClose" type="button">✕</button>
+    </div>
+    <div id="estadoStage"></div>
+    <div class="estado-viewer-nav">
+      <button id="estadoPrev" type="button" aria-label="Anterior"></button>
+      <button id="estadoNext" type="button" aria-label="Siguiente"></button>
+    </div>
+  </div>
+
+  <input type="file" id="estadoInput" accept="image/*" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="matrix.js"></script>

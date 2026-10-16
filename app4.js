@@ -1,5 +1,5 @@
 // ============================================================
-// ZummChat - Mejoras WhatsApp (app4.js)
+// ZummChat - Mejoras WhatsApp v2 (app4.js)
 // © 2026 José Yudier Arencibia Ajo
 // ============================================================
 
@@ -41,9 +41,11 @@
     return m ? m[0] : null;
   }
 
+  // ==========================================================
+  // RENDER OVERRIDE
+  // ==========================================================
   window.renderMessage = function (m, esNuevo) {
     _renderOriginal(m, esNuevo);
-
     if (!messagesEl || !m || !m.id) return;
     const div = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
     if (!div) return;
@@ -59,52 +61,40 @@
     if (content && header) {
       const viejo = header.querySelector(".msg-right");
       if (viejo) viejo.remove();
-
       if (!content.querySelector(".msg-footer")) {
         const footer = document.createElement("div");
         footer.className = "msg-footer";
-
         if (m.edited_at) {
           const ed = document.createElement("span");
-          ed.className = "msg-edited";
-          ed.textContent = "(editado)";
+          ed.className = "msg-edited"; ed.textContent = "(editado)";
           footer.appendChild(ed);
         }
-
         const t = document.createElement("span");
-        t.className = "msg-time";
-        t.textContent = formatTime(m.created_at);
+        t.className = "msg-time"; t.textContent = formatTime(m.created_at);
         footer.appendChild(t);
-
         if (esMio && !esBot) {
           const chk = document.createElement("span");
-          chk.className = "msg-checks";
-          chk.textContent = "✓✓";
+          chk.className = "msg-checks"; chk.textContent = "✓✓";
           chk.classList.toggle("leido", mensajeLeido(m));
           footer.appendChild(chk);
         }
-
         content.appendChild(footer);
       }
     }
 
     const body = div.querySelector(".msg-body");
     if (body && !body.querySelector("img, video, audio, .poll-box, .location-msg, .voice-note")) {
-      if (esSoloEmoji(body.textContent)) {
-        body.classList.add("emoji-only");
-      }
+      if (esSoloEmoji(body.textContent)) body.classList.add("emoji-only");
     }
 
     if (!div.querySelector(".swipe-indicator")) {
       const sw = document.createElement("div");
-      sw.className = "swipe-indicator";
-      sw.textContent = "↩️";
+      sw.className = "swipe-indicator"; sw.textContent = "↩️";
       div.insertBefore(sw, div.firstChild);
     }
 
     if (!div.dataset.gestosListos) {
       div.dataset.gestosListos = "1";
-
       let touchStartX = 0, touchStartY = 0;
       let isSwiping = false, swipeReady = false;
       let lastTapTime = 0;
@@ -113,8 +103,7 @@
         if (modoSeleccion) return;
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
-        isSwiping = false;
-        swipeReady = false;
+        isSwiping = false; swipeReady = false;
       }, { passive: true });
 
       div.addEventListener("touchmove", function (e) {
@@ -127,68 +116,47 @@
           div.classList.add("swiping");
           const offset = Math.min(dx, 80);
           div.style.transform = "translateX(" + offset + "px)";
-          if (offset > 55) {
-            div.classList.add("swipe-ready");
-            swipeReady = true;
-          } else {
-            div.classList.remove("swipe-ready");
-            swipeReady = false;
-          }
+          if (offset > 55) { div.classList.add("swipe-ready"); swipeReady = true; }
+          else { div.classList.remove("swipe-ready"); swipeReady = false; }
         }
       }, { passive: true });
 
       div.addEventListener("touchend", function (e) {
         if (modoSeleccion) return;
-
         if (isSwiping) {
           div.classList.remove("swiping");
-          if (swipeReady) {
-            mostrarReplyBar(m);
-            if (navigator.vibrate) navigator.vibrate(30);
-          }
+          if (swipeReady) { mostrarReplyBar(m); if (navigator.vibrate) navigator.vibrate(30); }
           div.style.transform = "";
           setTimeout(function () { div.classList.remove("swipe-ready"); }, 250);
-          isSwiping = false;
-          swipeReady = false;
-          return;
+          isSwiping = false; swipeReady = false; return;
         }
-
         const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
         const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
         if (dx > 10 || dy > 10) return;
-
         const now = Date.now();
         if (now - lastTapTime < 300) {
           toggleReaccion(m.id, "❤️");
           const heart = document.createElement("div");
-          heart.className = "double-tap-heart";
-          heart.textContent = "❤️";
+          heart.className = "double-tap-heart"; heart.textContent = "❤️";
           div.appendChild(heart);
           setTimeout(function () { heart.remove(); }, 800);
           if (navigator.vibrate) navigator.vibrate(20);
           lastTapTime = 0;
-        } else {
-          lastTapTime = now;
-        }
+        } else lastTapTime = now;
       });
     }
 
     if (!esBot && m.text && !div.querySelector(".link-preview") && !div.dataset.previewHecha) {
       const url = extraerPrimeraUrl(m.text.replace(/^\[REPLY:[^\]]+\]\s*/i, "").replace(/^\[FORWARD\]\s*/i, ""));
-      if (url) {
-        div.dataset.previewHecha = "1";
-        cargarLinkPreview(url, content, m.id);
-      }
+      if (url) { div.dataset.previewHecha = "1"; cargarLinkPreview(url, content, m.id); }
     }
   };
 
   setInterval(function () {
     if (!messagesEl) return;
     messagesEl.querySelectorAll(".msg.mio .msg-checks").forEach(function (chk) {
-      const el = chk.closest(".msg");
-      if (!el) return;
-      const m = mensajesPorId.get(el.dataset.msgId);
-      if (!m) return;
+      const el = chk.closest(".msg"); if (!el) return;
+      const m = mensajesPorId.get(el.dataset.msgId); if (!m) return;
       chk.classList.toggle("leido", mensajeLeido(m));
     });
   }, 4000);
@@ -196,46 +164,82 @@
   const typingBubble = document.createElement("div");
   typingBubble.className = "msg typing-bubble otro";
   typingBubble.style.display = "none";
-  typingBubble.innerHTML =
-    '<div class="msg-body">' +
-    '<span class="typing-dot"></span>' +
-    '<span class="typing-dot"></span>' +
-    '<span class="typing-dot"></span>' +
-    '</div>';
-
+  typingBubble.innerHTML = '<div class="msg-body"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
   window.actualizarIndicadorTyping = function (usuariosTyping) {
     if (usuariosTyping && usuariosTyping.length > 0) {
-      if (messagesEl && typingBubble.parentNode !== messagesEl) {
-        messagesEl.appendChild(typingBubble);
-      }
+      if (messagesEl && typingBubble.parentNode !== messagesEl) messagesEl.appendChild(typingBubble);
       typingBubble.style.display = "flex";
       if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
-    } else {
-      typingBubble.style.display = "none";
-    }
+    } else typingBubble.style.display = "none";
   };
+
+  // ==========================================================
+  // REACCIONES
+  // ==========================================================
+  const reactionPicker = document.getElementById("reactionPicker");
+  const EMOJIS_REACCION = ["❤️", "😂", "😮", "😢", "👍", "🔥", "🙏", "🎉"];
+
+  function abrirReactionPicker(m, x, y) {
+    if (!reactionPicker) return;
+    reactionPicker.innerHTML = "";
+    EMOJIS_REACCION.forEach(function (emoji) {
+      const b = document.createElement("button");
+      b.textContent = emoji;
+      b.type = "button";
+      b.style.cssText = "background:transparent;border:none;font-size:26px;cursor:pointer;padding:6px;border-radius:50%;transition:transform .15s;";
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleReaccion(m.id, emoji);
+        reactionPicker.classList.remove("show");
+      });
+      reactionPicker.appendChild(b);
+    });
+    reactionPicker.style.left = Math.max(10, Math.min(x, window.innerWidth - 300)) + "px";
+    reactionPicker.style.top = Math.max(10, Math.min(y, window.innerHeight - 80)) + "px";
+    reactionPicker.style.position = "fixed";
+    reactionPicker.style.display = "flex";
+    reactionPicker.style.gap = "2px";
+    reactionPicker.style.background = "var(--bg-secondary)";
+    reactionPicker.style.border = "2px solid var(--accent)";
+    reactionPicker.style.borderRadius = "30px";
+    reactionPicker.style.padding = "6px 10px";
+    reactionPicker.style.boxShadow = "0 4px 16px rgba(0,0,0,.6)";
+    reactionPicker.style.zIndex = "10050";
+    reactionPicker.classList.add("show");
+  }
+
+  document.addEventListener("touchstart", function (e) {
+    if (reactionPicker && reactionPicker.classList.contains("show") && !reactionPicker.contains(e.target)) {
+      reactionPicker.classList.remove("show");
+    }
+  });
+
+  // Hook al msgMenu para el botón Reaccionar
+  const menuReactBtn = document.getElementById("menuReactBtn");
+  if (menuReactBtn) {
+    menuReactBtn.addEventListener("click", function () {
+      if (!mensajeMenuActual) return;
+      const m = mensajeMenuActual;
+      const rect = menuReactBtn.getBoundingClientRect();
+      cerrarMenu();
+      setTimeout(function () { abrirReactionPicker(m, rect.left, rect.top - 60); }, 100);
+    });
+  }
 
   // ==========================================================
   // VISTA PREVIA DE LINKS
   // ==========================================================
   const linkPreviewCache = JSON.parse(localStorage.getItem("zummchat_linkpreviews") || "{}");
-  function guardarCacheLinks() {
-    try { localStorage.setItem("zummchat_linkpreviews", JSON.stringify(linkPreviewCache)); } catch (e) {}
-  }
+  function guardarCacheLinks() { try { localStorage.setItem("zummchat_linkpreviews", JSON.stringify(linkPreviewCache)); } catch (e) {} }
 
   async function cargarLinkPreview(url, contentDiv, msgId) {
-    if (linkPreviewCache[url] && linkPreviewCache[url].data) {
-      pintarLinkPreview(contentDiv, url, linkPreviewCache[url].data);
-      return;
-    }
+    if (linkPreviewCache[url] && linkPreviewCache[url].data) { pintarLinkPreview(contentDiv, url, linkPreviewCache[url].data); return; }
     if (linkPreviewCache[url] && linkPreviewCache[url].loading) return;
     linkPreviewCache[url] = { loading: true };
-
     const placeholder = document.createElement("div");
     placeholder.className = "link-preview";
     placeholder.innerHTML = '<div class="link-preview-loading">Cargando vista previa...</div>';
     contentDiv.appendChild(placeholder);
-
     try {
       const endpoint = "https://api.microlink.io/?url=" + encodeURIComponent(url) + "&meta=true";
       const r = await fetch(endpoint);
@@ -247,66 +251,40 @@
           image: (json.data.image && json.data.image.url) || "",
           domain: json.data.publisher || (new URL(url)).hostname.replace("www.", "")
         };
-        linkPreviewCache[url] = { data: data };
-        guardarCacheLinks();
-        placeholder.remove();
-        pintarLinkPreview(contentDiv, url, data);
-      } else {
-        linkPreviewCache[url] = { data: null };
-        placeholder.remove();
-      }
-    } catch (e) {
-      linkPreviewCache[url] = { data: null };
-      placeholder.remove();
-    }
+        linkPreviewCache[url] = { data: data }; guardarCacheLinks();
+        placeholder.remove(); pintarLinkPreview(contentDiv, url, data);
+      } else { linkPreviewCache[url] = { data: null }; placeholder.remove(); }
+    } catch (e) { linkPreviewCache[url] = { data: null }; placeholder.remove(); }
   }
 
   function pintarLinkPreview(contentDiv, url, data) {
     if (contentDiv.querySelector(".link-preview")) return;
     const box = document.createElement("a");
-    box.href = url;
-    box.target = "_blank";
-    box.rel = "noopener noreferrer";
+    box.href = url; box.target = "_blank"; box.rel = "noopener noreferrer";
     box.className = "link-preview";
-
     if (data.image) {
       const img = document.createElement("img");
-      img.className = "link-preview-img";
-      img.src = data.image;
-      img.loading = "lazy";
+      img.className = "link-preview-img"; img.src = data.image; img.loading = "lazy";
       img.onerror = function () { img.remove(); };
       box.appendChild(img);
     }
-
     const body = document.createElement("div");
     body.className = "link-preview-body";
-
-    if (data.title) {
-      const t = document.createElement("div");
-      t.className = "link-preview-title";
-      t.textContent = data.title;
-      body.appendChild(t);
-    }
-    if (data.description) {
-      const d = document.createElement("div");
-      d.className = "link-preview-desc";
-      d.textContent = data.description;
-      body.appendChild(d);
-    }
+    if (data.title) { const t = document.createElement("div"); t.className = "link-preview-title"; t.textContent = data.title; body.appendChild(t); }
+    if (data.description) { const d = document.createElement("div"); d.className = "link-preview-desc"; d.textContent = data.description; body.appendChild(d); }
     const dom = document.createElement("div");
-    dom.className = "link-preview-domain";
-    dom.textContent = "🔗 " + (data.domain || "link");
+    dom.className = "link-preview-domain"; dom.textContent = "🔗 " + (data.domain || "link");
     body.appendChild(dom);
-
     box.appendChild(body);
     contentDiv.appendChild(box);
   }
 
   // ==========================================================
-  // BÚSQUEDA EN GALERÍA + CONTADORES
+  // BÚSQUEDA EN GALERÍA + CONTADORES + DESCARGAR TODAS
   // ==========================================================
   const gallerySearch = document.getElementById("gallerySearch");
   const gallerySearchClear = document.getElementById("gallerySearchClear");
+  const galleryDownloadAllBtn = document.getElementById("galleryDownloadAllBtn");
   let busquedaGaleria = "";
 
   const _abrirGaleriaOrig = window.abrirGaleria;
@@ -329,21 +307,12 @@
     if (typeof galleryItems === "undefined" || !Array.isArray(galleryItems)) return;
     const tabs = document.querySelectorAll("#galleryTabs button");
     if (!tabs.length) return;
-
     const conteos = { image: 0, video: 0, audio: 0, doc: 0, link: 0 };
     galleryItems.forEach(function (it) {
       const cat = clasificarItemLocal(it);
       if (conteos[cat] !== undefined) conteos[cat]++;
     });
-
-    const etiquetas = {
-      image: "📷 Fotos",
-      video: "🎬 Videos",
-      audio: "🎤 Audio",
-      doc: "📄 Docs",
-      link: "🔗 Links"
-    };
-
+    const etiquetas = { image: "📷 Fotos", video: "🎬 Videos", audio: "🎤 Audio", doc: "📄 Docs", link: "🔗 Links" };
     tabs.forEach(function (btn) {
       const cat = btn.dataset.tab;
       const base = etiquetas[cat] || cat;
@@ -364,9 +333,7 @@
 
   function aplicarFiltroBusquedaGaleria() {
     if (!busquedaGaleria) {
-      document.querySelectorAll("#galleryContent .gallery-item, #galleryContent .gallery-list-item").forEach(function (el) {
-        el.style.display = "";
-      });
+      document.querySelectorAll("#galleryContent .gallery-item, #galleryContent .gallery-list-item").forEach(function (el) { el.style.display = ""; });
       return;
     }
     const q = busquedaGaleria.toLowerCase();
@@ -374,11 +341,8 @@
       const txt = (el.textContent || "").toLowerCase();
       const img = el.querySelector("img");
       const src = img ? img.src.toLowerCase() : "";
-      if (!txt.includes(q) && !src.includes(q)) {
-        el.style.display = "none";
-      } else {
-        el.style.display = "";
-      }
+      if (!txt.includes(q) && !src.includes(q)) el.style.display = "none";
+      else el.style.display = "";
     });
   }
 
@@ -391,15 +355,31 @@
   }
   if (gallerySearchClear) {
     gallerySearchClear.addEventListener("click", function () {
-      gallerySearch.value = "";
-      busquedaGaleria = "";
+      gallerySearch.value = ""; busquedaGaleria = "";
       gallerySearchClear.classList.remove("show");
       aplicarFiltroBusquedaGaleria();
     });
   }
 
+  if (galleryDownloadAllBtn) {
+    galleryDownloadAllBtn.addEventListener("click", async function () {
+      if (typeof galleryItems === "undefined" || !Array.isArray(galleryItems)) return;
+      const imgs = galleryItems.filter(function (it) { return clasificarItemLocal(it) === "image"; });
+      if (imgs.length === 0) { alert("No hay fotos para descargar."); return; }
+      if (!confirm("¿Descargar " + imgs.length + " foto" + (imgs.length === 1 ? "" : "s") + "?\n\nSe abrirán en pestañas nuevas.")) return;
+      for (let i = 0; i < imgs.length; i++) {
+        const it = imgs[i];
+        setTimeout(function () {
+          const a = document.createElement("a");
+          a.href = it.url; a.download = it.name || ("foto_" + i + ".jpg"); a.target = "_blank";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }, i * 400);
+      }
+    });
+  }
+
   // ==========================================================
-  // ESTADOS / HISTORIAS (tabla zumm_estados)
+  // ESTADOS / HISTORIAS
   // ==========================================================
   const estadosBar = document.getElementById("estadosBar");
   const estadoViewer = document.getElementById("estadoViewer");
@@ -412,11 +392,21 @@
   const estadoNext = document.getElementById("estadoNext");
   const estadoProgressBar = document.getElementById("estadoProgressBar");
   const estadoInput = document.getElementById("estadoInput");
+  const estadoMenuModal = document.getElementById("estadoMenuModal");
+  const estadoMenuVerBtn = document.getElementById("estadoMenuVerBtn");
+  const estadoMenuVistasBtn = document.getElementById("estadoMenuVistasBtn");
+  const estadoMenuBorrarBtn = document.getElementById("estadoMenuBorrarBtn");
+  const estadoMenuCancelBtn = document.getElementById("estadoMenuCancelBtn");
+  const estadoVistasModal = document.getElementById("estadoVistasModal");
+  const estadoVistasList = document.getElementById("estadoVistasList");
+  const estadoVistasEmpty = document.getElementById("estadoVistasEmpty");
+  const estadoVistasCloseBtn = document.getElementById("estadoVistasCloseBtn");
 
   let estadosPorUsuario = {};
   let estadoActualUser = null;
   let estadoActualIdx = 0;
   let estadoProgressAnim = null;
+  let vistasConocidas = new Set();
 
   const vistos = JSON.parse(localStorage.getItem("zummchat_estados_vistos") || "{}");
   function guardarVistos() { try { localStorage.setItem("zummchat_estados_vistos", JSON.stringify(vistos)); } catch (e) {} }
@@ -430,21 +420,42 @@
         .gte("created_at", hace24h)
         .order("created_at", { ascending: true });
       if (error) { console.warn("Estados error:", error); return; }
-
       estadosPorUsuario = {};
       (data || []).forEach(function (e) {
         if (!e.file_url) return;
         if (!estadosPorUsuario[e.username]) estadosPorUsuario[e.username] = [];
         estadosPorUsuario[e.username].push({
-          id: e.id,
-          url: e.file_url,
-          fecha: e.created_at,
+          id: e.id, url: e.file_url, fecha: e.created_at,
           esImagen: (e.file_type || "").startsWith("image/")
         });
       });
-
       renderEstadosBar();
-    } catch (e) { console.warn("Estados error:", e); }
+      cargarNotificacionesVistas();
+    } catch (e) { console.warn(e); }
+  }
+
+  async function cargarNotificacionesVistas() {
+    try {
+      const misEstadosIds = (estadosPorUsuario[username] || []).map(function (e) { return e.id; });
+      if (misEstadosIds.length === 0) return;
+      const { data } = await supabaseClient.from("zumm_estado_vistas")
+        .select("id, estado_id, viewer, created_at")
+        .in("estado_id", misEstadosIds);
+      (data || []).forEach(function (v) {
+        const clave = v.estado_id + ":" + v.viewer;
+        if (!vistasConocidas.has(clave)) {
+          if (vistasConocidas.size > 0) {
+            // Notificación nueva
+            if (v.viewer.toLowerCase() !== username.toLowerCase()) {
+              if (typeof mostrarNotificacion === "function") {
+                mostrarNotificacion(v.viewer, "👁️ Vio tu estado", null);
+              }
+            }
+          }
+          vistasConocidas.add(clave);
+        }
+      });
+    } catch (e) {}
   }
 
   function renderEstadosBar() {
@@ -458,32 +469,31 @@
     miRing.className = "estado-ring propio";
     const miInner = document.createElement("div");
     miInner.className = "estado-ring-inner";
-
-    if (myAvatarUrl) {
-      miInner.style.backgroundImage = "url(" + myAvatarUrl + ")";
-    } else {
-      miInner.style.background = colorForUser(username);
-      miInner.textContent = avatarLetter(username);
-    }
+    if (myAvatarUrl) miInner.style.backgroundImage = "url(" + myAvatarUrl + ")";
+    else { miInner.style.background = colorForUser(username); miInner.textContent = avatarLetter(username); }
     miRing.appendChild(miInner);
-
     const badge = document.createElement("div");
-    badge.className = "estado-add-badge";
-    badge.textContent = "+";
+    badge.className = "estado-add-badge"; badge.textContent = "+";
     miRing.appendChild(badge);
     miDiv.appendChild(miRing);
-
     const miNombre = document.createElement("div");
-    miNombre.className = "estado-nombre";
-    miNombre.textContent = "Mi estado";
+    miNombre.className = "estado-nombre"; miNombre.textContent = "Mi estado";
     miDiv.appendChild(miNombre);
 
+    let pressTimer = null;
+    miDiv.addEventListener("touchstart", function () {
+      pressTimer = setTimeout(function () {
+        if (navigator.vibrate) navigator.vibrate(50);
+        abrirMenuEstado();
+      }, 550);
+    }, { passive: true });
+    miDiv.addEventListener("touchend", function () {
+      clearTimeout(pressTimer);
+    });
+    miDiv.addEventListener("touchmove", function () { clearTimeout(pressTimer); });
     miDiv.addEventListener("click", function () {
-      if (misEstados.length > 0) {
-        abrirEstadoViewer(username, 0);
-      } else {
-        estadoInput.click();
-      }
+      if (misEstados.length > 0) abrirEstadoViewer(username, 0);
+      else estadoInput.click();
     });
     estadosBar.appendChild(miDiv);
 
@@ -491,40 +501,94 @@
       if (user.toLowerCase() === username.toLowerCase()) return;
       const lista = estadosPorUsuario[user];
       if (!lista || !lista.length) return;
-
       const div = document.createElement("div");
       div.className = "estado-item";
       const ring = document.createElement("div");
       ring.className = "estado-ring";
-
-      const todosVistos = lista.every(function (e) {
-        return vistos[user + ":" + e.id];
-      });
+      const todosVistos = lista.every(function (e) { return vistos[user + ":" + e.id]; });
       if (todosVistos) ring.classList.add("visto");
-
       const inner = document.createElement("div");
       inner.className = "estado-ring-inner";
       const urlAvatar = avataresPorUsuario[user.toLowerCase()] || "";
-      if (urlAvatar) {
-        inner.style.backgroundImage = "url(" + urlAvatar + ")";
-      } else {
-        inner.style.background = colorForUser(user);
-        inner.textContent = avatarLetter(user);
-      }
+      if (urlAvatar) inner.style.backgroundImage = "url(" + urlAvatar + ")";
+      else { inner.style.background = colorForUser(user); inner.textContent = avatarLetter(user); }
       ring.appendChild(inner);
       div.appendChild(ring);
-
       const nom = document.createElement("div");
-      nom.className = "estado-nombre";
-      nom.textContent = user;
+      nom.className = "estado-nombre"; nom.textContent = user;
       div.appendChild(nom);
-
-      div.addEventListener("click", function () {
-        abrirEstadoViewer(user, 0);
-      });
+      div.addEventListener("click", function () { abrirEstadoViewer(user, 0); });
       estadosBar.appendChild(div);
     });
   }
+
+  function abrirMenuEstado() {
+    if (!estadoMenuModal) return;
+    estadoMenuModal.classList.add("show");
+  }
+
+  if (estadoMenuCancelBtn) estadoMenuCancelBtn.addEventListener("click", function () { estadoMenuModal.classList.remove("show"); });
+  if (estadoMenuVerBtn) estadoMenuVerBtn.addEventListener("click", function () {
+    estadoMenuModal.classList.remove("show");
+    const misEstados = estadosPorUsuario[username] || [];
+    if (misEstados.length > 0) abrirEstadoViewer(username, 0);
+  });
+  if (estadoMenuVistasBtn) estadoMenuVistasBtn.addEventListener("click", function () {
+    estadoMenuModal.classList.remove("show");
+    mostrarVistasEstados();
+  });
+  if (estadoMenuBorrarBtn) estadoMenuBorrarBtn.addEventListener("click", async function () {
+    estadoMenuModal.classList.remove("show");
+    const misEstados = estadosPorUsuario[username] || [];
+    if (misEstados.length === 0) { alert("No tienes estados."); return; }
+    if (!confirm("¿Eliminar TODOS tus estados?")) return;
+    try {
+      for (const e of misEstados) {
+        await supabaseClient.from("zumm_estados").delete().eq("id", e.id);
+      }
+      alert("✅ Estados eliminados");
+      cargarEstados();
+    } catch (e) { alert("Error: " + e.message); }
+  });
+
+  async function mostrarVistasEstados() {
+    if (!estadoVistasModal || !estadoVistasList) return;
+    estadoVistasModal.classList.add("show");
+    estadoVistasList.innerHTML = "";
+    estadoVistasEmpty.style.display = "none";
+    const misEstadosIds = (estadosPorUsuario[username] || []).map(function (e) { return e.id; });
+    if (misEstadosIds.length === 0) { estadoVistasEmpty.style.display = "block"; return; }
+    try {
+      const { data } = await supabaseClient.from("zumm_estado_vistas")
+        .select("viewer, created_at, estado_id")
+        .in("estado_id", misEstadosIds)
+        .order("created_at", { ascending: false });
+      const unicos = {};
+      (data || []).forEach(function (v) {
+        if (!unicos[v.viewer]) unicos[v.viewer] = v.created_at;
+      });
+      const listado = Object.keys(unicos);
+      if (listado.length === 0) { estadoVistasEmpty.style.display = "block"; return; }
+      listado.forEach(function (u) {
+        const li = document.createElement("li");
+        const avatar = document.createElement("div");
+        avatar.style.cssText = "width:32px;height:32px;border-radius:50%;background:" + colorForUser(u) + ";color:#000;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;flex-shrink:0;";
+        avatar.textContent = avatarLetter(u);
+        const info = document.createElement("div");
+        info.style.cssText = "flex:1;";
+        const nom = document.createElement("div");
+        nom.textContent = u; nom.style.fontWeight = "bold";
+        const fecha = document.createElement("div");
+        fecha.className = "list-meta";
+        fecha.textContent = new Date(unicos[u]).toLocaleString();
+        info.appendChild(nom); info.appendChild(fecha);
+        li.appendChild(avatar); li.appendChild(info);
+        estadoVistasList.appendChild(li);
+      });
+    } catch (e) { estadoVistasEmpty.style.display = "block"; }
+  }
+
+  if (estadoVistasCloseBtn) estadoVistasCloseBtn.addEventListener("click", function () { estadoVistasModal.classList.remove("show"); });
 
   function abrirEstadoViewer(user, idx) {
     const lista = estadosPorUsuario[user];
@@ -544,18 +608,13 @@
     const urlAvatar = estadoActualUser.toLowerCase() === username.toLowerCase()
       ? myAvatarUrl
       : (avataresPorUsuario[estadoActualUser.toLowerCase()] || "");
-    if (urlAvatar) {
-      estadoViewerAvatar.style.backgroundImage = "url(" + urlAvatar + ")";
-      estadoViewerAvatar.textContent = "";
-    } else {
+    if (urlAvatar) { estadoViewerAvatar.style.backgroundImage = "url(" + urlAvatar + ")"; estadoViewerAvatar.textContent = ""; }
+    else {
       estadoViewerAvatar.style.backgroundImage = "";
       estadoViewerAvatar.style.background = colorForUser(estadoActualUser);
       estadoViewerAvatar.textContent = avatarLetter(estadoActualUser);
     }
-    estadoViewerNombre.textContent = estadoActualUser.toLowerCase() === username.toLowerCase()
-      ? "Mi estado"
-      : estadoActualUser;
-
+    estadoViewerNombre.textContent = estadoActualUser.toLowerCase() === username.toLowerCase() ? "Mi estado" : estadoActualUser;
     const diff = Date.now() - new Date(est.fecha).getTime();
     const mins = Math.floor(diff / 60000);
     let hace;
@@ -565,22 +624,29 @@
     estadoViewerTime.textContent = hace;
 
     estadoStage.innerHTML = "";
-    if (est.esImagen) {
-      const img = document.createElement("img");
-      img.src = est.url;
-      estadoStage.appendChild(img);
-    } else {
-      const v = document.createElement("video");
-      v.src = est.url;
-      v.controls = true;
-      v.autoplay = true;
-      v.playsInline = true;
-      estadoStage.appendChild(v);
-    }
+    if (est.esImagen) { const img = document.createElement("img"); img.src = est.url; estadoStage.appendChild(img); }
+    else { const v = document.createElement("video"); v.src = est.url; v.controls = true; v.autoplay = true; v.playsInline = true; estadoStage.appendChild(v); }
 
     vistos[estadoActualUser + ":" + est.id] = true;
     guardarVistos();
+
+    // Registrar vista (solo si NO es mi estado)
+    if (estadoActualUser.toLowerCase() !== username.toLowerCase()) {
+      registrarVista(est.id, estadoActualUser);
+    }
+
     iniciarProgreso();
+  }
+
+  async function registrarVista(estadoId, owner) {
+    try {
+      const { data: existente } = await supabaseClient.from("zumm_estado_vistas")
+        .select("id").eq("estado_id", estadoId).eq("viewer", username).maybeSingle();
+      if (existente) return;
+      await supabaseClient.from("zumm_estado_vistas").insert([{
+        estado_id: estadoId, owner: owner, viewer: username
+      }]);
+    } catch (e) {}
   }
 
   function iniciarProgreso() {
@@ -591,46 +657,35 @@
     estadoProgressAnim = setInterval(function () {
       const pct = Math.min(100, ((Date.now() - inicio) / duracion) * 100);
       if (estadoProgressBar) estadoProgressBar.style.width = pct + "%";
-      if (pct >= 100) {
-        clearInterval(estadoProgressAnim);
-        siguienteEstado();
-      }
+      if (pct >= 100) { clearInterval(estadoProgressAnim); siguienteEstado(); }
     }, 50);
   }
 
   function siguienteEstado() {
     const lista = estadosPorUsuario[estadoActualUser];
     if (!lista) { cerrarEstadoViewer(); return; }
-    if (estadoActualIdx < lista.length - 1) {
-      estadoActualIdx++;
-      pintarEstadoActual();
-    } else {
+    if (estadoActualIdx < lista.length - 1) { estadoActualIdx++; pintarEstadoActual(); }
+    else {
       const usuarios = Object.keys(estadosPorUsuario);
       const miIdx = usuarios.indexOf(estadoActualUser);
       let siguiente = null;
       for (let i = miIdx + 1; i < usuarios.length; i++) {
         if (usuarios[i].toLowerCase() !== username.toLowerCase()) { siguiente = usuarios[i]; break; }
       }
-      if (siguiente) abrirEstadoViewer(siguiente, 0);
-      else cerrarEstadoViewer();
+      if (siguiente) abrirEstadoViewer(siguiente, 0); else cerrarEstadoViewer();
     }
   }
 
   function anteriorEstado() {
-    if (estadoActualIdx > 0) {
-      estadoActualIdx--;
-      pintarEstadoActual();
-    } else {
+    if (estadoActualIdx > 0) { estadoActualIdx--; pintarEstadoActual(); }
+    else {
       const usuarios = Object.keys(estadosPorUsuario);
       const miIdx = usuarios.indexOf(estadoActualUser);
       let anterior = null;
       for (let i = miIdx - 1; i >= 0; i--) {
         if (usuarios[i].toLowerCase() !== username.toLowerCase()) { anterior = usuarios[i]; break; }
       }
-      if (anterior) {
-        const lista = estadosPorUsuario[anterior];
-        abrirEstadoViewer(anterior, lista.length - 1);
-      }
+      if (anterior) { const lista = estadosPorUsuario[anterior]; abrirEstadoViewer(anterior, lista.length - 1); }
     }
   }
 
@@ -638,8 +693,7 @@
     clearInterval(estadoProgressAnim);
     if (estadoViewer) estadoViewer.classList.remove("show");
     if (estadoStage) estadoStage.innerHTML = "";
-    estadoActualUser = null;
-    estadoActualIdx = 0;
+    estadoActualUser = null; estadoActualIdx = 0;
     renderEstadosBar();
   }
 
@@ -651,47 +705,129 @@
     estadoInput.addEventListener("change", async function () {
       const file = estadoInput.files[0];
       if (!file) return;
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Máximo 5 MB.");
-        estadoInput.value = "";
-        return;
-      }
+      if (file.size > 5 * 1024 * 1024) { alert("Máximo 5 MB."); estadoInput.value = ""; return; }
       try {
         const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
         const nombreArchivo = "estado_" + limpiarNombre(username) + "_" + Date.now() + "." + ext;
-        const { error: upErr } = await supabaseClient.storage
-          .from("archivos")
+        const { error: upErr } = await supabaseClient.storage.from("archivos")
           .upload(nombreArchivo, file, { contentType: file.type || "image/jpeg" });
         if (upErr) { alert("Error al subir: " + upErr.message); estadoInput.value = ""; return; }
         const { data: urlData } = supabaseClient.storage.from("archivos").getPublicUrl(nombreArchivo);
         const publicUrl = urlData.publicUrl;
-
         const { error } = await supabaseClient.from("zumm_estados").insert([{
-          username: username,
-          file_url: publicUrl,
-          file_name: file.name,
-          file_type: file.type || "image/jpeg"
+          username: username, file_url: publicUrl, file_name: file.name, file_type: file.type || "image/jpeg"
         }]);
         if (error) { alert("Error: " + error.message); estadoInput.value = ""; return; }
         estadoInput.value = "";
         alert("✅ Estado publicado (durará 24h)");
         await cargarEstados();
-      } catch (e) {
-        alert("Error: " + e.message);
-        estadoInput.value = "";
-      }
+      } catch (e) { alert("Error: " + e.message); estadoInput.value = ""; }
     });
   }
 
+  // ==========================================================
+  // MENSAJES FIJADOS MÚLTIPLES
+  // ==========================================================
+  const pinnedListModal = document.getElementById("pinnedListModal");
+  const pinnedListUl = document.getElementById("pinnedListUl");
+  const pinnedListEmpty = document.getElementById("pinnedListEmpty");
+  const pinnedListCloseBtn = document.getElementById("pinnedListCloseBtn");
+  const pinnedBar = document.getElementById("pinnedBar");
+
+  async function cargarMensajeFijado() {
+    if (!pinnedBar || !currentRoom) return;
+    try {
+      const { data } = await supabaseClient.from("zumm_messages")
+        .select("id, text, username, file_type, created_at")
+        .eq("room", currentRoom).eq("pinned", true)
+        .order("created_at", { ascending: false });
+      if (!data || data.length === 0) { pinnedBar.classList.remove("show"); return; }
+      const n = data.length;
+      const m = data[0];
+      let preview = (m.username || "?") + ": ";
+      if (m.file_type && m.file_type.startsWith("audio/")) preview += "🎤 Nota de voz";
+      else if (m.file_type && m.file_type.startsWith("location/")) preview += "📍 Ubicación";
+      else if (m.file_type && m.file_type.startsWith("poll/")) preview += "📊 Encuesta";
+      else if (m.text) preview += m.text;
+      else preview += "📎 Archivo";
+      if (preview.length > 60) preview = preview.substring(0, 60) + "...";
+      const pinnedTextEl = document.getElementById("pinnedText");
+      if (pinnedTextEl) pinnedTextEl.textContent = "📌 " + (n > 1 ? "(" + n + ") " : "") + preview;
+      pinnedBar.classList.add("show");
+    } catch (e) {}
+  }
+
+  window.cargarMensajeFijado = cargarMensajeFijado;
+
+  if (pinnedBar) {
+    pinnedBar.addEventListener("click", async function (e) {
+      if (e.target.id === "unpinBtn") return;
+      await abrirListaFijados();
+    });
+  }
+
+  async function abrirListaFijados() {
+    if (!pinnedListModal || !pinnedListUl) return;
+    pinnedListModal.classList.add("show");
+    pinnedListUl.innerHTML = "";
+    pinnedListEmpty.style.display = "none";
+    try {
+      const { data } = await supabaseClient.from("zumm_messages")
+        .select("id, text, username, file_type, created_at")
+        .eq("room", currentRoom).eq("pinned", true)
+        .order("created_at", { ascending: false });
+      if (!data || data.length === 0) { pinnedListEmpty.style.display = "block"; return; }
+      data.forEach(function (m) {
+        const li = document.createElement("li");
+        const meta = document.createElement("div");
+        meta.className = "list-meta";
+        meta.textContent = (m.username || "?") + " · " + formatTime(m.created_at);
+        li.appendChild(meta);
+        const texto = document.createElement("div");
+        let prev = m.text || "📎";
+        if (m.file_type && m.file_type.startsWith("audio/")) prev = "🎤 Nota de voz";
+        if (m.file_type && m.file_type.startsWith("location/")) prev = "📍 Ubicación";
+        if (m.file_type && m.file_type.startsWith("poll/")) prev = "📊 Encuesta";
+        if (prev.length > 120) prev = prev.substring(0, 120) + "...";
+        texto.textContent = prev;
+        li.appendChild(texto);
+        const del = document.createElement("button");
+        del.className = "list-del"; del.textContent = "✕";
+        del.addEventListener("click", async function (ev) {
+          ev.stopPropagation();
+          if (!confirm("¿Quitar de fijados?")) return;
+          await supabaseClient.from("zumm_messages").update({ pinned: false }).eq("id", m.id);
+          li.remove();
+          if (pinnedListUl.children.length === 0) pinnedListEmpty.style.display = "block";
+          cargarMensajeFijado();
+        });
+        li.appendChild(del);
+        li.addEventListener("click", function () {
+          pinnedListModal.classList.remove("show");
+          const el = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("highlight");
+            setTimeout(function () { el.classList.remove("highlight"); }, 2000);
+          }
+        });
+        pinnedListUl.appendChild(li);
+      });
+    } catch (e) { pinnedListEmpty.style.display = "block"; }
+  }
+
+  if (pinnedListCloseBtn) pinnedListCloseBtn.addEventListener("click", function () { pinnedListModal.classList.remove("show"); });
+
+  // ==========================================================
+  // CARGA INICIAL
+  // ==========================================================
   setTimeout(cargarEstados, 2500);
-  setInterval(function () {
-    if (!document.hidden) cargarEstados();
-  }, 60000);
+  setInterval(function () { if (!document.hidden) cargarEstados(); }, 60000);
 
   try {
-    supabaseClient.channel("zumm-estados-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "zumm_estados" },
-        function () { cargarEstados(); })
+    supabaseClient.channel("zumm-estados-v2")
+      .on("postgres_changes", { event: "*", schema: "public", table: "zumm_estados" }, function () { cargarEstados(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "zumm_estado_vistas" }, function () { cargarNotificacionesVistas(); })
       .subscribe();
   } catch (e) {}
 

@@ -2714,6 +2714,304 @@ if (videoBtn) videoBtn.addEventListener("click", () => {
 clearInterval(signalsCheckInterval);
 signalsCheckInterval = setInterval(leerSenales, 1500);
 
+// ============================================================
+// GALERÍA ESTILO WHATSAPP
+// ============================================================
+
+const galleryModal   = document.getElementById("galleryModal");
+const galleryTitle   = document.getElementById("galleryTitle");
+const galleryContent = document.getElementById("galleryContent");
+const galleryEmpty   = document.getElementById("galleryEmpty");
+const galleryTabs    = document.getElementById("galleryTabs");
+const mediaViewer    = document.getElementById("mediaViewer");
+const viewerStage    = document.getElementById("viewerStage");
+const viewerCounter  = document.getElementById("viewerCounter");
+
+let galleryTabActual = "image";
+let galleryItems     = [];
+let viewerIndex      = 0;
+let galleryRoomActual = null;
+
+const optGalleryBtn = document.getElementById("optGalleryBtn");
+if (optGalleryBtn) optGalleryBtn.addEventListener("click", () => {
+  if (!chatOpcionesActual) return;
+  const room = chatOpcionesActual.room;
+  const nombre = chatOpcionesActual.nombre;
+  chatOptionsModal.classList.remove("show");
+  chatOpcionesActual = null;
+  abrirGaleria(room, nombre);
+});
+
+async function abrirGaleria(room, nombreVisible) {
+  if (!galleryModal) return;
+  galleryRoomActual = room;
+  galleryTitle.textContent = "Medios de " + nombreVisible;
+  galleryModal.classList.add("show");
+  galleryTabActual = "image";
+  document.querySelectorAll("#galleryTabs button").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === "image");
+  });
+  await cargarGaleria(room);
+}
+
+async function cargarGaleria(room) {
+  if (!galleryContent) return;
+  galleryContent.innerHTML = "<p style='text-align:center;color:var(--text-dim);padding:20px;'>Cargando...</p>";
+  if (galleryEmpty) galleryEmpty.style.display = "none";
+  try {
+    const { data, error } = await supabaseClient.from("zumm_messages")
+      .select("id, text, username, created_at, file_url, file_name, file_type")
+      .eq("room", room)
+      .not("file_url", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error) throw error;
+
+    galleryItems = (data || []).map(m => ({
+      id: m.id,
+      url: m.file_url,
+      name: m.file_name || "archivo",
+      tipo: m.file_type || "",
+      fecha: m.created_at,
+      username: m.username,
+      text: m.text || ""
+    }));
+    renderGaleria();
+  } catch (e) {
+    galleryContent.innerHTML = "<p style='text-align:center;color:#ff5252;padding:20px;'>Error: " + e.message + "</p>";
+  }
+}
+
+function clasificarItem(it) {
+  const t = (it.tipo || "").toLowerCase();
+  if (t.startsWith("image/")) return "image";
+  if (t.startsWith("video/")) return "video";
+  if (t.startsWith("audio/")) return "audio";
+  if (t.startsWith("location/")) return "link";
+  if (it.text && /https?:\/\//.test(it.text)) return "link";
+  return "doc";
+}
+
+function renderGaleria() {
+  if (!galleryContent) return;
+  galleryContent.innerHTML = "";
+  const filtrados = galleryItems.filter(it => clasificarItem(it) === galleryTabActual);
+
+  if (filtrados.length === 0) {
+    if (galleryEmpty) galleryEmpty.style.display = "block";
+    return;
+  }
+  if (galleryEmpty) galleryEmpty.style.display = "none";
+
+  if (galleryTabActual === "image" || galleryTabActual === "video") {
+    const grupos = {};
+    filtrados.forEach(it => {
+      const d = new Date(it.fecha);
+      const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+      if (!grupos[key]) grupos[key] = [];
+      grupos[key].push(it);
+    });
+    Object.keys(grupos).forEach(key => {
+      const sep = document.createElement("div");
+      sep.className = "gallery-date-sep";
+      const [y, m, d] = key.split("-");
+      sep.textContent = dateLabel(new Date(parseInt(y), parseInt(m)-1, parseInt(d)));
+      galleryContent.appendChild(sep);
+
+      const grid = document.createElement("div");
+      grid.className = "gallery-grid";
+      grupos[key].forEach(it => {
+        const div = document.createElement("div");
+        div.className = "gallery-item";
+        const idx = filtrados.indexOf(it);
+
+        if (clasificarItem(it) === "image") {
+          const img = document.createElement("img");
+          img.src = it.url; img.loading = "lazy";
+          div.appendChild(img);
+        } else {
+          const v = document.createElement("video");
+          v.src = it.url; v.muted = true; v.preload = "metadata";
+          div.appendChild(v);
+          const b = document.createElement("span");
+          b.className = "item-badge"; b.textContent = "video";
+          div.appendChild(b);
+        }
+        div.addEventListener("click", () => abrirVisor(idx));
+        grid.appendChild(div);
+      });
+      galleryContent.appendChild(grid);
+    });
+    return;
+  }
+
+  const lista = document.createElement("div");
+  lista.className = "gallery-list";
+  filtrados.forEach(it => {
+    const li = document.createElement("div");
+    li.className = "gallery-list-item";
+    const tipo = clasificarItem(it);
+    const icon = tipo === "audio" ? "🎤" : tipo === "link" ? "🔗" : (it.tipo || "").includes("pdf") ? "📄" : "📎";
+
+    const ic = document.createElement("div");
+    ic.className = "gl-icon"; ic.textContent = icon;
+    const info = document.createElement("div");
+    info.className = "gl-info";
+    const nm = document.createElement("div");
+    nm.className = "gl-name"; nm.textContent = it.name || "archivo";
+    const mt = document.createElement("div");
+    mt.className = "gl-meta";
+    mt.textContent = (it.username || "?") + " · " + formatHoraCorta(it.fecha);
+    info.appendChild(nm); info.appendChild(mt);
+    li.appendChild(ic); li.appendChild(info);
+
+    li.addEventListener("click", () => {
+      if (tipo === "link" && it.url) window.open(it.url, "_blank");
+      else if (tipo === "audio") abrirVisor(filtrados.indexOf(it));
+      else if (it.url) window.open(it.url, "_blank");
+    });
+    lista.appendChild(li);
+  });
+  galleryContent.appendChild(lista);
+}
+
+if (galleryTabs) {
+  galleryTabs.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-tab]");
+    if (!btn) return;
+    galleryTabActual = btn.dataset.tab;
+    galleryTabs.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+    renderGaleria();
+  });
+}
+
+function listaVisor() {
+  return galleryItems.filter(it => {
+    const c = clasificarItem(it);
+    return c === galleryTabActual || (galleryTabActual === "image" && c === "video");
+  });
+}
+
+function abrirVisor(idx) {
+  if (!mediaViewer || !viewerStage) return;
+  const filtrados = listaVisor();
+  if (!filtrados[idx]) return;
+  viewerIndex = idx;
+  mediaViewer.classList.add("show");
+  pintarVisor(filtrados);
+}
+
+function pintarVisor(lista) {
+  const it = lista[viewerIndex];
+  if (!it) return;
+  viewerStage.innerHTML = "";
+  const tipo = clasificarItem(it);
+  if (tipo === "image") {
+    const img = document.createElement("img");
+    img.src = it.url;
+    viewerStage.appendChild(img);
+  } else if (tipo === "video") {
+    const v = document.createElement("video");
+    v.src = it.url; v.controls = true; v.autoplay = true;
+    viewerStage.appendChild(v);
+  } else if (tipo === "audio") {
+    const a = document.createElement("audio");
+    a.src = it.url; a.controls = true; a.autoplay = true;
+    a.style.width = "80%";
+    viewerStage.appendChild(a);
+  }
+  if (viewerCounter) viewerCounter.textContent = (viewerIndex + 1) + " / " + lista.length;
+  const prev = document.getElementById("viewerPrevBtn");
+  const next = document.getElementById("viewerNextBtn");
+  if (prev) prev.disabled = viewerIndex === 0;
+  if (next) next.disabled = viewerIndex >= lista.length - 1;
+}
+
+const _vClose = document.getElementById("viewerCloseBtn");
+if (_vClose) _vClose.addEventListener("click", () => {
+  mediaViewer.classList.remove("show");
+  viewerStage.innerHTML = "";
+});
+const _vPrev = document.getElementById("viewerPrevBtn");
+if (_vPrev) _vPrev.addEventListener("click", () => {
+  if (viewerIndex > 0) { viewerIndex--; pintarVisor(listaVisor()); }
+});
+const _vNext = document.getElementById("viewerNextBtn");
+if (_vNext) _vNext.addEventListener("click", () => {
+  const lista = listaVisor();
+  if (viewerIndex < lista.length - 1) { viewerIndex++; pintarVisor(lista); }
+});
+const _vDl = document.getElementById("viewerDownloadBtn");
+if (_vDl) _vDl.addEventListener("click", () => {
+  const it = listaVisor()[viewerIndex];
+  if (!it) return;
+  const a = document.createElement("a");
+  a.href = it.url; a.download = it.name; a.target = "_blank";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+});
+const _vSh = document.getElementById("viewerShareBtn");
+if (_vSh) _vSh.addEventListener("click", async () => {
+  const it = listaVisor()[viewerIndex];
+  if (!it) return;
+  if (navigator.share) {
+    try { await navigator.share({ url: it.url, title: it.name }); } catch (e) {}
+  } else {
+    try { await navigator.clipboard.writeText(it.url); alert("Enlace copiado"); } catch (e) {}
+  }
+});
+const _vJp = document.getElementById("viewerJumpBtn");
+if (_vJp) _vJp.addEventListener("click", () => {
+  const it = listaVisor()[viewerIndex];
+  if (!it) return;
+  mediaViewer.classList.remove("show");
+  galleryModal.classList.remove("show");
+  const el = messagesEl.querySelector('[data-msg-id="' + it.id + '"]');
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("highlight");
+    setTimeout(() => el.classList.remove("highlight"), 2000);
+  } else {
+    alert("El mensaje no está en este chat o ya fue borrado.");
+  }
+});
+
+let touchStartX = 0;
+if (mediaViewer) {
+  mediaViewer.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  mediaViewer.addEventListener("touchend", (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) < 60) return;
+    const lista = listaVisor();
+    if (dx < 0 && viewerIndex < lista.length - 1) { viewerIndex++; pintarVisor(lista); }
+    else if (dx > 0 && viewerIndex > 0) { viewerIndex--; pintarVisor(lista); }
+  });
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!mediaViewer || !mediaViewer.classList.contains("show")) return;
+  const lista = listaVisor();
+  if (e.key === "ArrowRight" && viewerIndex < lista.length - 1) { viewerIndex++; pintarVisor(lista); }
+  if (e.key === "ArrowLeft" && viewerIndex > 0) { viewerIndex--; pintarVisor(lista); }
+  if (e.key === "Escape") { mediaViewer.classList.remove("show"); viewerStage.innerHTML = ""; }
+});
+
+const _gClose = document.getElementById("galleryCloseBtn");
+if (_gClose) _gClose.addEventListener("click", () => {
+  galleryModal.classList.remove("show");
+});
+const _gJump = document.getElementById("galleryJumpBtn");
+if (_gJump) _gJump.addEventListener("click", () => {
+  if (galleryItems.length === 0) return;
+  const it = galleryItems[0];
+  galleryModal.classList.remove("show");
+  const el = messagesEl.querySelector('[data-msg-id="' + it.id + '"]');
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("highlight");
+    setTimeout(() => el.classList.remove("highlight"), 2000);
+  }
+});
+
 actualizarIndicadorDnd();
 actualizarBotonDnd();
 showChatList();
@@ -2723,5 +3021,6 @@ cargarListaCamaras();
 actualizarBotonAbajo();
 cargarBloqueados();
 cargarContactos();
+cargarFavoritos();
 
 // © 2026 - José Yudier Arencibia Ajo - Todos los derechos reservados.

@@ -1,7 +1,6 @@
 // ============================================================
-// ZummChat - Mejoras estilo WhatsApp (app4.js)
-// Burbujas + Checks + Swipe + Doble toque + Galería + Links + Estados
-// Creado por: José Yudier Arencibia Ajo - © 2026
+// ZummChat - Mejoras WhatsApp (app4.js)
+// © 2026 José Yudier Arencibia Ajo
 // ============================================================
 
 (function () {
@@ -10,9 +9,6 @@
   const mensajesPorId = new Map();
   const _renderOriginal = window.renderMessage;
 
-  // ==========================================================
-  // UTILIDADES
-  // ==========================================================
   function mensajeLeido(m) {
     if (!m || !m.username) return false;
     if (m.username.toLowerCase() !== username.toLowerCase()) return false;
@@ -45,9 +41,6 @@
     return m ? m[0] : null;
   }
 
-  // ==========================================================
-  // OVERRIDE renderMessage
-  // ==========================================================
   window.renderMessage = function (m, esNuevo) {
     _renderOriginal(m, esNuevo);
 
@@ -61,7 +54,6 @@
     div.classList.add(esMio ? "mio" : "otro");
     mensajesPorId.set(m.id, m);
 
-    // Footer (hora + checks)
     const content = div.querySelector(".msg-content");
     const header = div.querySelector(".msg-header");
     if (content && header) {
@@ -96,7 +88,6 @@
       }
     }
 
-    // Emoji limit
     const body = div.querySelector(".msg-body");
     if (body && !body.querySelector("img, video, audio, .poll-box, .location-msg, .voice-note")) {
       if (esSoloEmoji(body.textContent)) {
@@ -104,7 +95,6 @@
       }
     }
 
-    // Swipe indicator
     if (!div.querySelector(".swipe-indicator")) {
       const sw = document.createElement("div");
       sw.className = "swipe-indicator";
@@ -112,7 +102,6 @@
       div.insertBefore(sw, div.firstChild);
     }
 
-    // Gestos
     if (!div.dataset.gestosListos) {
       div.dataset.gestosListos = "1";
 
@@ -184,7 +173,6 @@
       });
     }
 
-    // Vista previa de links
     if (!esBot && m.text && !div.querySelector(".link-preview") && !div.dataset.previewHecha) {
       const url = extraerPrimeraUrl(m.text.replace(/^\[REPLY:[^\]]+\]\s*/i, "").replace(/^\[FORWARD\]\s*/i, ""));
       if (url) {
@@ -194,9 +182,6 @@
     }
   };
 
-  // ==========================================================
-  // ACTUALIZAR CHECKS
-  // ==========================================================
   setInterval(function () {
     if (!messagesEl) return;
     messagesEl.querySelectorAll(".msg.mio .msg-checks").forEach(function (chk) {
@@ -208,9 +193,6 @@
     });
   }, 4000);
 
-  // ==========================================================
-  // BURBUJA "escribiendo..."
-  // ==========================================================
   const typingBubble = document.createElement("div");
   typingBubble.className = "msg typing-bubble otro";
   typingBubble.style.display = "none";
@@ -417,7 +399,7 @@
   }
 
   // ==========================================================
-  // ESTADOS / HISTORIAS (usa tabla zumm_estados)
+  // ESTADOS / HISTORIAS (tabla zumm_estados)
   // ==========================================================
   const estadosBar = document.getElementById("estadosBar");
   const estadoViewer = document.getElementById("estadoViewer");
@@ -665,9 +647,6 @@
   if (estadoNext) estadoNext.addEventListener("click", siguienteEstado);
   if (estadoPrev) estadoPrev.addEventListener("click", anteriorEstado);
 
-  // ==========================================================
-  // CREAR ESTADO (usa tabla zumm_estados)
-  // ==========================================================
   if (estadoInput) {
     estadoInput.addEventListener("change", async function () {
       const file = estadoInput.files[0];
@@ -704,9 +683,6 @@
     });
   }
 
-  // ==========================================================
-  // CARGAR ESTADOS
-  // ==========================================================
   setTimeout(cargarEstados, 2500);
   setInterval(function () {
     if (!document.hidden) cargarEstados();
@@ -715,9 +691,7 @@
   try {
     supabaseClient.channel("zumm-estados-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "zumm_estados" },
-        function () {
-          cargarEstados();
-        })
+        function () { cargarEstados(); })
       .subscribe();
   } catch (e) {}
 

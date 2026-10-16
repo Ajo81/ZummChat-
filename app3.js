@@ -231,10 +231,7 @@ function limpiarNombre(texto) {
     .replace(/ñ/g, "n").replace(/[^a-z0-9]/g, "") || "user";
 }
 
-// ================= ÚLTIMO LEÍDO =================
-function getLastRead(room) {
-  return LS.getItem("zummchat_lastread_" + room) || "";
-}
+function getLastRead(room) { return LS.getItem("zummchat_lastread_" + room) || ""; }
 function setLastRead(room) {
   if (!room) return;
   LS.setItem("zummchat_lastread_" + room, new Date().toISOString());
@@ -390,19 +387,6 @@ function reproducirSonidoPreview(sonidoId) {
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.45);
-        if (sonido.eco) {
-          setTimeout(() => {
-            try {
-              const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
-              osc2.type = "sine"; osc2.frequency.value = freq * 2;
-              gain2.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-              gain2.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.02);
-              gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
-              osc2.connect(gain2); gain2.connect(audioCtx.destination);
-              osc2.start(); osc2.stop(audioCtx.currentTime + 0.35);
-            } catch (e) {}
-          }, 60);
-        }
       } catch (e) {}
     }, idx * sonido.gap);
   });
@@ -722,50 +706,62 @@ function previewUltimoMsg(m) {
   else if (tipo.startsWith("poll/")) texto = "📊 Encuesta";
   else if (m.file_url) texto = "📎 Archivo";
   else texto = m.text || "";
-  // Quitar bloque de REPLY del preview
   texto = texto.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
   const esMio = (m.username || "").toLowerCase() === username.toLowerCase();
   if (esMio) texto = "Tú: " + texto;
   return texto;
 }
 
+let renderizandoLista = false;
 async function renderChatList() {
+  if (renderizandoLista) return;
   if (!chatListEl) return;
-  chatListEl.innerHTML = "";
-  const gruposBase = ["general", "amigos", "familia", "trabajo"];
-  const todosGrupos = [...gruposBase, ...gruposPersonalizados.filter(g => !gruposOcultos.includes(g)).map(g => "grupo:" + g)];
+  renderizandoLista = true;
+  try {
+    chatListEl.innerHTML = "";
+    const gruposBase = ["general", "amigos", "familia", "trabajo"];
+    const todosGrupos = [...gruposBase, ...gruposPersonalizados.filter(g => !gruposOcultos.includes(g)).map(g => "grupo:" + g)];
 
-  const privados = [];
-  const usuariosMostrados = new Set();
-  const miUserLower = username.toLowerCase();
-  privateRooms.forEach(room => {
-    const partes = room.replace("priv:", "").split("|");
-    const otro = partes.find(n => n.toLowerCase() !== miUserLower);
-    if (otro && !usuariosMostrados.has(otro.toLowerCase())) { usuariosMostrados.add(otro.toLowerCase()); privados.push({ otro, room }); }
-  });
-  usersOnline.forEach(u => {
-    if (u.toLowerCase() !== miUserLower && !usuariosMostrados.has(u.toLowerCase())) {
-      usuariosMostrados.add(u.toLowerCase());
-      const partes = [username, u].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-      privados.push({ otro: u, room: "priv:" + partes[0] + "|" + partes[1] });
-    }
-  });
-  misContactos.forEach(c => {
-    if (c.toLowerCase() !== miUserLower && !usuariosMostrados.has(c.toLowerCase())) {
-      usuariosMostrados.add(c.toLowerCase());
-      const partes = [username, c].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-      privados.push({ otro: c, room: "priv:" + partes[0] + "|" + partes[1] });
-    }
-  });
+    const privados = [];
+    const usuariosMostrados = new Set();
+    const miUserLower = username.toLowerCase();
+    privateRooms.forEach(room => {
+      const partes = room.replace("priv:", "").split("|");
+      const otro = partes.find(n => n.toLowerCase() !== miUserLower);
+      if (otro && !usuariosMostrados.has(otro.toLowerCase())) { usuariosMostrados.add(otro.toLowerCase()); privados.push({ otro, room }); }
+    });
+    usersOnline.forEach(u => {
+      if (u.toLowerCase() !== miUserLower && !usuariosMostrados.has(u.toLowerCase())) {
+        usuariosMostrados.add(u.toLowerCase());
+        const partes = [username, u].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        privados.push({ otro: u, room: "priv:" + partes[0] + "|" + partes[1] });
+      }
+    });
+    misContactos.forEach(c => {
+      if (c.toLowerCase() !== miUserLower && !usuariosMostrados.has(c.toLowerCase())) {
+        usuariosMostrados.add(c.toLowerCase());
+        const partes = [username, c].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        privados.push({ otro: c, room: "priv:" + partes[0] + "|" + partes[1] });
+      }
+    });
 
-  // Crear items con info
-  for (const room of todosGrupos) {
-    const info = await getInfoChat(room);
-    crearItemChat(roomLabel(room), room, "grupo", info);
-  }
-  for (const p of privados) {
-    const info = await getInfoChat(p.room);
-    crearItemChat(p.otro, p.room, "priv", info);
+    const promesas = [];
+    todosGrupos.forEach(room => {
+      promesas.push(getInfoChat(room).then(info => ({ tipo: "grupo", room, info })));
+    });
+    privados.forEach(p => {
+      promesas.push(getInfoChat(p.room).then(info => ({ tipo: "priv", room: p.room, otro: p.otro, info })));
+    });
+    const resultados = await Promise.all(promesas);
+
+    resultados.forEach(r => {
+      if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info);
+      else crearItemChat(r.otro, r.room, "priv", r.info);
+    });
+  } catch (e) {
+    console.error("Error renderChatList:", e);
+  } finally {
+    renderizandoLista = false;
   }
 }
 
@@ -1052,12 +1048,7 @@ function construirTextoConReply(textoReal) {
   preview = preview.replace(/\|/g, "¦");
   return "[REPLY:" + autor + "|" + preview + "]\n\n" + textoReal;
 }
-
-function ocultarReplyBar() {
-  replyTo = null;
-  if (replyBar) replyBar.classList.remove("show");
-}
-
+function ocultarReplyBar() { replyTo = null; if (replyBar) replyBar.classList.remove("show"); }
 function mostrarReplyBar(m) {
   replyTo = m;
   if (!replyBar) return;
@@ -1104,7 +1095,6 @@ function maybeAddDateSeparator(iso) {
   sep.className = "date-sep"; sep.textContent = dateLabel(d);
   messagesEl.appendChild(sep);
 }
-
 function parsePoll(m) {
   if (!m.file_type || !m.file_type.startsWith("poll/")) return null;
   try { return JSON.parse(m.file_url || "{}"); } catch (e) { return null; }
@@ -1189,7 +1179,6 @@ function renderMessage(m, esNuevo) {
   const body = document.createElement("div");
   body.className = "msg-body";
 
-  // Extraer reply embebido
   const extraido = extraerReply(m.text || "");
   const textoParaMostrar = extraido.textoReal;
 
@@ -1273,7 +1262,6 @@ function renderMessage(m, esNuevo) {
       }
       const duracion = document.createElement("span");
       duracion.className = "voice-duration"; duracion.textContent = "0:00";
-      // Botón velocidad
       const speedBtn = document.createElement("button");
       speedBtn.className = "voice-speed-btn";
       speedBtn.type = "button";
@@ -2041,6 +2029,10 @@ async function leerPresencia() {
       });
     }
     usuariosConocidos = new Set(nuevaLista.map(u => u.toLowerCase()));
+
+    const listaCambio = nuevaLista.length !== usersOnline.length ||
+      nuevaLista.some((u, i) => u !== usersOnline[i]);
+
     primeraCargaPresencia = false;
     usersOnline = nuevaLista;
     avataresPorUsuario = {};
@@ -2050,14 +2042,16 @@ async function leerPresencia() {
       .filter(u => u.typing_at && (ahora - new Date(u.typing_at).getTime() < 5000)).map(u => u.username);
     actualizarIndicadorTyping(escribiendo);
     renderUserList();
-    if (!inChatView) renderChatList();
+    if (!inChatView && (listaCambio || !chatListEl.children.length)) {
+      renderChatList();
+    }
   } catch (e) {}
 }
 
 function iniciarPresencia() {
   registrarPresencia(); leerPresencia();
   clearInterval(presenceInterval); presenceInterval = setInterval(registrarPresencia, 8000);
-  clearInterval(presenceRefreshInterval); presenceRefreshInterval = setInterval(leerPresencia, 3000);
+  clearInterval(presenceRefreshInterval); presenceRefreshInterval = setInterval(leerPresencia, 8000);
 }
 supabaseClient.channel("zumm-presence-realtime")
   .on("postgres_changes", { event: "*", schema: "public", table: "zumm_presence" }, () => { leerPresencia(); })

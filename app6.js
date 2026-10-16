@@ -1,6 +1,6 @@
 // ============================================================
 // ZummChat - FASE 3 (app6.js)
-// GIFs + Traducción + Stickers personalizados + Canales
+// GIFs + Traducción + Stickers personalizados + Canales + Tabs unificadas
 // © 2026 José Yudier Arencibia Ajo
 // ============================================================
 
@@ -8,89 +8,135 @@
   "use strict";
 
   // ==========================================================
-  // 1) GIFs (Tenor API pública)
+  // TABS DE MEDIA UNIFICADAS (Emoji / Sticker / GIF)
   // ==========================================================
-  const TENOR_KEY = "LIVDSRZULELA"; // clave demo pública
-  const gifBtn = document.getElementById("gifBtn");
-  const gifPickerModal = document.getElementById("gifPickerModal");
-  const gifCloseBtn = document.getElementById("gifCloseBtn");
-  const gifSearchInput = document.getElementById("gifSearchInput");
-  const gifResults = document.getElementById("gifResults");
+  const TENOR_KEY = "LIVDSRZULELA";
+
+  const mediaTabs = document.getElementById("mediaTabs");
+  const stickerBtnViejo = document.getElementById("stickerBtn");
+  const stickerBarReal = document.getElementById("sticker-bar");
+  const emojiBarReal = document.getElementById("emoji-bar");
+  const gifBtnViejo = document.getElementById("gifBtn");
+  const emojiBtnReal = document.getElementById("emojiBtn");
+
+  if (stickerBtnViejo) stickerBtnViejo.style.display = "none";
+  if (gifBtnViejo) gifBtnViejo.style.display = "none";
 
   let gifTimeout = null;
+  let tabMediaActual = "emoji";
 
-  if (gifBtn) {
-    gifBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (emojiBar) emojiBar.classList.remove("show");
-      if (stickerBar) stickerBar.classList.remove("show");
-      gifPickerModal.classList.add("show");
-      cargarGifsTrending();
+  function mostrarTabMedia(tab) {
+    tabMediaActual = tab;
+    if (!mediaTabs) return;
+    mediaTabs.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.tab === tab);
     });
+
+    // Ocultar todas las barras
+    if (emojiBarReal) emojiBarReal.classList.remove("show");
+    if (stickerBarReal) stickerBarReal.classList.remove("show");
+    const gifPanel = document.getElementById("gifPanelInBar");
+    if (gifPanel) gifPanel.style.display = "none";
+
+    // Mostrar la seleccionada
+    if (tab === "emoji") {
+      if (emojiBarReal) emojiBarReal.classList.add("show");
+    } else if (tab === "sticker") {
+      if (stickerBarReal) stickerBarReal.classList.add("show");
+    } else if (tab === "gif") {
+      if (!gifPanel) {
+        const panel = document.createElement("div");
+        panel.id = "gifPanelInBar";
+        panel.style.cssText = "background:var(--bg-card);border-radius:0 0 10px 10px;padding:8px;margin-bottom:6px;display:flex;flex-direction:column;max-height:300px;";
+        panel.innerHTML =
+          '<input type="text" id="gifSearchInline" placeholder="🔍 Buscar GIFs..." style="padding:9px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);font-size:14px;margin-bottom:6px;outline:none;">' +
+          '<div id="gifInlineResults" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;overflow-y:auto;max-height:230px;padding:2px;"></div>';
+        if (mediaTabs && mediaTabs.parentNode) {
+          mediaTabs.parentNode.insertBefore(panel, mediaTabs.nextSibling);
+        }
+        setTimeout(function () {
+          const inp = document.getElementById("gifSearchInline");
+          if (inp) {
+            inp.addEventListener("input", function () {
+              clearTimeout(gifTimeout);
+              const q = inp.value.trim();
+              gifTimeout = setTimeout(function () {
+                cargarGifsInline(q);
+              }, 500);
+            });
+          }
+          cargarGifsInline("");
+        }, 100);
+      } else {
+        gifPanel.style.display = "flex";
+      }
+    }
   }
 
-  if (gifCloseBtn) {
-    gifCloseBtn.addEventListener("click", function () {
-      gifPickerModal.classList.remove("show");
-    });
-  }
-
-  if (gifSearchInput) {
-    gifSearchInput.addEventListener("input", function () {
-      clearTimeout(gifTimeout);
-      const q = gifSearchInput.value.trim();
-      gifTimeout = setTimeout(function () {
-        if (q.length < 2) cargarGifsTrending();
-        else buscarGifs(q);
-      }, 500);
-    });
-  }
-
-  async function cargarGifsTrending() {
-    gifResults.innerHTML = "<p style='text-align:center;color:var(--text-dim);padding:20px;grid-column:1/-1;'>Cargando GIFs...</p>";
+  async function cargarGifsInline(query) {
+    const cont = document.getElementById("gifInlineResults");
+    if (!cont) return;
+    cont.innerHTML = "<p style='text-align:center;color:var(--text-dim);grid-column:1/-1;padding:12px;font-size:12px;'>Cargando...</p>";
     try {
-      const r = await fetch("https://g.tenor.com/v1/trending?key=" + TENOR_KEY + "&limit=20&media_filter=minimal");
+      const base = (query && query.length >= 2)
+        ? "https://g.tenor.com/v1/search?q=" + encodeURIComponent(query) + "&key=" + TENOR_KEY + "&limit=20&media_filter=minimal"
+        : "https://g.tenor.com/v1/trending?key=" + TENOR_KEY + "&limit=20&media_filter=minimal";
+      const r = await fetch(base);
       const data = await r.json();
-      pintarGifs(data.results || []);
-    } catch (e) {
-      gifResults.innerHTML = "<p style='text-align:center;color:#ff5252;padding:20px;grid-column:1/-1;'>Error al cargar GIFs</p>";
-    }
-  }
-
-  async function buscarGifs(query) {
-    gifResults.innerHTML = "<p style='text-align:center;color:var(--text-dim);padding:20px;grid-column:1/-1;'>Buscando...</p>";
-    try {
-      const r = await fetch("https://g.tenor.com/v1/search?q=" + encodeURIComponent(query) + "&key=" + TENOR_KEY + "&limit=20&media_filter=minimal");
-      const data = await r.json();
-      pintarGifs(data.results || []);
-    } catch (e) {
-      gifResults.innerHTML = "<p style='text-align:center;color:#ff5252;padding:20px;grid-column:1/-1;'>Error</p>";
-    }
-  }
-
-  function pintarGifs(items) {
-    if (!items.length) {
-      gifResults.innerHTML = "<p style='text-align:center;color:var(--text-muted);padding:20px;grid-column:1/-1;'>Sin resultados</p>";
-      return;
-    }
-    gifResults.innerHTML = "";
-    items.forEach(function (item) {
-      const media = item.media && item.media[0];
-      if (!media || !media.tinygif) return;
-      const url = media.tinygif.url;
-      const fullUrl = (media.gif && media.gif.url) || url;
-      const div = document.createElement("div");
-      div.className = "gif-item";
-      const img = document.createElement("img");
-      img.src = url;
-      img.loading = "lazy";
-      div.appendChild(img);
-      div.addEventListener("click", function () {
-        enviarGif(fullUrl);
-        gifPickerModal.classList.remove("show");
-        gifSearchInput.value = "";
+      const items = data.results || [];
+      if (!items.length) {
+        cont.innerHTML = "<p style='text-align:center;color:var(--text-muted);grid-column:1/-1;padding:12px;font-size:12px;'>Sin resultados</p>";
+        return;
+      }
+      cont.innerHTML = "";
+      items.forEach(function (item) {
+        const media = item.media && item.media[0];
+        if (!media || !media.tinygif) return;
+        const url = media.tinygif.url;
+        const fullUrl = (media.gif && media.gif.url) || url;
+        const img = document.createElement("img");
+        img.src = url;
+        img.loading = "lazy";
+        img.style.cssText = "width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;cursor:pointer;background:var(--bg-secondary);";
+        img.addEventListener("click", function () {
+          enviarGif(fullUrl);
+          cerrarMediaTabs();
+        });
+        cont.appendChild(img);
       });
-      gifResults.appendChild(div);
+    } catch (e) {
+      cont.innerHTML = "<p style='text-align:center;color:#ff5252;grid-column:1/-1;padding:12px;font-size:12px;'>Error</p>";
+    }
+  }
+
+  function cerrarMediaTabs() {
+    if (mediaTabs) mediaTabs.classList.remove("show");
+    if (emojiBarReal) emojiBarReal.classList.remove("show");
+    if (stickerBarReal) stickerBarReal.classList.remove("show");
+    const gifPanel = document.getElementById("gifPanelInBar");
+    if (gifPanel) gifPanel.style.display = "none";
+    if (emojiBtnReal) emojiBtnReal.classList.remove("activo");
+  }
+
+  if (mediaTabs) {
+    mediaTabs.addEventListener("click", function (e) {
+      const btn = e.target.closest("button[data-tab]");
+      if (!btn) return;
+      mostrarTabMedia(btn.dataset.tab);
+    });
+  }
+
+  if (emojiBtnReal) {
+    emojiBtnReal.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const abierto = mediaTabs && mediaTabs.classList.contains("show");
+      if (abierto) {
+        cerrarMediaTabs();
+      } else {
+        if (mediaTabs) mediaTabs.classList.add("show");
+        mostrarTabMedia("emoji");
+        emojiBtnReal.classList.add("activo");
+      }
     });
   }
 
@@ -107,7 +153,7 @@
   }
 
   // ==========================================================
-  // 2) TRADUCCIÓN AUTOMÁTICA (MyMemory API - gratis)
+  // TRADUCCIÓN
   // ==========================================================
   const translateModal = document.getElementById("translateModal");
   const translateOriginal = document.getElementById("translateOriginal");
@@ -119,7 +165,6 @@
 
   let textoParaTraducir = "";
   let traduccionActual = "";
-  let idiomaDestinoActual = "en";
 
   window.abrirTraduccion = function (texto) {
     if (!translateModal || !texto) return;
@@ -132,10 +177,8 @@
   };
 
   async function traducirTexto(texto, destino) {
-    idiomaDestinoActual = destino;
     translateResult.textContent = "Traduciendo...";
     try {
-      // Detectar idioma origen (por defecto español)
       const r = await fetch("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(texto) + "&langpair=es|" + destino);
       const data = await r.json();
       if (data && data.responseData && data.responseData.translatedText) {
@@ -154,22 +197,16 @@
       if (textoParaTraducir) traducirTexto(textoParaTraducir, translateLang.value);
     });
   }
-
-  if (translateCancelBtn) translateCancelBtn.addEventListener("click", function () {
-    translateModal.classList.remove("show");
-  });
-
+  if (translateCancelBtn) translateCancelBtn.addEventListener("click", function () { translateModal.classList.remove("show"); });
   if (translateCopyBtn) translateCopyBtn.addEventListener("click", async function () {
     if (!traduccionActual) return;
     try { await navigator.clipboard.writeText(traduccionActual); alert("📋 Copiado"); } catch (e) {}
   });
-
   if (translateSendBtn) translateSendBtn.addEventListener("click", async function () {
     if (!traduccionActual || !currentRoom) return;
     try {
-      const texto = "🌐 " + traduccionActual;
       const { data, error } = await supabaseClient.from("zumm_messages")
-        .insert([{ text: texto, username: username, room: currentRoom }])
+        .insert([{ text: "🌐 " + traduccionActual, username: username, room: currentRoom }])
         .select().single();
       if (error) { alert("Error: " + error.message); return; }
       if (typeof renderMessage === "function") renderMessage(data, false);
@@ -177,19 +214,15 @@
     } catch (e) { alert("Error: " + e.message); }
   });
 
-  // Añadir botón al menú de mensajes
   const menuTranslateBtn = document.getElementById("menuTranslateBtn");
   if (menuTranslateBtn) {
     menuTranslateBtn.addEventListener("click", function () {
       if (!mensajeMenuActual) return;
       const m = mensajeMenuActual;
       let texto = m.text || "";
-      // Limpiar reply/forward
       texto = texto.replace(/^\[REPLY:[^\]]+\]\s*/i, "").replace(/^\[FORWARD\]\s*/i, "");
-      // Ignorar stickers y gifs
       if (texto.startsWith("[STICKER]") || texto.startsWith("[GIF]") || texto.startsWith("[IMGSTICKER]")) {
-        alert("No se puede traducir este tipo de mensaje.");
-        return;
+        alert("No se puede traducir este tipo de mensaje."); return;
       }
       if (!texto.trim()) { alert("Este mensaje no tiene texto."); return; }
       cerrarMenu();
@@ -198,7 +231,7 @@
   }
 
   // ==========================================================
-  // 3) STICKERS PERSONALIZADOS
+  // STICKERS PERSONALIZADOS
   // ==========================================================
   const myStickersBtn = document.getElementById("myStickersBtn");
   const stickerManagerModal = document.getElementById("stickerManagerModal");
@@ -224,14 +257,11 @@
     try { localStorage.setItem("zummchat_mis_stickers", JSON.stringify(lista)); } catch (e) {}
   }
 
-  if (myStickersBtn) {
-    myStickersBtn.addEventListener("click", function () {
-      cerrarPaneles();
-      stickerManagerModal.classList.add("show");
-      renderMisStickers();
-    });
-  }
-
+  if (myStickersBtn) myStickersBtn.addEventListener("click", function () {
+    cerrarPaneles();
+    stickerManagerModal.classList.add("show");
+    renderMisStickers();
+  });
   if (stickerManagerCloseBtn) stickerManagerCloseBtn.addEventListener("click", function () {
     stickerManagerModal.classList.remove("show");
   });
@@ -252,8 +282,7 @@
       img.src = st.url; img.alt = st.name;
       div.appendChild(img);
       const del = document.createElement("button");
-      del.className = "sticker-del";
-      del.textContent = "✕";
+      del.className = "sticker-del"; del.textContent = "✕";
       del.addEventListener("click", function (e) {
         e.stopPropagation();
         if (!confirm("¿Borrar sticker '" + st.name + "'?")) return;
@@ -276,15 +305,12 @@
     archivoStickerNuevo = null;
     newStickerModal.classList.add("show");
   });
-
   if (newStickerCancelBtn) newStickerCancelBtn.addEventListener("click", function () {
     newStickerModal.classList.remove("show");
   });
-
   if (newStickerPickBtn) newStickerPickBtn.addEventListener("click", function () {
     if (newStickerInput) newStickerInput.click();
   });
-
   if (newStickerInput) {
     newStickerInput.addEventListener("change", function () {
       const file = newStickerInput.files[0];
@@ -297,7 +323,6 @@
       reader.readAsDataURL(file);
     });
   }
-
   if (newStickerSaveBtn) {
     newStickerSaveBtn.addEventListener("click", async function () {
       const nombre = (newStickerName.value || "").trim();
@@ -318,9 +343,8 @@
         alert("✅ Sticker creado");
         newStickerModal.classList.remove("show");
         renderMisStickers();
-      } catch (e) {
-        alert("Error: " + e.message);
-      } finally {
+      } catch (e) { alert("Error: " + e.message); }
+      finally {
         newStickerSaveBtn.textContent = "Guardar";
         newStickerSaveBtn.disabled = false;
       }
@@ -340,7 +364,7 @@
   }
 
   // ==========================================================
-  // 4) RENDERIZAR GIF y STICKERS PERSONALIZADOS
+  // RENDERIZAR GIF y STICKERS PERSONALIZADOS
   // ==========================================================
   const _renderOrig6 = window.renderMessage;
   window.renderMessage = function (m, esNuevo) {
@@ -348,13 +372,10 @@
     if (!messagesEl || !m || !m.id) return;
     const div = messagesEl.querySelector('[data-msg-id="' + m.id + '"]');
     if (!div) return;
-
     const body = div.querySelector(".msg-body");
     if (!body) return;
-
     const txt = (m.text || "");
 
-    // GIF
     const gifMatch = txt.match(/^\[GIF\](.+)\[\/GIF\]$/);
     if (gifMatch && !body.dataset.gifRender) {
       body.dataset.gifRender = "1";
@@ -367,7 +388,6 @@
       return;
     }
 
-    // Sticker personalizado
     const stMatch = txt.match(/^\[IMGSTICKER\](.+)\[\/IMGSTICKER\]$/);
     if (stMatch && !body.dataset.stickerRender) {
       body.dataset.stickerRender = "1";
@@ -382,7 +402,7 @@
   };
 
   // ==========================================================
-  // 5) CANALES / DIFUSIÓN
+  // CANALES
   // ==========================================================
   const newChannelBtn = document.getElementById("newChannelBtn");
   const newChannelModal = document.getElementById("newChannelModal");
@@ -391,16 +411,13 @@
   const newChannelCancelBtn = document.getElementById("newChannelCancelBtn");
   const newChannelSaveBtn = document.getElementById("newChannelSaveBtn");
   const channelReadOnly = document.getElementById("channelReadOnly");
-  const inputArea = document.getElementById("input-area");
+  const inputAreaReal = document.getElementById("input-area");
 
-  if (newChannelBtn) {
-    newChannelBtn.addEventListener("click", function () {
-      channelName.value = "";
-      channelDesc.value = "";
-      newChannelModal.classList.add("show");
-    });
-  }
-
+  if (newChannelBtn) newChannelBtn.addEventListener("click", function () {
+    channelName.value = "";
+    channelDesc.value = "";
+    newChannelModal.classList.add("show");
+  });
   if (newChannelCancelBtn) newChannelCancelBtn.addEventListener("click", function () {
     newChannelModal.classList.remove("show");
   });
@@ -412,42 +429,31 @@
     newChannelSaveBtn.textContent = "Creando...";
     newChannelSaveBtn.disabled = true;
     try {
-      // Guardar en localStorage: lista de canales creados por mí
       const misCanales = JSON.parse(localStorage.getItem("zummchat_mis_canales") || "[]");
       if (misCanales.some(function (c) { return c.nombre === nombre; })) {
-        alert("Ya tienes un canal con ese nombre.");
-        return;
+        alert("Ya tienes un canal con ese nombre."); return;
       }
       misCanales.push({ nombre: nombre, desc: desc, creador: username, fecha: Date.now() });
       localStorage.setItem("zummchat_mis_canales", JSON.stringify(misCanales));
-
-      // Guardar en zumm_grupos con password null pero con un campo "tipo"
-      // para que otros usuarios puedan encontrarlo
-      const { error } = await supabaseClient.from("zumm_grupos").insert([{
-        nombre: "canal-" + nombre,
-        password: null,
-        creador: username
-      }]);
-      if (error && !error.message.includes("duplicate")) {
-        // Si falla, no es crítico, seguimos
-      }
-
+      try {
+        await supabaseClient.from("zumm_grupos").insert([{
+          nombre: "canal-" + nombre, password: null, creador: username
+        }]);
+      } catch (e) {}
       newChannelModal.classList.remove("show");
       alert("✅ Canal '" + nombre + "' creado\n\nSolo tú puedes publicar aquí.");
-      switchRoom("canal:" + nombre);
-    } catch (e) {
-      alert("Error: " + e.message);
-    } finally {
+      if (typeof switchRoom === "function") switchRoom("canal:" + nombre);
+    } catch (e) { alert("Error: " + e.message); }
+    finally {
       newChannelSaveBtn.textContent = "Crear canal";
       newChannelSaveBtn.disabled = false;
     }
   });
 
-  // Detectar si estoy en un canal y aplicar solo lectura
   function actualizarModoCanal() {
     if (!currentRoom || !currentRoom.startsWith("canal:")) {
       if (channelReadOnly) channelReadOnly.style.display = "none";
-      if (inputArea) inputArea.classList.remove("readonly");
+      if (inputAreaReal) inputAreaReal.classList.remove("readonly");
       return;
     }
     const nombreCanal = currentRoom.replace("canal:", "");
@@ -457,21 +463,19 @@
     });
     if (esMio) {
       if (channelReadOnly) channelReadOnly.style.display = "none";
-      if (inputArea) inputArea.classList.remove("readonly");
+      if (inputAreaReal) inputAreaReal.classList.remove("readonly");
     } else {
       if (channelReadOnly) channelReadOnly.style.display = "block";
-      if (inputArea) inputArea.classList.add("readonly");
+      if (inputAreaReal) inputAreaReal.classList.add("readonly");
     }
   }
 
-  // Hook a switchRoom para actualizar el modo canal
   const _switchRoomOrig = window.switchRoom;
   window.switchRoom = function (room) {
     _switchRoomOrig(room);
     setTimeout(actualizarModoCanal, 100);
   };
 
-  // Hook a renderChatList para añadir canales
   const _renderChatListOrig = window.renderChatList;
   window.renderChatList = async function () {
     await _renderChatListOrig();
@@ -483,22 +487,17 @@
     if (!chatListEl) return;
     const misCanales = JSON.parse(localStorage.getItem("zummchat_mis_canales") || "[]");
     if (misCanales.length === 0) return;
-
     misCanales.forEach(function (c) {
-      // Verificar que no esté ya pintado
       const existe = Array.from(chatListEl.querySelectorAll(".chat-item")).some(function (li) {
         return li.dataset.canalRoom === "canal:" + c.nombre;
       });
       if (existe) return;
-
       const li = document.createElement("li");
       li.className = "chat-item canal-item";
       li.dataset.canalRoom = "canal:" + c.nombre;
-
       const avatar = document.createElement("div");
       avatar.className = "chat-avatar";
       avatar.textContent = "📢";
-
       const info = document.createElement("div");
       info.className = "chat-info";
       const name = document.createElement("div");
@@ -508,27 +507,18 @@
       badge.className = "canal-badge";
       badge.textContent = "CANAL";
       name.appendChild(badge);
-
       const preview = document.createElement("div");
       preview.className = "chat-preview";
       preview.textContent = c.desc || "Canal de difusión";
-
-      info.appendChild(name);
-      info.appendChild(preview);
-      li.appendChild(avatar);
-      li.appendChild(info);
-
+      info.appendChild(name); info.appendChild(preview);
+      li.appendChild(avatar); li.appendChild(info);
       li.addEventListener("click", function () {
         if (typeof switchRoom === "function") switchRoom("canal:" + c.nombre);
       });
-
       chatListEl.insertBefore(li, chatListEl.firstChild);
     });
   }
 
-  // ==========================================================
-  // 6) BOTÓN DE STICKER PERSONALIZADO EN EL EDITOR DE IMAGEN
-  // ==========================================================
   const ieStickerBtn = document.getElementById("ieStickerBtn");
   if (ieStickerBtn) {
     ieStickerBtn.addEventListener("click", function () {
@@ -536,9 +526,6 @@
     });
   }
 
-  // ==========================================================
-  // 7) INICIALIZACIÓN
-  // ==========================================================
   setTimeout(function () {
     pintarCanalesEnLista();
     actualizarModoCanal();

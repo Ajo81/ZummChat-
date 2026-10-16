@@ -5,9 +5,9 @@
 // Año: 2026 - Todos los derechos reservados.
 // ============================================================
 
-const CACHE = "zummchat-v62";
-const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./matrix.js",
-                "./manifest.json", "./logo.png", "./icon.png"];
+const CACHE = "zummchat-v63";
+const ASSETS = ["./", "./index.html", "./style.css", "./app3.js", "./app4.js",
+                "./matrix.js", "./manifest.json", "./logo.png", "./icon.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

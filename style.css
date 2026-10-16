@@ -156,21 +156,28 @@ html, body {
   50%      { box-shadow: 0 0 0 6px transparent; }
 }
 
+/* ============ LISTA DE CHATS CON BOTONES FIJOS ============ */
 #chat-list-container {
   flex: 1;
   overflow-y: auto;
   background: var(--bg-secondary);
   border-radius: 10px;
-  padding: 10px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
+
 .home-buttons-row {
   display: flex;
   gap: 6px;
-  margin-bottom: 12px;
   flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-secondary);
+  padding: 10px;
+  border-bottom: 1px solid var(--border-light);
 }
 .home-buttons-row .new-chat-btn {
   flex: 1;
@@ -199,8 +206,12 @@ html, body {
 .new-chat-btn:active { background: var(--accent); color: var(--bg); }
 #chat-list {
   list-style: none;
-  padding: 0; margin: 0;
-  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px;
+  padding-top: 8px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .chat-item {
   display: flex; align-items: center; gap: 12px;

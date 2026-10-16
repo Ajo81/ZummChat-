@@ -66,6 +66,7 @@ const editCancelBtn   = document.getElementById("editCancelBtn");
 const editSaveBtn     = document.getElementById("editSaveBtn");
 const msgMenu         = document.getElementById("msgMenu");
 const menuReplyBtn    = document.getElementById("menuReplyBtn");
+const menuForwardBtn  = document.getElementById("menuForwardBtn");
 const menuFavBtn      = document.getElementById("menuFavBtn");
 const menuPinBtn      = document.getElementById("menuPinBtn");
 const menuCopyBtn     = document.getElementById("menuCopyBtn");
@@ -80,6 +81,15 @@ const replyBar        = document.getElementById("reply-bar");
 const replyAuthor     = document.getElementById("reply-author");
 const replyPreview    = document.getElementById("reply-preview");
 const replyCancelBtn  = document.getElementById("replyCancelBtn");
+const chatOptionsModal = document.getElementById("chatOptionsModal");
+const chatOptionsTitle = document.getElementById("chatOptionsTitle");
+const optPinChatBtn   = document.getElementById("optPinChatBtn");
+const optArchiveChatBtn = document.getElementById("optArchiveChatBtn");
+const optMuteChatBtn  = document.getElementById("optMuteChatBtn");
+const optCancelBtn    = document.getElementById("optCancelBtn");
+const forwardModal    = document.getElementById("forwardModal");
+const forwardList     = document.getElementById("forwardList");
+const forwardCancelBtn = document.getElementById("forwardCancelBtn");
 const statsModal      = document.getElementById("statsModal");
 const statsCloseBtn   = document.getElementById("statsCloseBtn");
 const statTotalMsgs   = document.getElementById("statTotalMsgs");
@@ -223,6 +233,8 @@ let myStatus = LS.getItem("zummchat_status") || "";
 let currentRoom = "general";
 let inChatView = false;
 let replyTo = null;
+let mensajeParaReenviar = null;
+let chatOpcionesActual = null;
 
 function limpiarNombre(texto) {
   if (!texto) return "user";
@@ -235,6 +247,55 @@ function getLastRead(room) { return LS.getItem("zummchat_lastread_" + room) || "
 function setLastRead(room) {
   if (!room) return;
   LS.setItem("zummchat_lastread_" + room, new Date().toISOString());
+}
+
+// ================= CHATS FIJADOS, ARCHIVADOS Y SILENCIADOS =================
+let chatsFijados = JSON.parse(LS.getItem("zummchat_fijados") || "[]");
+function guardarFijados() { LS.setItem("zummchat_fijados", JSON.stringify(chatsFijados)); }
+function estaFijado(room) { return chatsFijados.includes(room); }
+function toggleFijar(room) {
+  if (chatsFijados.includes(room)) {
+    chatsFijados = chatsFijados.filter(r => r !== room);
+    alert("📌 Chat desfijado");
+  } else {
+    chatsFijados.push(room);
+    alert("📌 Chat fijado arriba");
+  }
+  guardarFijados();
+  renderChatList();
+}
+
+let chatsArchivados = JSON.parse(LS.getItem("zummchat_archivados") || "[]");
+function guardarArchivados() { LS.setItem("zummchat_archivados", JSON.stringify(chatsArchivados)); }
+function estaArchivado(room) {
+  if (!chatsArchivados.includes(room)) return false;
+  // Si llegó un mensaje nuevo tras archivarlo, ya no está "realmente" archivado
+  const archTime = LS.getItem("zummchat_archived_time_" + room);
+  if (!archTime) return true;
+  return true;
+}
+function toggleArchivar(room, silencioso) {
+  if (chatsArchivados.includes(room)) {
+    chatsArchivados = chatsArchivados.filter(r => r !== room);
+    LS.removeItem("zummchat_archived_time_" + room);
+    if (!silencioso) alert("📥 Chat desarchivado");
+  } else {
+    chatsArchivados.push(room);
+    LS.setItem("zummchat_archived_time_" + room, new Date().toISOString());
+    if (!silencioso) alert("📥 Chat archivado");
+  }
+  guardarArchivados();
+  if (!silencioso) renderChatList();
+}
+
+let chatsSilenciados = JSON.parse(LS.getItem("zummchat_silenciados") || "[]");
+function guardarSilenciados() { LS.setItem("zummchat_silenciados", JSON.stringify(chatsSilenciados)); }
+function chatEstaSilenciado(room) { return chatsSilenciados.includes(room); }
+function toggleSilenciar(room, silencioso) {
+  if (chatsSilenciados.includes(room)) { chatsSilenciados = chatsSilenciados.filter(r => r !== room); if (!silencioso) alert("🔔 ACTIVADAS"); }
+  else { chatsSilenciados.push(room); if (!silencioso) alert("🔕 SILENCIADO"); }
+  guardarSilenciados();
+  if (!silencioso) renderChatList();
 }
 
 let bloqueados = new Set();
@@ -270,15 +331,6 @@ async function eliminarContacto(nombre) {
 }
 function estaEnContactos(nombre) {
   return misContactos.some(c => c.toLowerCase() === (nombre || "").toLowerCase());
-}
-
-let chatsSilenciados = JSON.parse(LS.getItem("zummchat_silenciados") || "[]");
-function guardarSilenciados() { LS.setItem("zummchat_silenciados", JSON.stringify(chatsSilenciados)); }
-function chatEstaSilenciado(room) { return chatsSilenciados.includes(room); }
-function toggleSilenciar(room) {
-  if (chatsSilenciados.includes(room)) { chatsSilenciados = chatsSilenciados.filter(r => r !== room); alert("🔔 ACTIVADAS"); }
-  else { chatsSilenciados.push(room); alert("🔕 SILENCIADO"); }
-  guardarSilenciados();
 }
 
 let temaActual = LS.getItem("zummchat_tema") || "dark";
@@ -664,7 +716,7 @@ if (backBtn) backBtn.addEventListener("click", showChatList);
 async function getInfoChat(room) {
   try {
     const { data } = await supabaseClient.from("zumm_messages")
-      .select("created_at, username, text, file_type")
+      .select("created_at, username, text, file_type, file_url")
       .eq("room", room)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -701,6 +753,7 @@ function previewUltimoMsg(m) {
   let texto = "";
   const tipo = m.file_type || "";
   if (m.text && m.text.startsWith("[STICKER]")) texto = "🧩 Sticker";
+  else if (m.text && m.text.startsWith("[FORWARD]")) texto = "🔁 " + m.text.replace("[FORWARD] ", "");
   else if (tipo.startsWith("audio/")) texto = "🎤 Nota de voz";
   else if (tipo.startsWith("location/")) texto = "📍 Ubicación";
   else if (tipo.startsWith("poll/")) texto = "📊 Encuesta";
@@ -754,7 +807,30 @@ async function renderChatList() {
     });
     const resultados = await Promise.all(promesas);
 
+    // Separar fijados, archivados y normales
+    const fijados = [];
+    const normales = [];
     resultados.forEach(r => {
+      if (estaFijado(r.room)) fijados.push(r);
+      else if (estaArchivado(r.room)) {
+        // ¿Llegó mensaje nuevo DESPUÉS de archivarlo? → desarchivar automáticamente
+        const archTime = LS.getItem("zummchat_archived_time_" + r.room);
+        const lastMsgTime = r.info && r.info.ultimo ? r.info.ultimo.created_at : null;
+        if (archTime && lastMsgTime && new Date(lastMsgTime) > new Date(archTime)) {
+          chatsArchivados = chatsArchivados.filter(x => x !== r.room);
+          LS.removeItem("zummchat_archived_time_" + r.room);
+          guardarArchivados();
+          normales.push(r);
+        }
+        // Si no, se queda archivado (no lo añadimos a la lista)
+      } else normales.push(r);
+    });
+
+    fijados.forEach(r => {
+      if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info);
+      else crearItemChat(r.otro, r.room, "priv", r.info);
+    });
+    normales.forEach(r => {
       if (r.tipo === "grupo") crearItemChat(roomLabel(r.room), r.room, "grupo", r.info);
       else crearItemChat(r.otro, r.room, "priv", r.info);
     });
@@ -771,6 +847,8 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   const esGrupo = tipo === "grupo";
   const estaOnline = !esGrupo && usersOnline.some(u => u.toLowerCase() === nombreUsuario.toLowerCase());
   const urlAvatar = !esGrupo ? (avataresPorUsuario[nombreUsuario.toLowerCase()] || "") : "";
+
+  if (estaFijado(roomId)) li.classList.add("pinned");
 
   const avatar = document.createElement("div");
   avatar.className = "chat-avatar";
@@ -790,6 +868,12 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   const name = document.createElement("div");
   name.className = "chat-name";
   name.textContent = nombreUsuario;
+  if (estaFijado(roomId)) {
+    const pin = document.createElement("span");
+    pin.className = "pin-icon";
+    pin.textContent = " 📌";
+    name.appendChild(pin);
+  }
   const preview = document.createElement("div");
   preview.className = "chat-preview";
   if (info && info.ultimo) preview.textContent = previewUltimoMsg(info.ultimo);
@@ -820,6 +904,7 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
   li.appendChild(infoEl);
   li.appendChild(right);
 
+  // Click normal: abrir chat
   li.addEventListener("click", () => {
     if (!esGrupo && !privateRooms.includes(roomId)) {
       privateRooms.push(roomId);
@@ -827,9 +912,148 @@ function crearItemChat(nombreUsuario, roomId, tipo, info) {
     }
     switchRoom(roomId);
   });
+
+  // Long press: opciones del chat
+  let longPressTimer = null;
+  li.addEventListener("touchstart", (e) => {
+    longPressTimer = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(50);
+      abrirOpcionesChat(roomId, nombreUsuario);
+    }, 550);
+  }, { passive: true });
+  li.addEventListener("touchend", () => clearTimeout(longPressTimer));
+  li.addEventListener("touchmove", () => clearTimeout(longPressTimer));
+  li.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    abrirOpcionesChat(roomId, nombreUsuario);
+  });
+
   chatListEl.appendChild(li);
 }
 
+// ================= OPCIONES DEL CHAT (long press) =================
+function abrirOpcionesChat(roomId, nombreVisible) {
+  chatOpcionesActual = { room: roomId, nombre: nombreVisible };
+  if (chatOptionsTitle) chatOptionsTitle.textContent = nombreVisible;
+  if (optPinChatBtn) optPinChatBtn.textContent = estaFijado(roomId) ? "📌 Desfijar" : "📌 Fijar arriba";
+  if (optArchiveChatBtn) optArchiveChatBtn.textContent = estaArchivado(roomId) ? "📥 Desarchivar" : "📥 Archivar";
+  if (optMuteChatBtn) optMuteChatBtn.textContent = chatEstaSilenciado(roomId) ? "🔔 Activar sonido" : "🔕 Silenciar";
+  if (chatOptionsModal) chatOptionsModal.classList.add("show");
+}
+if (optCancelBtn) optCancelBtn.addEventListener("click", () => {
+  if (chatOptionsModal) chatOptionsModal.classList.remove("show");
+  chatOpcionesActual = null;
+});
+if (chatOptionsModal) chatOptionsModal.addEventListener("click", (e) => {
+  if (e.target === chatOptionsModal) {
+    chatOptionsModal.classList.remove("show");
+    chatOpcionesActual = null;
+  }
+});
+if (optPinChatBtn) optPinChatBtn.addEventListener("click", () => {
+  if (!chatOpcionesActual) return;
+  toggleFijar(chatOpcionesActual.room);
+  chatOptionsModal.classList.remove("show");
+  chatOpcionesActual = null;
+});
+if (optArchiveChatBtn) optArchiveChatBtn.addEventListener("click", () => {
+  if (!chatOpcionesActual) return;
+  toggleArchivar(chatOpcionesActual.room);
+  chatOptionsModal.classList.remove("show");
+  chatOpcionesActual = null;
+});
+if (optMuteChatBtn) optMuteChatBtn.addEventListener("click", () => {
+  if (!chatOpcionesActual) return;
+  toggleSilenciar(chatOpcionesActual.room);
+  chatOptionsModal.classList.remove("show");
+  chatOpcionesActual = null;
+});
+
+// ================= REENVIAR MENSAJES =================
+async function abrirMenuReenvio(m) {
+  if (!forwardModal || !forwardList) return;
+  mensajeParaReenviar = m;
+  forwardList.innerHTML = "";
+
+  const gruposBase = ["general", "amigos", "familia", "trabajo"];
+  const todosGrupos = [...gruposBase, ...gruposPersonalizados.filter(g => !gruposOcultos.includes(g)).map(g => "grupo:" + g)];
+
+  todosGrupos.forEach(room => {
+    const li = document.createElement("li");
+    li.textContent = "👥 " + roomLabel(room);
+    li.addEventListener("click", () => reenviarA(room));
+    forwardList.appendChild(li);
+  });
+
+  // Privados con chats guardados o usuarios en línea
+  const usuariosMostrados = new Set();
+  const miUserLower = username.toLowerCase();
+  const agregarPrivado = (otro) => {
+    if (usuariosMostrados.has(otro.toLowerCase())) return;
+    usuariosMostrados.add(otro.toLowerCase());
+    const partes = [username, otro].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    const room = "priv:" + partes[0] + "|" + partes[1];
+    const li = document.createElement("li");
+    li.textContent = "🔒 " + otro;
+    li.addEventListener("click", () => reenviarA(room));
+    forwardList.appendChild(li);
+  };
+  privateRooms.forEach(room => {
+    const partes = room.replace("priv:", "").split("|");
+    const otro = partes.find(n => n.toLowerCase() !== miUserLower);
+    if (otro) agregarPrivado(otro);
+  });
+  usersOnline.forEach(u => { if (u.toLowerCase() !== miUserLower) agregarPrivado(u); });
+  misContactos.forEach(c => { if (c.toLowerCase() !== miUserLower) agregarPrivado(c); });
+
+  forwardModal.classList.add("show");
+}
+
+async function reenviarA(roomDestino) {
+  if (!mensajeParaReenviar) return;
+  const m = mensajeParaReenviar;
+  forwardModal.classList.remove("show");
+  mensajeParaReenviar = null;
+
+  let texto = m.text || "";
+  // Quitar reply si lo tiene
+  const extraido = extraerReply(texto);
+  texto = extraido.textoReal || texto;
+  // Marcar como reenviado
+  texto = "[FORWARD] " + texto;
+
+  const payload = {
+    text: texto,
+    username: username,
+    room: roomDestino
+  };
+  if (m.file_url && !m.file_type?.startsWith("poll/")) {
+    payload.file_url = m.file_url;
+    payload.file_name = m.file_name || "archivo";
+    payload.file_type = m.file_type || "application/octet-stream";
+  } else if (m.file_type && m.file_type.startsWith("poll/")) {
+    // Reenviar encuesta también
+    payload.file_url = m.file_url;
+    payload.file_name = m.file_name || "Encuesta";
+    payload.file_type = m.file_type;
+  }
+
+  const { error } = await supabaseClient.from("zumm_messages").insert([payload]);
+  if (error) { alert("No se pudo reenviar: " + error.message); return; }
+  alert("✅ Reenviado a " + roomLabel(roomDestino));
+}
+if (forwardCancelBtn) forwardCancelBtn.addEventListener("click", () => {
+  forwardModal.classList.remove("show");
+  mensajeParaReenviar = null;
+});
+if (forwardModal) forwardModal.addEventListener("click", (e) => {
+  if (e.target === forwardModal) {
+    forwardModal.classList.remove("show");
+    mensajeParaReenviar = null;
+  }
+});
+
+// ================= CAMBIAR DE SALA =================
 function switchRoom(room) {
   currentRoom = room;
   showChatView();
@@ -1131,6 +1355,7 @@ function renderMessage(m, esNuevo) {
       else if (tipo.startsWith("poll/")) textoNotif = "📊 Encuesta";
       else if (m.file_url) textoNotif = "📎 Archivo";
       else if (m.text && m.text.startsWith("[STICKER]")) textoNotif = "🧩 Sticker";
+      else if (m.text && m.text.startsWith("[FORWARD]")) textoNotif = "🔁 " + m.text.replace("[FORWARD] ", "");
       else textoNotif = m.text || "Nuevo mensaje";
       textoNotif = textoNotif.replace(/^\[REPLY:[^\]]+\]\s*/i, "");
       mostrarNotificacion(m.username || "Alguien", textoNotif, m.room);
@@ -1180,7 +1405,7 @@ function renderMessage(m, esNuevo) {
   body.className = "msg-body";
 
   const extraido = extraerReply(m.text || "");
-  const textoParaMostrar = extraido.textoReal;
+  let textoParaMostrar = extraido.textoReal;
 
   if (extraido.reply) {
     const q = document.createElement("div");
@@ -1193,6 +1418,17 @@ function renderMessage(m, esNuevo) {
     qt.textContent = extraido.reply.preview;
     q.appendChild(qa); q.appendChild(qt);
     body.appendChild(q);
+  }
+
+  // Detectar reenvío
+  let esReenviado = false;
+  if (textoParaMostrar && textoParaMostrar.startsWith("[FORWARD] ")) {
+    esReenviado = true;
+    textoParaMostrar = textoParaMostrar.replace("[FORWARD] ", "");
+    const fwd = document.createElement("div");
+    fwd.className = "msg-forwarded";
+    fwd.textContent = "🔁 Reenviado";
+    body.appendChild(fwd);
   }
 
   const pollData = parsePoll(m);
@@ -1511,8 +1747,10 @@ function abrirEditorMensaje(m) {
   if (m.file_type && m.file_type.startsWith("poll/")) { alert("No puedes editar una encuesta."); return; }
   if (m.text && m.text.startsWith("[STICKER]")) { alert("No puedes editar un sticker."); return; }
   const extraido = extraerReply(m.text || "");
+  let txt = extraido.textoReal || "";
+  txt = txt.replace(/^\[FORWARD\]\s*/i, "");
   mensajeEditando = m;
-  editInput.value = extraido.textoReal || "";
+  editInput.value = txt;
   editModal.classList.add("show");
   setTimeout(() => editInput.focus(), 100);
 }
@@ -1540,7 +1778,7 @@ function mostrarMenuMensaje(m, x, y) {
   if (menuPinBtn) menuPinBtn.textContent = m.pinned ? "📌 Desfijar" : "📌 Fijar";
   if (menuFavBtn) menuFavBtn.textContent = favoritosIds.has(m.id) ? "⭐ Quitar fav" : "⭐ Favorito";
   msgMenu.classList.add("show");
-  const ancho = 180, alto = 300;
+  const ancho = 180, alto = 340;
   const xFinal = Math.min(x, window.innerWidth - ancho - 10);
   const yFinal = Math.min(y, window.innerHeight - alto - 10);
   msgMenu.style.left = Math.max(10, xFinal) + "px";
@@ -1558,6 +1796,11 @@ if (menuReplyBtn) menuReplyBtn.addEventListener("click", () => {
   if (!mensajeMenuActual) return;
   const m = mensajeMenuActual; cerrarMenu();
   mostrarReplyBar(m);
+});
+if (menuForwardBtn) menuForwardBtn.addEventListener("click", () => {
+  if (!mensajeMenuActual) return;
+  const m = mensajeMenuActual; cerrarMenu();
+  abrirMenuReenvio(m);
 });
 if (menuPinBtn) menuPinBtn.addEventListener("click", async () => {
   if (!mensajeMenuActual) return;
